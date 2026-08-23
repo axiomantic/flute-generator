@@ -29,10 +29,10 @@ class TestOpenScadGeneration:
 
         # Check critical modules
         required_modules = [
-            "module body_profile(h)",
+            "module body_cross_section(h)",
             "module body_with_chimneys(h)",
             "module bores()",
-            "module simple_fipple(offset_x, bore_d)",
+            "module single_fipple(offset_x, bore_d)",
             "module complete_flute()",
             "module head_slice()",
             "module mid_slice()",
@@ -59,7 +59,8 @@ class TestOpenScadGeneration:
         assert f"wall = {dims.wall:.2f};" in scad_code
         assert f"spacing = {dims.spacing:.2f};" in scad_code
         assert f"tol = {dims.tolerance:.2f};" in scad_code
-        assert f"total_L = {dims.total_length:.2f};" in scad_code
+        assert f"fipple_z = {dims.total_length:.2f};" in scad_code
+        assert f"total_L = {38.0 + dims.total_length:.2f};" in scad_code
         assert f"bore_melody = {dims.bore_melody:.2f};" in scad_code
         assert f"bore_drone1 = {dims.bore_drone1:.2f};" in scad_code
         assert f"bore_drone2 = {dims.bore_drone2:.2f};" in scad_code
