@@ -1,4 +1,4 @@
-"""Deep tests for MIDI sequencing, message timing, and audio waveform synthesis."""
+"""Deep tests for expressive MIDI sequencing, controllers (CC1/CC11), and audio waveform synthesis."""
 
 import math
 from pathlib import Path
@@ -21,30 +21,44 @@ from flute_generator.scales import SCALES
 
 
 class TestMidiSequencing:
-    def test_midi_track_structure_and_flute_program(self):
-        """MIDI file must contain tempo meta message and flute program change (73)."""
+    def test_midi_multitrack_structure_and_expressive_controllers(self):
+        """MIDI file must contain Conductor, Melody with CC1/CC11/CC91/Pitchwheel, and Drone tracks."""
         dims = calculate_flute_geometry(root_midi=69)
-        events = build_quantized_melody("scale_arpeggio", root_midi=69, scale_intervals=dims.scale_intervals)
+        events = build_quantized_melody("condor_pasa", root_midi=69, scale_intervals=dims.scale_intervals)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             midi_path = Path(tmpdir) / "flute.mid"
             create_flute_midi(dims, events, midi_path, bpm=120)
 
             mid = mido.MidiFile(str(midi_path))
-            track = mid.tracks[0]
+            assert len(mid.tracks) == 4  # Conductor, Melody, Drone 1, Drone 2
 
-            # Check program change to flute (73)
-            program_msgs = [m for m in track if m.type == 'program_change']
-            assert len(program_msgs) == 1
-            assert program_msgs[0].program == 73
-
-            # Check tempo
-            tempo_msgs = [m for m in track if m.type == 'set_tempo']
+            # Check Conductor track tempo
+            conductor = mid.tracks[0]
+            tempo_msgs = [m for m in conductor if m.type == 'set_tempo']
             assert len(tempo_msgs) == 1
             assert pytest.approx(mido.tempo2bpm(tempo_msgs[0].tempo), abs=0.1) == 120.0
 
-    def test_drone_notes_span_entire_melody_duration(self):
-        """Drone 1 and Drone 2 must start at delta 0 and end at the very end of the sequence."""
+            # Check Melody track (Track 1)
+            melody_track = mid.tracks[1]
+            program_msgs = [m for m in melody_track if m.type == 'program_change']
+            assert len(program_msgs) == 1
+            assert program_msgs[0].program == 73
+
+            # Check CC1 (vibrato modulation), CC11 (expression breath), CC91 (reverb)
+            cc_msgs = [m for m in melody_track if m.type == 'control_change']
+            cc_numbers = {m.control for m in cc_msgs}
+            assert 1 in cc_numbers   # Vibrato LFO depth
+            assert 11 in cc_numbers  # Expression breath swell
+            assert 91 in cc_numbers  # Reverb send
+            assert 10 in cc_numbers  # Pan
+
+            # Check pitchwheel events (pitch scoops)
+            pitch_msgs = [m for m in melody_track if m.type == 'pitchwheel']
+            assert len(pitch_msgs) > 0
+
+    def test_drone_tracks_have_stereo_separation_and_independent_channels(self):
+        """Drone 1 and Drone 2 must be on separate channels with distinct stereo panning."""
         dims = calculate_flute_geometry(root_midi=69, drone1_offset=0, drone2_offset=7)
         events = [
             NoteEvent(midi_note=69, duration_beats=1.0),
@@ -58,26 +72,21 @@ class TestMidiSequencing:
             create_flute_midi(dims, events, midi_path, bpm=100)
 
             mid = mido.MidiFile(str(midi_path))
-            track = mid.tracks[0]
+            drone1_track = mid.tracks[2]
+            drone2_track = mid.tracks[3]
 
-            # Find drone start notes (time=0)
-            drone1_note = 69
-            drone2_note = 76  # 69 + 7
+            # Drone 1 channel 1, left pan (38)
+            d1_pan = [m.value for m in drone1_track if m.type == 'control_change' and m.control == 10]
+            assert d1_pan == [38]
 
-            note_ons = [m for m in track if m.type == 'note_on' and m.note in (drone1_note, drone2_note)]
-            assert len(note_ons) >= 2
-            for n_on in note_ons[:2]:
-                assert n_on.time == 0
-
-            # Calculate total ticks
-            total_ticks = sum(m.time for m in track)
-            expected_ticks = 5.0 * mid.ticks_per_beat
-            assert pytest.approx(total_ticks, abs=1) == expected_ticks
+            # Drone 2 channel 2, right pan (90)
+            d2_pan = [m.value for m in drone2_track if m.type == 'control_change' and m.control == 10]
+            assert d2_pan == [90]
 
 
 class TestWaveformSynthesis:
-    def test_synthesized_wav_header_and_signal_properties(self):
-        """Synthesized WAV must have valid 16-bit PCM mono format with non-clipped samples."""
+    def test_synthesized_wav_stereo_and_signal_properties(self):
+        """Synthesized WAV must have valid 16-bit PCM stereo format with rich non-clipped samples."""
         dims = calculate_flute_geometry(root_midi=69)
         events = build_quantized_melody("native_motif", root_midi=69, scale_intervals=dims.scale_intervals)
 
@@ -90,21 +99,20 @@ class TestWaveformSynthesis:
             assert wav_path.exists()
 
             with wave.open(str(wav_path), "rb") as w:
-                assert w.getnchannels() == 1
+                assert w.getnchannels() == 2  # Stereo
                 assert w.getsampwidth() == 2  # 16-bit
                 assert w.getframerate() == sample_rate
                 n_frames = w.getnframes()
                 raw_bytes = w.readframes(n_frames)
 
-            # Unpack all 16-bit signed samples
+            # Unpack all 16-bit signed interleaved stereo samples (L, R)
             num_samples = len(raw_bytes) // 2
             samples = struct.unpack(f"<{num_samples}h", raw_bytes)
 
-            # Signal verification
             max_sample = max(samples)
             min_sample = min(samples)
 
-            # Must have non-zero sound energy
+            # Must have strong acoustic signal
             assert max_sample > 1000
             assert min_sample < -1000
 
@@ -112,9 +120,9 @@ class TestWaveformSynthesis:
             assert max_sample <= 32767
             assert min_sample >= -32768
 
-            # Average DC offset should be approximately 0
+            # Average DC offset should be minimal
             mean_dc = sum(samples) / len(samples)
-            assert abs(mean_dc) < 500  # negligible DC offset
+            assert abs(mean_dc) < 500
 
 
 class TestSoundFontResolution:

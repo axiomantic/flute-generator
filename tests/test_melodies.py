@@ -55,7 +55,7 @@ class TestMelodyPresetsAndQuantizationIntegration:
     def test_rhythm_and_duration_conservation(self):
         """Total melody duration in beats must strictly equal the sum of durations in the raw preset."""
         for preset_name, raw_events in MELODY_PRESETS.items():
-            expected_total_beats = sum(dur for _, dur in raw_events)
+            expected_total_beats = sum(item[1] for item in raw_events)
             quantized_events = build_quantized_melody(
                 melody_name=preset_name,
                 root_midi=69,
@@ -73,7 +73,9 @@ class TestMelodyPresetsAndQuantizationIntegration:
             scale_intervals=SCALES["minor_pentatonic"],
         )
         assert len(raw_condor) == len(quantized_condor)
-        for (raw_pitch, raw_dur), q_event in zip(raw_condor, quantized_condor):
+        for raw_item, q_event in zip(raw_condor, quantized_condor):
+            raw_pitch = raw_item[0]
+            raw_dur = raw_item[1]
             assert q_event.duration_beats == raw_dur
             if raw_pitch is None:
                 assert q_event.midi_note is None
