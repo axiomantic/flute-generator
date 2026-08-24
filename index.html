@@ -2892,14 +2892,24 @@ module slice_part(z_bottom, z_top, has_male_bottom, has_female_top) {
 }
 
 module joint_seam_groove(z_pos) {
-    // Continuous precision perimeter seam line + individual tube groove rings
-    translate([0, 0, z_pos])
+    // Sharp V-groove chamfer cut around the outer body and each individual tube
+    translate([0, 0, z_pos]) {
+        // Hexagonal body groove
         difference() {
-            linear_extrude(height = 0.45, center = true)
-                offset(r = 1.2) hex_profile_2d();
-            linear_extrude(height = 0.55, center = true)
-                offset(r = -0.3) hex_profile_2d();
+            linear_extrude(height = 0.7, center = true)
+                offset(r = 2.0) hex_profile_2d();
+            linear_extrude(height = 0.9, center = true)
+                offset(r = -0.6) hex_profile_2d();
         }
+        // Individual cylindrical tube groove rings
+        for (xp = [-spacing, 0, spacing]) {
+            translate([xp, 0, 0])
+                difference() {
+                    cylinder(d = outer_d + 3.0, h = 0.7, center = true, $fn = 32);
+                    cylinder(d = outer_d - 1.2, h = 0.9, center = true, $fn = 32);
+                }
+        }
+    }
 }
 
 if (num_segments == 1) {
