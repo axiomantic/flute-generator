@@ -1847,13 +1847,17 @@ function init3D() {
     requestAnimationFrame(animate);
     controls.update();
 
-    // Smoothly animate key rocker rotation every frame
+    // Smoothly animate door-hinge key rotation around vertical Y-axis
     if (keyLeverMeshes && keyLeverMeshes.length > 0) {
       keyLeverMeshes.forEach(kGroup => {
         if (kGroup.userData) {
-          const target = kGroup.userData.targetAngle !== undefined ? kGroup.userData.targetAngle : (kGroup.userData.openAngle || -0.16);
-          kGroup.userData.currAngle += (target - kGroup.userData.currAngle) * 0.25;
-          kGroup.rotation.x = kGroup.userData.currAngle;
+          const target = kGroup.userData.targetAngle !== undefined ? kGroup.userData.targetAngle : (kGroup.userData.openAngle || 0.0);
+          kGroup.userData.currAngle += (target - kGroup.userData.currAngle) * 0.30;
+          if (kGroup.userData.isDoorHinge) {
+            kGroup.rotation.y = kGroup.userData.currAngle; // Rotate around vertical door hinge pin!
+          } else {
+            kGroup.rotation.x = kGroup.userData.currAngle;
+          }
         }
       });
     }
@@ -2243,12 +2247,13 @@ function rebuild3DFlute() {
         fluteRootGroup.add(chimRing);
       }
 
-      // Build Multi-Color Articulated Keywork with Side Rods & S-Curved Dogleg Flap Arms on Front Face
+      
+      // Build Multi-Color Articulated Door-Hinge Keywork (Vertical Axle Rotation)
       if (keyworkMode !== 'none') {
         const clusterTopZ = fippleZ - 65.0;
         const keyPitch = 22.0;
         const frontY = outerD * 0.433;
-        const deckY = frontY + 3.2;
+        const deckY = frontY + 2.8;
 
         for (let hIdx = 0; hIdx < numHoles; hIdx++) {
           const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
@@ -2260,93 +2265,94 @@ function rebuild3DFlute() {
           if (isKeyed) {
             const isLeftHand = hIdx < Math.floor(numHoles / 2);
             const sideX = isLeftHand ? -spacing * 0.72 : spacing * 0.72;
-            const padZ = clusterTopZ - hIdx * keyPitch; // Stationary hand rest row
+            const padZ = clusterTopZ - hIdx * keyPitch; // Touchpad clustered in stationary hand row
             const cupD = holeDiam + rimThickness * 2 + 2.0;
             const cupY = frontY + chimneyDepth + 1.2;
 
-            // Transformed 3D Pivot Position
-            const pivotPos = toThreePos(sideX, deckY, padZ);
+            // Vertical Door-Hinge Root Position (Along the Side Rail)
+            const hingePos = toThreePos(sideX, deckY, padZ);
 
-            // 1. Static Hinge Stanchions (Anchored on Side Rail)
+            // 1. Static Door-Hinge Clevis Knuckles & Vertical Steel Pin (Three.js Y-axis is vertical)
             const stanchGroup = new THREE.Group();
-            stanchGroup.position.copy(pivotPos);
+            stanchGroup.position.copy(hingePos);
 
-            const leftClevis = new THREE.Mesh(new THREE.BoxGeometry(1.6, 5.0, 5.0), matHingeStanch);
-            leftClevis.position.set(-2.4, 0, 0);
-            stanchGroup.add(leftClevis);
+            // Upper & Lower Clevis Knuckles
+            const topKnuckle = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 2.8, 16), matHingeStanch);
+            topKnuckle.position.set(0, 4.2, 0);
+            stanchGroup.add(topKnuckle);
 
-            const rightClevis = new THREE.Mesh(new THREE.BoxGeometry(1.6, 5.0, 5.0), matHingeStanch);
-            rightClevis.position.set(2.4, 0, 0);
-            stanchGroup.add(rightClevis);
+            const botKnuckle = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 2.8, 16), matHingeStanch);
+            botKnuckle.position.set(0, -4.2, 0);
+            stanchGroup.add(botKnuckle);
 
-            const axlePin = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 6.5, 16), matAxlePin);
-            axlePin.rotation.z = Math.PI / 2;
-            stanchGroup.add(axlePin);
+            // Vertical Chrome Door Hinge Pin (Running along vertical Y-axis!)
+            const verticalPin = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 12.0, 16), matAxlePin);
+            stanchGroup.add(verticalPin);
 
             fluteRootGroup.add(stanchGroup);
 
-            // 2. Articulated Key Rocker Lever Group (Pivoting at the Axle Pin)
-            const keyRockerGroup = new THREE.Group();
-            keyRockerGroup.position.copy(pivotPos);
+            // 2. Articulated Door-Hinge Assembly (Rotates around vertical Y-axis like a door leaf!)
+            const keyDoorGroup = new THREE.Group();
+            keyDoorGroup.position.copy(hingePos);
 
-            // A. Pearl Touchpad with Gold Bezel (Stationary Hand Rest on the Side)
-            const touchGroup = new THREE.Group();
-            touchGroup.position.set(0, 0, -3.2); // Pointing forward toward camera (-Z in Three.js)
+            // A. Rotating Hinge Knuckle Barrel Sleeve
+            const barrelMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 5.0, 16), matHingeBoss);
+            keyDoorGroup.add(barrelMesh);
+
+            // B. Touchpad Lever Arm (Extending laterally from the vertical hinge barrel)
+            const touchLeverGroup = new THREE.Group();
+            const touchOffsetDir = isLeftHand ? -6.0 : 6.0;
+            touchLeverGroup.position.set(touchOffsetDir, 0, -2.5);
 
             const touchBezel = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 1.2, 24), matConnectRod);
             touchBezel.rotation.x = Math.PI / 2;
-            touchGroup.add(touchBezel);
+            touchLeverGroup.add(touchBezel);
 
             const touchPearl = new THREE.Mesh(new THREE.CylinderGeometry(6.6, 6.6, 1.5, 24), matTouchPad);
             touchPearl.rotation.x = Math.PI / 2;
             touchPearl.position.set(0, 0, -0.4);
-            touchGroup.add(touchPearl);
+            touchLeverGroup.add(touchPearl);
 
-            keyRockerGroup.add(touchGroup);
+            keyDoorGroup.add(touchLeverGroup);
 
-            // B. Rotating Hinge Rocker Boss
-            const bossMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 3.6, 16), matHingeBoss);
-            bossMesh.rotation.z = Math.PI / 2;
-            keyRockerGroup.add(bossMesh);
-
-            // C. Longitudinal Side Rod with Segmented Socket Glue Joints (Crossing cut planes)
+            // C. Vertical Longitudinal Torque Tube / Side Rod (Rotates as the Door Hinge Spine)
             const deltaScadZ = absZ - padZ;
-            const sideRodLen = Math.abs(deltaScadZ);
-            if (sideRodLen > 1.0) {
-              const sideRod = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, sideRodLen, 12), matConnectRod);
-              sideRod.position.set(0, deltaScadZ / 2, 0);
-              keyRockerGroup.add(sideRod);
+            const rodLen = Math.abs(deltaScadZ);
+            if (rodLen > 1.0) {
+              const verticalRod = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, rodLen, 16), matConnectRod);
+              verticalRod.position.set(0, deltaScadZ / 2, 0);
+              keyDoorGroup.add(verticalRod);
 
-              // Segmented Key Rod Socket Sleeves (for multi-segment builds)
+              // Segmented Key Rod Socket Sleeves (where rod crosses body slicing cut planes)
               if (numSegments > 1) {
                 const minZ = Math.min(padZ, absZ);
                 const maxZ = Math.max(padZ, absZ);
                 [zCut1, zCut2, zCut3].forEach(cutZ => {
                   if (cutZ > minZ + 5.0 && cutZ < maxZ - 5.0) {
                     const localCutY = cutZ - padZ;
-                    // Interlocking Glue Socket Collar Sleeve on the Rod
                     const socketCollar = new THREE.Mesh(
-                      new THREE.CylinderGeometry(2.4, 2.4, 6.0, 16),
-                      matAxlePin // High-contrast chrome sleeve
+                      new THREE.CylinderGeometry(2.5, 2.5, 6.0, 16),
+                      matAxlePin
                     );
                     socketCollar.position.set(0, localCutY, 0);
-                    keyRockerGroup.add(socketCollar);
+                    keyDoorGroup.add(socketCollar);
                   }
                 });
               }
             }
 
-            // D. S-Curved Dogleg Arm Reaching Inward from Side Rod to Center Hole (X=0)
-            const sArmGroup = new THREE.Group();
-            sArmGroup.position.set(0, deltaScadZ, 0);
+            // D. Door-Leaf S-Arm (Swings horizontally across front face like a door gate!)
+            const doorGateGroup = new THREE.Group();
+            doorGateGroup.position.set(0, deltaScadZ, 0);
 
-            // Transverse Bridge (-sideX reaches from side to center X=0)
-            const deltaThreeZ = -(cupY - deckY); // Forward offset toward front face
-            const armBridge = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(sideX), 3.2, 2.0), matConnectRod);
-            armBridge.position.set(-sideX / 2, 0, deltaThreeZ * 0.5);
-            sArmGroup.add(armBridge);
+            // Horizontal Swing Arm from vertical spine over to center hole (-sideX)
+            const armSpan = Math.abs(sideX);
+            const deltaThreeZ = -(cupY - deckY);
+            const swingArm = new THREE.Mesh(new THREE.BoxGeometry(armSpan, 2.8, 2.0), matConnectRod);
+            swingArm.position.set(-sideX / 2, 0, deltaThreeZ * 0.5);
+            doorGateGroup.add(swingArm);
 
-            // E. Amber Brass Key Cup Flap + Luminous Cyan Soft TPU Gasket (Directly over Chimney)
+            // E. Amber Brass Flap Cup + Luminous Cyan Soft TPU Gasket
             const cupGroup = new THREE.Group();
             cupGroup.position.set(-sideX, 0, deltaThreeZ);
 
@@ -2356,23 +2362,26 @@ function rebuild3DFlute() {
 
             const gasketMesh = new THREE.Mesh(new THREE.CylinderGeometry((cupD - 1.2)/2, (cupD - 1.2)/2, 1.2, 24), matPadGasket);
             gasketMesh.rotation.x = Math.PI / 2;
-            gasketMesh.position.set(0, 0, 1.1); // Faces into chimney
+            gasketMesh.position.set(0, 0, 1.1); // Compresses against chimney
             cupGroup.add(gasketMesh);
 
-            sArmGroup.add(cupGroup);
-            keyRockerGroup.add(sArmGroup);
+            doorGateGroup.add(cupGroup);
+            keyDoorGroup.add(doorGateGroup);
 
-            // Animation Pivot around local X-axis (Swing ~9 degrees)
-            keyRockerGroup.userData = {
-              openAngle: 0.16,
-              closedAngle: 0.0,
-              currAngle: 0.16,
-              targetAngle: 0.16
+            // Door-Hinge Rotation (Pivots around vertical Y-axis like a door!)
+            // Left-hand keys swing clockwise, right-hand keys swing counter-clockwise to open!
+            const swingSign = isLeftHand ? 1.0 : -1.0;
+            keyDoorGroup.userData = {
+              openAngle: 0.22 * swingSign,  // ~12.5 degrees swung open like a door
+              closedAngle: 0.0,             // 0 degrees flush sealed over hole
+              currAngle: 0.22 * swingSign,
+              targetAngle: 0.22 * swingSign,
+              isDoorHinge: true
             };
-            keyRockerGroup.rotation.x = 0.16;
+            keyDoorGroup.rotation.y = 0.22 * swingSign;
 
-            fluteRootGroup.add(keyRockerGroup);
-            keyLeverMeshes.push(keyRockerGroup);
+            fluteRootGroup.add(keyDoorGroup);
+            keyLeverMeshes.push(keyDoorGroup);
           }
         }
       }
@@ -2414,11 +2423,11 @@ function update3DFingersPose(activeHoles) {
     });
   }
 
-  // Animate Articulated Mechanical Key Rocker Levers
+  // Animate Articulated Mechanical Door-Hinge Key Levers
   if (keyLeverMeshes && keyLeverMeshes.length > 0) {
     keyLeverMeshes.forEach((kGroup, idx) => {
       const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
-      kGroup.userData.targetAngle = isCovered ? (kGroup.userData.closedAngle || 0.0) : (kGroup.userData.openAngle || -0.16);
+      kGroup.userData.targetAngle = isCovered ? (kGroup.userData.closedAngle || 0.0) : (kGroup.userData.openAngle || 0.20);
     });
   }
 }
@@ -2939,11 +2948,12 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
         const sideX = isLeftHand ? -spacing * 0.75 : spacing * 0.75;
         const padZ = clusterTopZ - hIdx * keyPitch;
 
-        keysScad.push(`        // Hinge Pivot Clevis Post for Key ${hIdx + 1}
-        translate([${sideX.toFixed(2)}, ${(frontY + 3.0).toFixed(2)}, ${padZ.toFixed(2)}]) {
-            translate([-2.4, 0, 0]) cube([1.6, 5.0, 5.0], center=true);
-            translate([2.4, 0, 0]) cube([1.6, 5.0, 5.0], center=true);
-            rotate([0, 90, 0]) cylinder(d=2.6, h=6.5, center=true, $fn=16);
+        keysScad.push(`        // Vertical Door-Hinge Stanchion Post for Key ${hIdx + 1}
+        translate([${sideX.toFixed(2)}, ${(frontY + 2.5).toFixed(2)}, ${padZ.toFixed(2)}]) {
+            // Upper & Lower captive hinge knuckles (Vertical door hinge pin)
+            translate([0, 0, 4.0]) cube([4.0, 4.0, 2.5], center=true);
+            translate([0, 0, -4.0]) cube([4.0, 4.0, 2.5], center=true);
+            cylinder(d=2.4, h=12.0, center=true, $fn=16);
         }`);
 
         const cupD = holeDiam + rimThickness * 2 + 2.0;
