@@ -1823,6 +1823,18 @@ function init3D() {
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
+
+    // Smoothly animate key rocker rotation every frame
+    if (keyLeverMeshes && keyLeverMeshes.length > 0) {
+      keyLeverMeshes.forEach(kGroup => {
+        if (kGroup.userData) {
+          const target = kGroup.userData.targetAngle !== undefined ? kGroup.userData.targetAngle : (kGroup.userData.openAngle || -0.16);
+          kGroup.userData.currAngle += (target - kGroup.userData.currAngle) * 0.25;
+          kGroup.rotation.x = kGroup.userData.currAngle;
+        }
+      });
+    }
+
     renderer.render(scene, camera);
   }
   animate();
@@ -2328,9 +2340,7 @@ function update3DFingersPose(activeHoles) {
   if (keyLeverMeshes && keyLeverMeshes.length > 0) {
     keyLeverMeshes.forEach((kGroup, idx) => {
       const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
-      const targetAngle = isCovered ? (kGroup.userData.closedAngle || 0.0) : (kGroup.userData.openAngle || -0.16);
-      kGroup.userData.currAngle += (targetAngle - kGroup.userData.currAngle) * 0.40;
-      kGroup.rotation.x = kGroup.userData.currAngle;
+      kGroup.userData.targetAngle = isCovered ? (kGroup.userData.closedAngle || 0.0) : (kGroup.userData.openAngle || -0.16);
     });
   }
 }
@@ -3024,9 +3034,6 @@ module complete_flute() {
 
             // Chimneys
 ${chimneysStr}
-
-            // Articulated Print-in-Place Keywork
-${keysStr}
         }
 
         // Resonator bores (fipple_z downwards to bottom)
