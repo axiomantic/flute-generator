@@ -286,7 +286,7 @@
 
     .piano-note-block {
       position: absolute;
-      background: linear-gradient(135deg, #0284c7, #0369a1);
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.88), rgba(2, 132, 199, 0.88)); backdrop-filter: blur(2px);
       border: 1px solid #38bdf8;
       border-radius: 4px;
       display: flex;
@@ -511,7 +511,7 @@
         <button class="btn-subtle" id="btn-add-note">➕ Add Note</button>
 
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:auto;">
-          🎹 Continuous Note Sequence • Drag note up/down to change hole • Drag right edge to adjust boundary • Click row to append
+          🎹 Finger-Hole Sequencer (Supports Overlaps & Trills) • Drag note up/down • Drag right edge to stretch • Click row to insert
         </span>
       </div>
 
@@ -602,7 +602,7 @@ function renderPianoRoll(activeIdx = -1) {
   track.querySelectorAll('.roll-grid-row, .piano-note-block').forEach(el => el.remove());
 
   // Compute track width: Fit full container width or scale by fixed bars
-  const totalScoreDur = scoreNotes.reduce((sum, n) => sum + n.duration, 0) || 4.0;
+  const totalScoreDur = scoreNotes.reduce((max, n) => Math.max(max, (n.startTime || 0) + n.duration), 0) || 4.0;
   const containerW = scrollContainer.clientWidth || 800;
 
   let effectiveTrackWidth = containerW;
@@ -663,13 +663,11 @@ function renderPianoRoll(activeIdx = -1) {
     track.appendChild(gridRow);
   });
 
-  // Render Note Blocks
-  let timeCursor = 0;
+  // Render Note Blocks (Full Overlap & Multi-Voice Polyphony Support)
   scoreNotes.forEach((note, idx) => {
-    const leftPx = timeCursor * pxPerSec;
-    // Contiguous space fill: Note always fills cleanly to the start of the next note (or end of track)
-    const nextLeftPx = (timeCursor + note.duration) * pxPerSec;
-    const widthPx = Math.max(16, nextLeftPx - leftPx - 2);
+    if (note.startTime === undefined) note.startTime = 0;
+    const leftPx = note.startTime * pxPerSec;
+    const widthPx = Math.max(16, note.duration * pxPerSec - 2);
     const pitchRowIdx = reversedPitches.indexOf(note.midi);
     const rowHeightPct = 100 / reversedPitches.length;
     const topPct = (pitchRowIdx >= 0 ? pitchRowIdx : 0) * rowHeightPct;
@@ -715,7 +713,6 @@ function renderPianoRoll(activeIdx = -1) {
     };
 
     track.appendChild(noteEl);
-    timeCursor += note.duration;
   });
 }
 
@@ -727,7 +724,7 @@ function onNoteMouseMove(e) {
 
   const playable = getPlayablePitches();
   const reversedPitches = [...playable].reverse();
-  const totalScoreDur = scoreNotes.reduce((sum, n) => sum + n.duration, 0) || 4.0;
+  const totalScoreDur = scoreNotes.reduce((max, n) => Math.max(max, (n.startTime || 0) + n.duration), 0) || 4.0;
   const pxPerSec = track.clientWidth / Math.max(2.0, totalScoreDur);
 
   if (isResizingRight) {
@@ -762,7 +759,10 @@ function onNoteMouseUp() {
 
 function insertNoteAtPitch(pitch) {
   const noteDur = lastSelectedDuration || 0.5;
+  const lastNote = scoreNotes[scoreNotes.length - 1];
+  const startTime = lastNote ? ((lastNote.startTime || 0) + lastNote.duration) : 0;
   scoreNotes.push({
+    startTime: parseFloat(startTime.toFixed(3)),
     midi: pitch,
     holes: midiToHoles(pitch),
     duration: noteDur
@@ -783,6 +783,1126 @@ function cycleNote(idx) {
   const nextIdx = (curIdx + 1) % playable.length;
   step.midi = playable[nextIdx];
   step.holes = midiToHoles(step.midi);
+  renderRibbon();
+}
+
+function addNote() {
+  const root = parseInt(document.getElementById('sel-root').value);
+  const qMidi = quantizeMidi(root);
+  scoreNotes.push({
+    midi: qMidi,
+    holes: midiToHoles(qMidi),
+    duration: 1.0
+  });
+  renderRibbon();
+}
+
+// 3D Engine: Exact 1:1 OpenSCAD Solid Model & Self-Supporting Donut Chimneys
+let scene, camera, renderer, controls;
+let fluteRootGroup = null;
+let toneHoleMeshes = [], fingerMeshes = [];
+
+
+
+// High-resolution procedural wood grain canvas texture generator
+function createWoodGrainTexture(baseColorHex, darkColorHex, grainScale = 1.0, isBamboo = false) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+
+  const base = new THREE.Color(baseColorHex);
+  const dark = new THREE.Color(darkColorHex);
+
+  // Background base tone
+  ctx.fillStyle = '#' + base.getHexString();
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (isBamboo) {
+    // Bamboo longitudinal fibrous grain & horizontal nodes
+    for (let x = 0; x < canvas.width; x += 2) {
+      const alpha = 0.04 + Math.sin(x * 0.4) * 0.03;
+      ctx.fillStyle = `rgba(${Math.floor(dark.r*255)}, ${Math.floor(dark.g*255)}, ${Math.floor(dark.b*255)}, ${alpha})`;
+      ctx.fillRect(x, 0, 1.5, canvas.height);
+    }
+    // Nodes / segments
+    for (let y = 180; y < canvas.height; y += 220) {
+      ctx.fillStyle = `rgba(${Math.floor(dark.r*255)}, ${Math.floor(dark.g*255)}, ${Math.floor(dark.b*255)}, 0.35)`;
+      ctx.fillRect(0, y - 2, canvas.width, 4);
+      ctx.fillStyle = `rgba(255, 255, 255, 0.15)`;
+      ctx.fillRect(0, y + 2, canvas.width, 3);
+    }
+  } else {
+    // Natural wood growth rings, longitudinal annular grain & ray flecks
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const idx = (y * canvas.width + x) * 4;
+        
+        // Annular grain rings with subtle wavy distortion
+        const wave = Math.sin(y * 0.02 * grainScale + Math.sin(x * 0.04) * 1.5);
+        const finePores = Math.sin(x * 0.8 + y * 0.05) * 0.1;
+        const grainPattern = Math.pow(Math.abs(Math.sin((x * 0.05 + wave * 4.0) * grainScale)), 4.0);
+
+        const mix = Math.min(1, Math.max(0, grainPattern * 0.45 + finePores));
+        
+        const r = base.r * (1 - mix) + dark.r * mix;
+        const g = base.g * (1 - mix) + dark.g * mix;
+        const b = base.b * (1 - mix) + dark.b * mix;
+
+        data[idx]     = Math.floor(r * 255);
+        data[idx + 1] = Math.floor(g * 255);
+        data[idx + 2] = Math.floor(b * 255);
+        data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1.5, 3.0);
+  return texture;
+}
+
+const WOOD_PROFILES = {
+  cedar: {
+    name: "Western Red Cedar",
+    color: 0xba7d48, dark: 0x6e3c1b,
+    roughness: 0.38, metalness: 0.06, grain: 1.2, isBamboo: false
+  },
+  walnut: {
+    name: "Black Walnut",
+    color: 0x4a3224, dark: 0x22140c,
+    roughness: 0.28, metalness: 0.12, grain: 1.0, isBamboo: false
+  },
+  cherry: {
+    name: "Wild Cherry",
+    color: 0x8a3826, dark: 0x47160c,
+    roughness: 0.32, metalness: 0.08, grain: 1.1, isBamboo: false
+  },
+  ebony: {
+    name: "African Ebony",
+    color: 0x222226, dark: 0x0f0f12,
+    roughness: 0.20, metalness: 0.22, grain: 0.8, isBamboo: false
+  },
+  bamboo: {
+    name: "Golden Bamboo",
+    color: 0xd9b362, dark: 0x8c6b28,
+    roughness: 0.40, metalness: 0.04, grain: 1.0, isBamboo: true
+  }
+};
+
+
+// Atmospheric lighting & backgrounds
+const ENV_PROFILES = {
+  canyon: {
+    bg: 'radial-gradient(circle at 50% 30%, #3e1b24 0%, #150912 60%, #060205 100%)',
+    ambient: 0xffeedd, ambientInt: 0.85,
+    keyLight: 0xffaa55, keyInt: 1.3,
+    fillLight: 0x6644aa, fillInt: 0.5,
+    gridColor: 0x552233
+  },
+  studio: {
+    bg: 'radial-gradient(circle at 50% 40%, #1a2233 0%, #0a0e17 65%, #03050a 100%)',
+    ambient: 0xffffff, ambientInt: 0.85,
+    keyLight: 0xffedd5, keyInt: 1.1,
+    fillLight: 0x93c5fd, fillInt: 0.55,
+    gridColor: 0x1e293b
+  },
+  forest: {
+    bg: 'radial-gradient(circle at 50% 30%, #0d2b22 0%, #051410 65%, #020806 100%)',
+    ambient: 0xddffea, ambientInt: 0.80,
+    keyLight: 0xa7f3d0, keyInt: 1.2,
+    fillLight: 0x1e3a8a, fillInt: 0.45,
+    gridColor: 0x064e3b
+  },
+  cad_dark: {
+    bg: 'radial-gradient(circle at 50% 50%, #0f172a 0%, #050811 75%, #000000 100%)',
+    ambient: 0xe2e8f0, ambientInt: 0.90,
+    keyLight: 0x38bdf8, keyInt: 1.2,
+    fillLight: 0x818cf8, fillInt: 0.40,
+    gridColor: 0x334155
+  }
+};
+
+let mainLight = null, sideLight = null, ambientLight = null, groundGrid = null;
+
+function applyEnvironment(envKey) {
+  const env = ENV_PROFILES[envKey] || ENV_PROFILES.canyon;
+  const container = document.getElementById('viewport-container');
+  if (container) container.style.background = env.bg;
+
+  if (ambientLight) {
+    ambientLight.color.setHex(env.ambient);
+    ambientLight.intensity = env.ambientInt;
+  }
+  if (mainLight) {
+    mainLight.color.setHex(env.keyLight);
+    mainLight.intensity = env.keyInt;
+  }
+  if (sideLight) {
+    sideLight.color.setHex(env.fillLight);
+    sideLight.intensity = env.fillInt;
+  }
+  if (groundGrid && scene) {
+    scene.remove(groundGrid);
+    groundGrid = new THREE.GridHelper(600, 20, env.gridColor, env.gridColor);
+    groundGrid.position.y = -10;
+    groundGrid.material.opacity = 0.25;
+    groundGrid.material.transparent = true;
+    scene.add(groundGrid);
+  }
+}
+
+function init3D() {
+  const container = document.getElementById('viewport-container');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 4000);
+  camera.position.set(0, 80, -520);
+
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport-canvas'), antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.zoomSpeed = 0.55;       // Gentle, controlled zoom speed (prevents overshooting)
+  controls.rotateSpeed = 0.75;     // Smooth rotation
+  controls.panSpeed = 0.70;        // Responsive pan for inspecting mouthpiece vs foot
+  controls.minDistance = 30;       // Allows close inspection of the labium/airways
+  controls.maxDistance = 2500;     // Prevents losing the model in space
+  controls.screenSpacePanning = true; // Intuitive 2D viewport panning
+
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+  scene.add(ambientLight);
+
+  mainLight = new THREE.DirectionalLight(0xffedd5, 1.1);
+  mainLight.position.set(150, 200, -350);
+  scene.add(mainLight);
+
+  sideLight = new THREE.DirectionalLight(0x93c5fd, 0.45);
+  sideLight.position.set(-180, 100, 250);
+  scene.add(sideLight);
+
+  groundGrid = new THREE.GridHelper(600, 20, 0x1e293b, 0x1e293b);
+  groundGrid.position.y = -10;
+  groundGrid.material.opacity = 0.25;
+  groundGrid.material.transparent = true;
+  scene.add(groundGrid);
+
+  // Pick random background and random wood finish on startup
+  const envKeys = Object.keys(ENV_PROFILES);
+  const randomEnv = envKeys[Math.floor(Math.random() * envKeys.length)];
+  const envSel = document.getElementById('sel-environment');
+  if (envSel) envSel.value = randomEnv;
+  applyEnvironment(randomEnv);
+
+  const woodKeys = Object.keys(WOOD_PROFILES);
+  const randomWood = woodKeys[Math.floor(Math.random() * woodKeys.length)];
+  const woodSel = document.getElementById('sel-wood-finish');
+  if (woodSel) woodSel.value = randomWood;
+
+  fluteRootGroup = new THREE.Group();
+  scene.add(fluteRootGroup);
+
+  rebuild3DFlute();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+}
+
+
+let fluteMesh = null;
+
+function updateFluteMaterialOnly() {
+  if (!fluteMesh) return;
+  const finishKey = document.getElementById('sel-wood-finish') ? document.getElementById('sel-wood-finish').value : 'cedar';
+  const finish = WOOD_PROFILES[finishKey] || WOOD_PROFILES.cedar;
+  const opacityVal = document.getElementById('rng-flute-opacity') ? (parseInt(document.getElementById('rng-flute-opacity').value) / 100.0) : 1.0;
+
+  const woodMap = createWoodGrainTexture(finish.color, finish.dark, finish.grain, finish.isBamboo);
+
+  fluteMesh.material.color.setHex(finish.color);
+  fluteMesh.material.map = woodMap;
+  fluteMesh.material.roughness = finish.roughness;
+  fluteMesh.material.metalness = finish.metalness;
+  fluteMesh.material.transparent = (opacityVal < 0.99);
+  fluteMesh.material.opacity = opacityVal;
+  fluteMesh.material.depthWrite = (opacityVal > 0.6);
+  fluteMesh.material.needsUpdate = true;
+
+  persistCurrentStudioState();
+}
+
+
+// Dynamically frame the flute so top and bottom fit comfortably within viewport window
+function fitCameraToFlute(targetGroup) {
+  if (!camera || !controls || !targetGroup) return;
+  
+  // Compute true Three.js world-space bounding box of the entire assembled model + indicators
+  const box = new THREE.Box3().setFromObject(targetGroup);
+  if (box.isEmpty()) return;
+
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+
+  const container = document.getElementById('viewport-container');
+  const aspect = container ? (container.clientWidth / container.clientHeight) : 1.5;
+  const fov = camera.fov * (Math.PI / 180);
+
+  // Determine required distance for both height and width with 25% safety margin
+  const distY = (size.y * 1.25) / (2 * Math.tan(fov / 2));
+  const distX = (size.x * 1.30) / (2 * Math.tan(fov / 2) * aspect);
+  const dist = Math.max(distY, distX, 180);
+
+  // Set near and far planes appropriately for wide scale ranges (Piccolo to Contrabass)
+  camera.near = Math.max(0.5, dist / 50);
+  camera.far = Math.max(5000, dist * 10);
+  camera.updateProjectionMatrix();
+
+  // Position camera directly in front of the center point looking along +Z onto the front face (-Z direction)
+  controls.target.copy(center);
+  camera.position.set(center.x, center.y, center.z - dist);
+  camera.lookAt(center);
+  controls.update();
+}
+
+// === OpenSCAD WASM renderer: single source of truth ===
+// generateScadJs() -> real OpenSCAD WASM -> STL -> Three.js
+// Zero hand-translation. Exact 1:1 fidelity with exported .scad
+
+let openSCADInstance = null;
+let renderPending = false;
+let renderQueued = false;
+
+async function getOpenSCAD() {
+  if (openSCADInstance) return openSCADInstance;
+  const mod = await import('./openscad.js');
+  openSCADInstance = await mod.createOpenSCAD();
+  return openSCADInstance;
+}
+
+function stlStringToGeometry(stl) {
+  const lines = stl.split(/\r?\n/);
+  const verts = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (t.startsWith('vertex')) {
+      const p = t.split(/\s+/);
+      if (p.length >= 4) {
+        verts.push(parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3]));
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+
+
+
+// Persist full studio state to LocalStorage
+function persistCurrentStudioState() {
+  try {
+    const state = {
+      presetKey: document.getElementById('sel-flute-preset') ? document.getElementById('sel-flute-preset').value : 'desert_drone',
+      root: document.getElementById('sel-root') ? document.getElementById('sel-root').value : '69',
+      scale: document.getElementById('sel-scale') ? document.getElementById('sel-scale').value : 'hijaz',
+      holes: document.getElementById('sel-holes') ? document.getElementById('sel-holes').value : '6',
+      profile: document.getElementById('sel-profile') ? document.getElementById('sel-profile').value : 'sac',
+      chimDepth: document.getElementById('rng-chim-depth') ? document.getElementById('rng-chim-depth').value : '2.8',
+      chimRim: document.getElementById('rng-chim-rim') ? document.getElementById('rng-chim-rim').value : '3.2',
+      vowel: document.getElementById('sel-vowel') ? document.getElementById('sel-vowel').value : 'tu',
+      articulation: document.getElementById('sel-articulation') ? document.getElementById('sel-articulation').value : 'none',
+      finish: document.getElementById('sel-wood-finish') ? document.getElementById('sel-wood-finish').value : 'cedar',
+      opacity: document.getElementById('rng-flute-opacity') ? document.getElementById('rng-flute-opacity').value : '100',
+      env: document.getElementById('sel-environment') ? document.getElementById('sel-environment').value : 'canyon',
+      indicator: document.getElementById('sel-indicator-style') ? document.getElementById('sel-indicator-style').value : 'minimal_gem',
+      song: currentSongKey || 'desert_caravan'
+    };
+    localStorage.setItem('flute_studio_active_state_v1', JSON.stringify(state));
+  } catch(e) {}
+}
+
+function restoreStudioState() {
+  loadFlutePresetsFromStorage();
+  populateSongDropdown();
+
+  try {
+    const raw = localStorage.getItem('flute_studio_active_state_v1');
+    if (raw) {
+      const state = JSON.parse(raw);
+      if (state.root) document.getElementById('sel-root').value = state.root;
+      if (state.scale) document.getElementById('sel-scale').value = state.scale;
+      if (state.holes) document.getElementById('sel-holes').value = state.holes;
+      if (state.profile) document.getElementById('sel-profile').value = state.profile;
+      if (state.chimDepth) {
+        document.getElementById('rng-chim-depth').value = state.chimDepth;
+        document.getElementById('val-chim-depth').innerText = `${parseFloat(state.chimDepth).toFixed(1)} mm`;
+      }
+      if (state.chimRim) {
+        document.getElementById('rng-chim-rim').value = state.chimRim;
+        document.getElementById('val-chim-rim').innerText = `${parseFloat(state.chimRim).toFixed(1)} mm`;
+      }
+      if (state.vowel && document.getElementById('sel-vowel')) document.getElementById('sel-vowel').value = state.vowel;
+      if (state.articulation && document.getElementById('sel-articulation')) document.getElementById('sel-articulation').value = state.articulation;
+      if (state.finish && document.getElementById('sel-wood-finish')) document.getElementById('sel-wood-finish').value = state.finish;
+      if (state.opacity && document.getElementById('rng-flute-opacity')) {
+        document.getElementById('rng-flute-opacity').value = state.opacity;
+        document.getElementById('val-flute-opacity').innerText = `${state.opacity}%`;
+      }
+      if (state.env && document.getElementById('sel-environment')) {
+        document.getElementById('sel-environment').value = state.env;
+        applyEnvironment(state.env);
+      }
+      if (state.indicator && document.getElementById('sel-indicator-style')) document.getElementById('sel-indicator-style').value = state.indicator;
+      if (state.song) {
+        currentSongKey = state.song;
+        if (document.getElementById('sel-preset-melody')) document.getElementById('sel-preset-melody').value = state.song;
+      }
+      if (state.presetKey && document.getElementById('sel-flute-preset')) {
+        document.getElementById('sel-flute-preset').value = state.presetKey;
+      }
+      regenerateSongForCurrentAcoustics();
+      return;
+    }
+  } catch(e) {}
+
+  // Fallback: apply default Hijaz preset
+  applyFlutePreset('desert_drone');
+}
+
+function rebuild3DFlute() {
+  if (!fluteRootGroup) return;
+  if (renderPending) { renderQueued = true; return; }
+  renderPending = true;
+
+  // Halt active physical audio playback while compiling 3D CSG geometry
+  if (typeof isAudioRunning !== 'undefined' && isAudioRunning) {
+    stopAudio();
+  }
+
+  const spinner = document.getElementById('render-spinner');
+  if (spinner) spinner.classList.remove('hidden');
+  
+  const rootMidi      = parseInt(document.getElementById('sel-root').value);
+  const numHoles      = parseInt(document.getElementById('sel-holes').value);
+  const scaleKey      = document.getElementById('sel-scale').value;
+  const profile       = document.getElementById('sel-profile').value;
+  const chimneyDepth  = parseFloat(document.getElementById('rng-chim-depth').value);
+  const rimThickness  = parseFloat(document.getElementById('rng-chim-rim').value);
+
+  const scadStr = generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness);
+  document.getElementById('lbl-status').innerText = 'Compiling OpenSCAD WASM...';
+
+  getOpenSCAD()
+    .then(function(scad) { return scad.renderToStl(scadStr); })
+    .then(function(stl) {
+      
+      while (fluteRootGroup.children.length > 0)
+        fluteRootGroup.remove(fluteRootGroup.children[0]);
+      toneHoleMeshes = [];
+      fingerMeshes   = [];
+
+      const geom = stlStringToGeometry(stl);
+      const finishKey = document.getElementById('sel-wood-finish') ? document.getElementById('sel-wood-finish').value : 'cedar';
+      const finish = WOOD_PROFILES[finishKey] || WOOD_PROFILES.cedar;
+
+      const woodMap = createWoodGrainTexture(finish.color, finish.dark, finish.grain, finish.isBamboo);
+
+      const opacityVal = document.getElementById('rng-flute-opacity') ? (parseInt(document.getElementById('rng-flute-opacity').value) / 100.0) : 1.0;
+      const mat = new THREE.MeshStandardMaterial({
+        color: finish.color,
+        map: woodMap,
+        roughness: finish.roughness,
+        metalness: finish.metalness,
+        transparent: (opacityVal < 0.99),
+        opacity: opacityVal,
+        depthWrite: (opacityVal > 0.6)
+      });
+      fluteMesh = new THREE.Mesh(geom, mat);
+
+      // Rotate so the flute stands upright (Y-axis) with front face (+Y in SCAD) pointing forward (+Z in Three.js)
+      fluteMesh.rotation.x = -Math.PI / 2;
+
+      geom.computeBoundingBox();
+      const box = geom.boundingBox;
+      const cx  = (box.min.x + box.max.x) / 2;
+      const cy  = (box.min.y + box.max.y) / 2;
+      fluteMesh.position.set(-cx, 0, cy);
+      fluteRootGroup.add(fluteMesh);
+
+      // Automatically frame camera so entire flute height fits in viewport
+      fitCameraToFlute(fluteRootGroup);
+
+      // Tone Hole Indicators / Finger Pad system
+      const indStyle = document.getElementById('sel-indicator-style') ? document.getElementById('sel-indicator-style').value : 'minimal_gem';
+      
+      let boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0;
+      if (rootMidi >= 74) { boreM = 12.0; boreD1 = 14.0; boreD2 = 10.0; }
+      else if (rootMidi >= 67) { boreM = 16.0; boreD1 = 18.0; boreD2 = 14.0; }
+      else if (rootMidi >= 58) { boreM = 19.0; boreD1 = 22.0; boreD2 = 16.0; }
+      else if (rootMidi >= 46) { boreM = 28.0; boreD1 = 32.0; boreD2 = 24.0; }
+      else { boreM = 40.0; boreD1 = 46.0; boreD2 = 34.0; }
+
+      const fMel = midiToFreq(rootMidi);
+      const fD1 = midiToFreq(rootMidi);
+      const fD2 = midiToFreq(rootMidi + 7);
+      const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
+      const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * boreD1;
+      const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * boreD2;
+      const totalBodyLen = Math.max(lMel, lD1, lD2) + 30.0;
+      const headLen = 42.0;
+      const totalCadLen = totalBodyLen + headLen;
+      const fippleZ = totalCadLen - headLen;
+      const maxBore = Math.max(boreM, boreD1, boreD2);
+      const outerD = maxBore + 8.0;
+      const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+      const holeDiam = Math.max(5.0, Math.min(9.5, boreM * 0.38));
+
+      const chimneySurfaceZ = -(outerD / 2) - chimneyDepth;
+
+      if (indStyle !== 'hidden') {
+        for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+          const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
+          const hFreq = midiToFreq(rootMidi + targetInterval);
+          const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
+          const absZ = fippleZ - hDist;
+          const isLeftHand = hIdx < Math.floor(numHoles / 2);
+          const fingerGroup = new THREE.Group();
+
+          if (indStyle === 'minimal_gem') {
+            // Sleek glowing turquoise / jade gemstone ring
+            const gemGeom = new THREE.TorusGeometry(holeDiam * 0.52, 1.4, 16, 32);
+            const gemMat = new THREE.MeshStandardMaterial({
+              color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.7,
+              roughness: 0.15, metalness: 0.4
+            });
+            const gemMesh = new THREE.Mesh(gemGeom, gemMat);
+            gemMesh.rotation.x = Math.PI / 2;
+            fingerGroup.add(gemMesh);
+
+            const innerCap = new THREE.Mesh(
+              new THREE.CylinderGeometry(holeDiam * 0.45, holeDiam * 0.45, 1.2, 24),
+              new THREE.MeshStandardMaterial({ color: 0x155e75, roughness: 0.3 })
+            );
+            innerCap.rotation.x = Math.PI / 2;
+            fingerGroup.add(innerCap);
+
+          } else if (indStyle === 'floating_orbs') {
+            // Ethereal floating energy orb
+            const orbGeom = new THREE.SphereGeometry(holeDiam * 0.48, 20, 20);
+            const orbMat = new THREE.MeshStandardMaterial({
+              color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.85,
+              roughness: 0.1, transparent: true, opacity: 0.88
+            });
+            const orbMesh = new THREE.Mesh(orbGeom, orbMat);
+            fingerGroup.add(orbMesh);
+
+          } else if (indStyle === 'spirit_pads') {
+            // Carved cedar / ebony spirit block slider
+            const padGeom = new THREE.BoxGeometry(14, 8, 4);
+            const padMat = new THREE.MeshStandardMaterial({
+              color: 0x7c2d12, roughness: 0.35, metalness: 0.15
+            });
+            const padMesh = new THREE.Mesh(padGeom, padMat);
+            fingerGroup.add(padMesh);
+
+          } else {
+            // Anatomical fingers
+            const matHand = new THREE.MeshStandardMaterial({ color: 0xe2a77f, roughness: 0.5 });
+            const fingerLen = 18.0;
+            const tipGeom = new THREE.CylinderGeometry(3.6, 4.2, fingerLen, 16);
+            const tipMesh = new THREE.Mesh(tipGeom, matHand);
+            tipMesh.rotation.z = isLeftHand ? (Math.PI / 2) : (-Math.PI / 2);
+            tipMesh.position.x = isLeftHand ? (-fingerLen / 2 + 2) : (fingerLen / 2 - 2);
+            fingerGroup.add(tipMesh);
+
+            const knuckleGeom = new THREE.SphereGeometry(4.2, 14, 14);
+            const knuckleMesh = new THREE.Mesh(knuckleGeom, matHand);
+            knuckleMesh.position.x = isLeftHand ? (-fingerLen + 2) : (fingerLen - 2);
+            fingerGroup.add(knuckleMesh);
+          }
+
+          // Align indicator position directly with the mesh center offset (-cx, 0, cy)
+          const posX = -cx;
+          const posY = absZ;
+          const posZ = chimneySurfaceZ + cy;
+
+          fingerGroup.position.set(posX, posY, posZ - 2.5);
+          fingerGroup.userData = {
+            baseZ: posZ,
+            closedZ: posZ - 0.8,
+            openZ: posZ - 13.0
+          };
+
+          fluteRootGroup.add(fingerGroup);
+          fingerMeshes.push(fingerGroup);
+        }
+      }
+
+      
+      const facets = (stl.match(/facet normal/g) || []).length;
+      document.getElementById('lbl-status').innerText = 'Engine Ready';
+      document.getElementById('lbl-viewport-title').innerText =
+        'Parametric ' + numHoles + '-Hole Triple Flute (' + getMidiName(rootMidi) + ')';
+      document.getElementById('lbl-viewport-sub').innerText =
+        'OpenSCAD WASM Exact Solid Model • ' + facets.toLocaleString() + ' Polygons';
+
+      console.log('WASM render OK:', facets, 'facets');
+      setTimeout(() => {
+        if (spinner) spinner.classList.add('hidden');
+        renderPending = false;
+        if (renderQueued) {
+          renderQueued = false;
+          setTimeout(rebuild3DFlute, 50);
+        }
+      }, 150);
+    })
+    .catch(function(err) {
+      console.error('OpenSCAD WASM error:', err);
+      document.getElementById('lbl-status').innerText = 'Render error';
+      if (spinner) spinner.classList.add('hidden');
+      renderPending = false;
+    });
+}
+
+
+function update3DFingersPose(activeHoles) {
+  if (!fingerMeshes || fingerMeshes.length === 0) return;
+  fingerMeshes.forEach((fGroup, idx) => {
+    const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
+    const targetZ = isCovered ? (fGroup.userData.closedZ || 20) : (fGroup.userData.openZ || 30);
+    fGroup.position.z += (targetZ - fGroup.position.z) * 0.35;
+  });
+}
+
+// Live Bio-Acoustic Audio Engine
+class WebPhysicalPipe {
+  constructor(sampleRate, boreDiameter = 19.0) {
+    this.sr = sampleRate;
+    const baseQ = 26.0 + (boreDiameter / 25.0) * 14.0;
+    this.modes = [
+      { freqMult: 1.0, gain: 1.00, q: baseQ, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 2.0, gain: 0.20, q: baseQ * 0.85, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 3.0, gain: 0.05, q: baseQ * 0.70, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
+    ];
+    this.jetDelay = new Float32Array(Math.floor(sampleRate * 0.05));
+    this.writeJet = 0;
+    this.noiseState = 0;
+    this.sacState = 0;
+    this.currFreq = 440.0;
+    this.targetFreq = 440.0;
+    this.updateCoeffs(440.0);
+  }
+
+  updateCoeffs(freq) {
+    for (let m of this.modes) {
+      const f = Math.min(this.sr * 0.45, freq * m.freqMult);
+      const w0 = 2.0 * Math.PI * f / this.sr;
+      const alpha = Math.sin(w0) / (2.0 * m.q);
+      m.b0 = (Math.sin(w0) / 2.0) / (1.0 + alpha);
+      m.a1 = (-2.0 * Math.cos(w0)) / (1.0 + alpha);
+      m.a2 = (1.0 - alpha) / (1.0 + alpha);
+    }
+  }
+
+  setFreq(freq) { if (freq > 20.0) this.targetFreq = freq; }
+
+  process(breathP) {
+    if (breathP <= 0.0001) return 0.0;
+    if (Math.abs(this.targetFreq - this.currFreq) > 0.1) {
+      this.currFreq += (this.targetFreq - this.currFreq) * 0.03;
+      this.updateCoeffs(this.currFreq);
+    }
+
+    this.sacState = this.sacState * 0.85 + breathP * 0.15;
+    const effB = this.sacState;
+
+    const rawN = Math.random() * 2.0 - 1.0;
+    this.noiseState = this.noiseState * 0.92 + rawN * 0.08;
+    const pJet = effB + this.noiseState * 0.0015 * Math.sqrt(effB);
+
+    let pAcoustic = 0;
+    for (let m of this.modes) pAcoustic += m.y1 * m.gain;
+
+    const dJet = Math.max(2.0, (this.sr / this.currFreq) * 0.25);
+    this.jetDelay[this.writeJet] = pAcoustic * 0.65 + this.noiseState * 0.0005;
+    this.writeJet = (this.writeJet + 1) % this.jetDelay.length;
+
+    const delayed = this.jetDelay[(this.writeJet - 1 - Math.floor(dJet) + this.jetDelay.length) % this.jetDelay.length];
+    const qVortex = pJet * Math.tanh(delayed * 1.35 + this.noiseState * 0.0015);
+
+    let totalOut = 0;
+    for (let m of this.modes) {
+      const y = m.b0 * (qVortex - m.x2) - m.a1 * m.y1 - m.a2 * m.y2;
+      m.x2 = m.x1; m.x1 = qVortex;
+      m.y2 = m.y1; m.y1 = y;
+      totalOut += y * m.gain;
+    }
+    return totalOut * 0.22;
+  }
+}
+
+let liveMelPipe = null, liveD1Pipe = null, liveD2Pipe = null;
+let currentPlaybackTime = 0.0;
+
+async function startAudio() {
+  if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioContext.state === 'suspended') await audioContext.resume();
+
+  const sr = audioContext.sampleRate;
+  liveMelPipe = new WebPhysicalPipe(sr, 19.0);
+  liveD1Pipe = new WebPhysicalPipe(sr, 22.0);
+  liveD2Pipe = new WebPhysicalPipe(sr, 16.0);
+
+  const root = parseInt(document.getElementById('sel-root').value);
+  liveD1Pipe.setFreq(midiToFreq(root));
+  liveD2Pipe.setFreq(midiToFreq(root + 7));
+
+  currentPlaybackTime = 0.0;
+  isAudioRunning = true;
+
+  liveProcessorNode = audioContext.createScriptProcessor(2048, 1, 2);
+  masterGainNode = audioContext.createGain();
+  masterGainNode.connect(audioContext.destination);
+
+  dummyOsc = audioContext.createOscillator();
+  dummyGain = audioContext.createGain();
+  dummyGain.gain.value = 0.0;
+  dummyOsc.connect(dummyGain);
+  dummyGain.connect(liveProcessorNode);
+  dummyOsc.start();
+
+  liveProcessorNode.onaudioprocess = (e) => {
+    if (!isAudioRunning) return;
+    const outL = e.outputBuffer.getChannelData(0);
+    const outR = e.outputBuffer.getChannelData(1);
+
+        const totalDur = scoreNotes.reduce((max, s) => Math.max(max, (s.startTime || 0) + s.duration), 0) || 4.0;
+    const dt = 1.0 / sr;
+
+    for (let i = 0; i < 2048; i++) {
+      currentPlaybackTime += dt;
+      if (currentPlaybackTime >= totalDur) currentPlaybackTime = 0.0;
+
+      // Find all notes active at this exact moment in time (polyphony & overlap)
+      let activeNotes = [];
+      for (let s of scoreNotes) {
+        const sTime = s.startTime || 0;
+        if (currentPlaybackTime >= sTime && currentPlaybackTime < sTime + s.duration) {
+          activeNotes.push(s);
+        }
+      }
+
+      let sM = 0;
+      if (activeNotes.length > 0) {
+        // Set physical melody frequency to latest triggered or highest note
+        const topNote = activeNotes[activeNotes.length - 1];
+        liveMelPipe.setFreq(midiToFreq(topNote.midi));
+        sM = liveMelPipe.process(0.70);
+      } else {
+        sM = liveMelPipe.process(0.0);
+      }
+
+      const sD1 = liveD1Pipe.process(0.60);
+      const sD2 = liveD2Pipe.process(0.50);
+
+      const dryL = (sD1 * 0.35 + sD2 * 0.18 + sM * 0.65) * 0.45;
+      const dryR = (sD1 * 0.18 + sD2 * 0.35 + sM * 0.65) * 0.45;
+
+      outL[i] = Math.tanh(dryL * 0.85);
+      outR[i] = Math.tanh(dryR * 0.85);
+    }
+  };
+
+  liveProcessorNode.connect(masterGainNode);
+  document.getElementById('btn-play').innerText = '⏸ Pause';
+
+  if (window.playheadTimer) clearInterval(window.playheadTimer);
+  window.playheadTimer = setInterval(() => {
+    if (!isAudioRunning) return;
+    let activeIdx = -1;
+    for (let i = scoreNotes.length - 1; i >= 0; i--) {
+      const s = scoreNotes[i];
+      const sTime = s.startTime || 0;
+      if (currentPlaybackTime >= sTime && currentPlaybackTime < sTime + s.duration) {
+        activeIdx = i;
+        break;
+      }
+    }
+    
+    const ph = document.getElementById('pianoroll-playhead');
+    if (ph) {
+      const px = currentPlaybackTime * PX_PER_SEC;
+      ph.style.left = `${px}px`;
+      
+      // Auto-scroll piano roll horizontally to follow playhead
+      const scrollContainer = document.getElementById('pianoroll-grid-scroll');
+      if (scrollContainer && (px > scrollContainer.scrollLeft + scrollContainer.clientWidth - 80 || px < scrollContainer.scrollLeft)) {
+        scrollContainer.scrollLeft = Math.max(0, px - 60);
+      }
+    }
+
+    renderPianoRoll(activeIdx);
+    if (activeIdx >= 0) {
+      update3DFingersPose(scoreNotes[activeIdx].holes);
+    }
+  }, 30);
+}
+
+function stopAudio() {
+  isAudioRunning = false;
+  if (dummyOsc) { try { dummyOsc.stop(); dummyOsc.disconnect(); } catch(e){} }
+  if (liveProcessorNode) liveProcessorNode.disconnect();
+  if (window.playheadTimer) clearInterval(window.playheadTimer);
+  renderRibbon(-1);
+  update3DFingersPose([]);
+  document.getElementById('btn-play').innerText = '▶ Play';
+}
+
+document.getElementById('btn-play').addEventListener('click', async () => {
+  if (isAudioRunning) stopAudio();
+  else await startAudio();
+});
+document.getElementById('btn-stop').addEventListener('click', stopAudio);
+
+document.getElementById('btn-add-note').addEventListener('click', addNote);
+document.getElementById('sel-roll-bars').addEventListener('change', () => { renderPianoRoll(); });
+window.addEventListener('resize', () => { if (document.getElementById('pianoroll-track')) renderPianoRoll(); });
+
+
+// Scale, Hole Count, Root Pitch & Chimney Listeners
+function onAcousticsChanged() {
+  persistCurrentStudioState();
+  regenerateSongForCurrentAcoustics();
+  rebuild3DFlute();
+}
+
+document.getElementById('sel-holes').addEventListener('change', onAcousticsChanged);
+document.getElementById('sel-scale').addEventListener('change', onAcousticsChanged);
+document.getElementById('sel-root').addEventListener('change', onAcousticsChanged);
+document.getElementById('sel-profile').addEventListener('change', () => {
+  rebuild3DFlute();
+});
+
+document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
+  currentSongKey = e.target.value;
+  persistCurrentStudioState();
+  regenerateSongForCurrentAcoustics();
+});
+document.getElementById('sel-vowel').addEventListener('change', persistCurrentStudioState);
+document.getElementById('sel-articulation').addEventListener('change', persistCurrentStudioState);
+
+document.getElementById('sel-flute-preset').addEventListener('change', (e) => {
+  applyFlutePreset(e.target.value);
+});
+
+document.getElementById('rng-chim-depth').addEventListener('input', (e) => {
+  document.getElementById('val-chim-depth').innerText = `${parseFloat(e.target.value).toFixed(1)} mm`;
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+
+document.getElementById('sel-wood-finish').addEventListener('change', () => {
+  updateFluteMaterialOnly();
+});
+
+document.getElementById('rng-flute-opacity').addEventListener('input', (e) => {
+  document.getElementById('val-flute-opacity').innerText = `${e.target.value}%`;
+  updateFluteMaterialOnly();
+});
+
+document.getElementById('sel-indicator-style').addEventListener('change', () => {
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+document.getElementById('sel-environment').addEventListener('change', (e) => {
+  persistCurrentStudioState();
+  applyEnvironment(e.target.value);
+});
+
+document.getElementById('rng-chim-rim').addEventListener('input', (e) => {
+  document.getElementById('val-chim-rim').innerText = `${parseFloat(e.target.value).toFixed(1)} mm`;
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+
+// Complete Standalone OpenSCAD Generator in JS (matches cad.py 100%)
+function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness) {
+  let boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0;
+  if (rootMidi >= 74) { boreM = 12.0; boreD1 = 14.0; boreD2 = 10.0; }
+  else if (rootMidi >= 67) { boreM = 16.0; boreD1 = 18.0; boreD2 = 14.0; }
+  else if (rootMidi >= 58) { boreM = 19.0; boreD1 = 22.0; boreD2 = 16.0; }
+  else if (rootMidi >= 46) { boreM = 28.0; boreD1 = 32.0; boreD2 = 24.0; }
+  else { boreM = 40.0; boreD1 = 46.0; boreD2 = 34.0; }
+
+  const fMel = midiToFreq(rootMidi);
+  const fD1 = midiToFreq(rootMidi);
+  const fD2 = midiToFreq(rootMidi + 7);
+
+  const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
+  const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * boreD1;
+  const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * boreD2;
+
+  const wall = 4.0;
+  const spacing = Math.max(20.0, Math.min(50.0, boreM * 1.35));
+  const maxBore = Math.max(boreM, boreD1, boreD2);
+  const outerD = maxBore + wall * 2;
+  const holeDiam = Math.max(5.0, Math.min(9.5, boreM * 0.38));
+
+  const headLen = 42.0;
+  const totalBodyLen = Math.max(lMel, lD1, lD2) + 30.0;
+  const totalCadLen = totalBodyLen + headLen;
+  const fippleZ = totalCadLen - headLen;
+  const winLen = 5.2;
+
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  
+  let chimneysScad = [];
+  let holesScad = [];
+
+  for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+    const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
+    const hFreq = midiToFreq(rootMidi + targetInterval);
+    const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
+    const absZ = fippleZ - hDist;
+
+    const outerRim = holeDiam + rimThickness * 2;
+    const baseFlange = outerRim + chimneyDepth * 2;
+
+    chimneysScad.push(`        // Solid fused donut chimney pad (fused 2.0mm into cylindrical body - zero seam gap)
+        translate([0, (outer_d/2 - 2.0).toFixed(2), ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
+            hull() {
+                cylinder(d=${(baseFlange + 2.0).toFixed(2)}, h=2.0, $fn=24);
+                translate([0, 0, ${(chimneyDepth + 1.2).toFixed(2)}]) cylinder(d=${outerRim.toFixed(2)}, h=0.8, $fn=24);
+            }
+            translate([0, 0, ${(chimneyDepth + 2.0).toFixed(2)}]) rotate_extrude($fn=24) translate([${((holeDiam + rimThickness)/2).toFixed(2)}, 0]) circle(d=${(rimThickness * 0.8).toFixed(2)}, $fn=12);
+        }`);
+
+    holesScad.push(`        translate([0, 0, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) cylinder(d=${holeDiam.toFixed(2)}, h=${(outerD + chimneyDepth * 2 + 5).toFixed(2)}, center=false, $fn=24);`);
+  }
+
+  const chimneysStr = chimneysScad.join('\n');
+  const holesStr = holesScad.join('\n');
+
+  return `// Parametric Triple Drone Flute (1:1 OpenSCAD Native Model)
+$fn = 24;
+
+wall = 4.0;
+spacing = ${spacing.toFixed(2)};
+bore_melody = ${boreM.toFixed(2)};
+bore_drone1 = ${boreD1.toFixed(2)};
+bore_drone2 = ${boreD2.toFixed(2)};
+outer_d = ${outerD.toFixed(2)};
+
+L_melody = ${lMel.toFixed(2)};
+L_drone1 = ${lD1.toFixed(2)};
+L_drone2 = ${lD2.toFixed(2)};
+
+head_len = ${headLen.toFixed(2)};
+win_len = ${winLen.toFixed(2)};
+total_L = ${totalCadLen.toFixed(2)};
+fipple_z = ${fippleZ.toFixed(2)};
+tip_spacing = 10.5;
+tip_d = 12.0;
+w_h = 1.35;
+
+module hex_profile_2d() {
+    hull() {
+        translate([-spacing, 0]) circle(d=outer_d, $fn=6);
+        translate([spacing, 0]) circle(d=outer_d, $fn=6);
+        square([spacing*1.5, outer_d * 0.866], center=true);
+    }
+}
+
+windway_profile = "${profile}";
+
+module single_windway(w, h, x_start, x_end) {
+    entry_h = (windway_profile == "venturi") ? h * 1.6 : h;
+    hull() {
+        translate([x_start - w/2, bore_melody/2 - h, fipple_z + win_len - 0.2])
+            cube([w, h, 1]);
+        translate([x_end - w/2, -entry_h/2, total_L - 0.1])
+            cube([w, entry_h, 1.2]);
+    }
+}
+
+module slow_air_chamber() {
+    if (windway_profile == "sac") {
+        hull() {
+            translate([-tip_spacing * 0.8, 0, fipple_z + win_len + 8])
+                cylinder(d=5.5, h=1, center=true, $fn=16);
+            translate([tip_spacing * 0.8, 0, fipple_z + win_len + 8])
+                cylinder(d=5.5, h=1, center=true, $fn=16);
+            translate([-tip_spacing * 0.8, 0, total_L - 8])
+                cylinder(d=7.0, h=1, center=true, $fn=16);
+            translate([tip_spacing * 0.8, 0, total_L - 8])
+                cylinder(d=7.0, h=1, center=true, $fn=16);
+        }
+    }
+}
+
+module converging_windways() {
+    w_wm = bore_melody * 0.45;
+    w_w1 = bore_drone1 * 0.45;
+    w_w2 = bore_drone2 * 0.45;
+
+    single_windway(w_wm, w_h, 0, 0);
+    single_windway(w_w1, w_h * 0.78, -spacing, -tip_spacing);
+    single_windway(w_w2, w_h * 0.78, spacing, tip_spacing);
+    slow_air_chamber();
+}
+
+module complete_flute() {
+    difference() {
+        union() {
+            // Main flute body
+            linear_extrude(height=fipple_z + win_len) hex_profile_2d();
+            
+            // Converging Mouthpiece Beak lofting smoothly inward to human lip tip
+            hull() {
+                translate([0, 0, fipple_z + win_len])
+                    linear_extrude(height=1) hex_profile_2d();
+                translate([0, 0, total_L - 1])
+                    linear_extrude(height=1)
+                        hull() {
+                            translate([-tip_spacing, 0]) circle(d=tip_d, $fn=6);
+                            translate([tip_spacing, 0]) circle(d=tip_d, $fn=6);
+                        }
+            }
+
+            // Chimneys
+${chimneysStr}
+        }
+
+        // Resonator bores (fipple_z downwards to bottom)
+        translate([0, 0, fipple_z - L_melody]) cylinder(d=bore_melody, h=L_melody + 0.1, $fn=24);
+        translate([-spacing, 0, fipple_z - L_drone1]) cylinder(d=bore_drone1, h=L_drone1 + 0.1, $fn=24);
+        translate([spacing, 0, fipple_z - L_drone2]) cylinder(d=bore_drone2, h=L_drone2 + 0.1, $fn=24);
+
+        // Open bottom exit bores
+        translate([0, 0, -1]) cylinder(d=bore_melody, h=fipple_z - L_melody + 1.1, $fn=24);
+        translate([-spacing, 0, -1]) cylinder(d=bore_drone1, h=fipple_z - L_drone1 + 1.1, $fn=24);
+        translate([spacing, 0, -1]) cylinder(d=bore_drone2, h=fipple_z - L_drone2 + 1.1, $fn=24);
+
+        // Fipple sound windows & labium splitting edges
+        translate([0, outer_d/2 - 2, fipple_z]) cube([bore_melody * 0.45, 10, win_len], center=true);
+        translate([-spacing, outer_d/2 - 2, fipple_z]) cube([bore_drone1 * 0.45, 10, win_len], center=true);
+        translate([spacing, outer_d/2 - 2, fipple_z]) cube([bore_drone2 * 0.45, 10, win_len], center=true);
+
+        // Converging airway windways inside mouthpiece
+        converging_windways();
+
+        // Tone holes
+${holesStr}
+    }
+}
+
+complete_flute();
+`;
+}
+
+// Download OpenSCAD
+document.getElementById('btn-export-scad').addEventListener('click', async () => {
+  const root = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const numHoles = parseInt(document.getElementById('sel-holes').value);
+  const profile = document.getElementById('sel-profile').value;
+  const chimneyDepth = parseFloat(document.getElementById('rng-chim-depth').value);
+  const rimThickness = parseFloat(document.getElementById('rng-chim-rim').value);
+
+  let scadContent = '';
+  if (pyodideInstance) {
+    try {
+      scadContent = await pyodideInstance.runPythonAsync(`
+from flute_generator.acoustics import calculate_flute_geometry
+from flute_generator.cad import generate_scad_content
+from flute_generator.scales import SCALES
+
+scale_ints = SCALES.get('${scaleKey}', SCALES['minor_pentatonic'])[:${numHoles} + 1]
+dims = calculate_flute_geometry(root_midi=${root}, scale_intervals=scale_ints, windway_profile='${profile}', chimney_depth=${chimneyDepth}, chimney_rim_thickness=${rimThickness})
+generate_scad_content(dims)
+`);
+    } catch(e){}
+  }
+
+  if (!scadContent || scadContent.length < 50) {
+    scadContent = generateScadJs(root, scaleKey, numHoles, profile, chimneyDepth, rimThickness);
+  }
+
+  const blob = new Blob([scadContent], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `flute_${root}_${scaleKey}_${numHoles}holes.scad`;
+  a.click();
+});
+
+// Initialize Pyodide WASM runtime
+async function initPyodideEngine() {
+  try {
+    document.getElementById('lbl-status').innerText = 'Loading Pyodide WASM...';
+    pyodideInstance = await loadPyodide();
+    await pyodideInstance.loadPackage(['micropip']);
+
+    const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py'];
+    pyodideInstance.FS.mkdirTree('/home/pyodide/flute_generator');
+    pyodideInstance.FS.writeFile('/home/pyodide/flute_generator/__init__.py', '"""Flute Generator Package"""\n');
+    await pyodideInstance.runPythonAsync(`import sys; sys.path.insert(0, '/home/pyodide')`);
+
+    for (const mod of modules) {
+      try {
+        const res = await fetch(`src/flute_generator/${mod}`);
+        if (res.ok) {
+          const text = await res.text();
+          pyodideInstance.FS.writeFile(`/home/pyodide/flute_generator/${mod}`, text);
+        }
+      } catch (err) {}
+    }
+    document.getElementById('lbl-status').innerText = 'Engine Ready (WASM)';
+  } catch (err) {
+    document.getElementById('lbl-status').innerText = 'Engine Ready';
+  }
+}
+
+// Init
+setTimeout(() => {
+  restoreStudioState();
+  init3D();
+  initPyodideEngine();
+}, 80);
+</script>
+</body>
+</html>  scoreNotes = [];
+  let currentStart = 0;
+  tmpl.intervals.forEach(item => {
+    // Map degree to current scale notes
+    const degreeClamped = item.deg % intervals.length;
+    const octShift = Math.floor(item.deg / intervals.length);
+    const targetMidi = root + (octShift * 12) + intervals[degreeClamped];
+    const qMidi = quantizeMidi(targetMidi);
+    const dur = Math.max(0.1, item.d * 0.75);
+
+    scoreNotes.push({
+      startTime: parseFloat(currentStart.toFixed(3)),
+      midi: qMidi,
+      holes: midiToHoles(qMidi),
+      duration: parseFloat(dur.toFixed(3))
+    });
+    currentStart += dur;
+  });
+
   renderRibbon();
 }
 
@@ -1527,14 +2647,14 @@ async function startAudio() {
   if (window.playheadTimer) clearInterval(window.playheadTimer);
   window.playheadTimer = setInterval(() => {
     if (!isAudioRunning) return;
-    let accum = 0;
     let activeIdx = -1;
-    for (let i = 0; i < scoreNotes.length; i++) {
-      if (currentPlaybackTime >= accum && currentPlaybackTime < accum + scoreNotes[i].duration) {
+    for (let i = scoreNotes.length - 1; i >= 0; i--) {
+      const s = scoreNotes[i];
+      const sTime = s.startTime || 0;
+      if (currentPlaybackTime >= sTime && currentPlaybackTime < sTime + s.duration) {
         activeIdx = i;
         break;
       }
-      accum += scoreNotes[i].duration;
     }
     
     const ph = document.getElementById('pianoroll-playhead');
