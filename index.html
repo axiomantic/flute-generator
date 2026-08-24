@@ -431,8 +431,9 @@ async function initPyodideEngine() {
     pyodideInstance = await loadPyodide();
     await pyodideInstance.loadPackage(['micropip']);
 
-    const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py', '__init__.py'];
+    const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py'];
     pyodideInstance.FS.mkdirTree('/home/pyodide/flute_generator');
+    pyodideInstance.FS.writeFile('/home/pyodide/flute_generator/__init__.py', '"""Flute Generator Package"""\n');
     
     await pyodideInstance.runPythonAsync(`
 import sys

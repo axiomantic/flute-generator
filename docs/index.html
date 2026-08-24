@@ -223,7 +223,6 @@
     .showcase-img { width: 100%; height: 160px; object-fit: cover; background: #232a3b; }
     .showcase-body { padding: 16px; }
   </style>
-  <!-- Three.js and Pyodide WASM -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
@@ -388,28 +387,28 @@
     <div class="tab-pane" id="tab-gallery">
       <div class="showcase-grid">
         <div class="showcase-card" onclick="loadShowcase('native_american', 69, 'sac', 'native_motif')">
-          <img src="01_native_american_a4_sac/flute_iso.png" class="showcase-img" alt="Native American Flute">
+          <img src="examples/01_native_american_a4_sac/flute_iso.png" class="showcase-img" alt="Native American Flute">
           <div class="showcase-body">
             <strong>🪈 Native American A4 (SAC)</strong>
             <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Minor pentatonic with internal Slow Air Chamber expansion bulb.</p>
           </div>
         </div>
         <div class="showcase-card" onclick="loadShowcase('hijaz', 69, 'venturi', 'desert_caravan', 'ribbed')">
-          <img src="02_desert_caravan_hijaz_ribbed/flute_iso.png" class="showcase-img" alt="Desert Caravan Flute">
+          <img src="examples/02_desert_caravan_hijaz_ribbed/flute_iso.png" class="showcase-img" alt="Desert Caravan Flute">
           <div class="showcase-body">
             <strong>🏜️ Desert Caravan A4 (Ribbed)</strong>
             <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Hijaz scale with Venturi airway and micro-ribbed drone rasp.</p>
           </div>
         </div>
         <div class="showcase-card" onclick="loadShowcase('minor_pentatonic', 69, 'arched', 'condor_pasa')">
-          <img src="03_baroque_condor_pasa_arched/flute_iso.png" class="showcase-img" alt="Baroque Condor Pasa">
+          <img src="examples/03_baroque_condor_pasa_arched/flute_iso.png" class="showcase-img" alt="Baroque Condor Pasa">
           <div class="showcase-body">
             <strong>🦅 Andean Condor Pasa A4 (Arched)</strong>
             <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Crowned arched Baroque windway for focused singing overtones.</p>
           </div>
         </div>
         <div class="showcase-card" onclick="loadShowcase('dorian', 72, 'flat', 'greensleeves')">
-          <img src="04_greensleeves_dorian_c5/flute_iso.png" class="showcase-img" alt="Greensleeves Dorian C5">
+          <img src="examples/04_greensleeves_dorian_c5/flute_iso.png" class="showcase-img" alt="Greensleeves Dorian C5">
           <div class="showcase-body">
             <strong>🏰 Renaissance Greensleeves C5</strong>
             <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Dorian modal scale with harmonic 5th drone accompaniment.</p>
@@ -425,39 +424,32 @@ let pyodideInstance = null;
 let audioContext = null;
 let currentAudioSource = null;
 
-// Initialize Pyodide & Mount Python Source
+// Initialize Pyodide & Mount Python Source Directly from src/
 async function initPyodideEngine() {
   try {
     document.getElementById('lbl-pyodide-status').innerText = 'Loading Pyodide WASM runtime...';
     pyodideInstance = await loadPyodide();
     await pyodideInstance.loadPackage(['micropip']);
 
-    const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py', '__init__.py'];
+    const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py'];
     pyodideInstance.FS.mkdirTree('/home/pyodide/flute_generator');
+    pyodideInstance.FS.writeFile('/home/pyodide/flute_generator/__init__.py', '"""Flute Generator Package"""\n');
     
     await pyodideInstance.runPythonAsync(`
 import sys
 sys.path.insert(0, '/home/pyodide')
 `);
 
-    // Fetch and mount the Python package from local relative path
+    // Fetch and mount the Python package directly from src/flute_generator/
     for (const mod of modules) {
       try {
-        const res = await fetch(`./flute_generator/${mod}`);
+        const res = await fetch(`src/flute_generator/${mod}`);
         if (res.ok) {
           const text = await res.text();
           pyodideInstance.FS.writeFile(`/home/pyodide/flute_generator/${mod}`, text);
         }
       } catch (err) {}
     }
-
-    // Install mido if available or stub
-    await pyodideInstance.runPythonAsync(`
-try:
-    import mido
-except ImportError:
-    pass
-`);
 
     document.getElementById('lbl-pyodide-status').innerText = 'Python Engine Ready (WASM)';
     updateAcousticSpecs();
@@ -548,22 +540,17 @@ document.getElementById('btn-play').addEventListener('click', async () => {
 
   const preset = document.getElementById('sel-preset-melody').value;
   const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const scale = document.getElementById('sel-scale').value;
-  const profile = document.getElementById('sel-profile').value;
-  const room = parseFloat(document.getElementById('rng-room').value);
-  const wet = parseFloat(document.getElementById('rng-wet').value);
 
   document.getElementById('btn-play').innerText = 'Synthesizing Audio...';
 
-  // Play pre-rendered or synthesized physical audio
   const audioMap = {
-    'native_motif': './01_native_american_a4_sac/flute.wav',
-    'desert_caravan': './02_desert_caravan_hijaz_ribbed/flute.wav',
-    'condor_pasa': './03_baroque_condor_pasa_arched/flute.wav',
-    'greensleeves': './04_greensleeves_dorian_c5/flute.wav'
+    'native_motif': 'examples/01_native_american_a4_sac/flute.wav',
+    'desert_caravan': 'examples/02_desert_caravan_hijaz_ribbed/flute.wav',
+    'condor_pasa': 'examples/03_baroque_condor_pasa_arched/flute.wav',
+    'greensleeves': 'examples/04_greensleeves_dorian_c5/flute.wav'
   };
 
-  const url = audioMap[preset] || './01_native_american_a4_sac/flute.wav';
+  const url = audioMap[preset] || 'examples/01_native_american_a4_sac/flute.wav';
   try {
     const res = await fetch(url);
     const arrayBuf = await res.arrayBuffer();
@@ -621,7 +608,6 @@ generate_scad_content(dims)
   if (!scadContent) {
     scadContent = `// Parametric Triple Flute
 $fn = 60;
-// Generated by Flute Generator
 `;
   }
 
