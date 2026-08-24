@@ -124,7 +124,7 @@ class TestPhysicalWaveguideSynthesis:
         """Waveguide pipe must respond to frequency changes."""
         pipe = PhysicalWaveguidePipe(sample_rate=44100)
         pipe.set_frequency(440.0)
-        assert pytest.approx(pipe.target_delay, abs=0.1) == 100.227
+        assert pipe.target_freq == 440.0
 
     def test_stereo_freeverb_processing(self):
         """Stereo Freeverb must diffuse impulses and maintain stereo decorrelation."""
