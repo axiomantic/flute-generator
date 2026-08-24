@@ -2147,19 +2147,69 @@ function rebuild3DFlute() {
       fluteMesh.position.set(-cx, 0, cy);
       fluteRootGroup.add(fluteMesh);
 
-      // Build Dynamic Animated Articulated Keywork in Three.js
-      if (keyworkMode !== 'none') {
-        const keyMat = new THREE.MeshStandardMaterial({
-          color: 0xd4af37, // Polished Brass / Gold Lacquer Saxophone Keywork
-          metalness: 0.85,
-          roughness: 0.22
-        });
-        const padGasketMat = new THREE.MeshStandardMaterial({
-          color: (padMaterial === 'tpu') ? 0x06b6d4 : 0x7c2d12, // Vibrant soft TPU pad
-          roughness: 0.4,
-          metalness: 0.1
-        });
+      
+      // Multi-Color Functional Component Materials (Distinct Visual Identification)
+      const matAxlePin      = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.95, roughness: 0.15 }); // Silver Chrome Axle
+      const matHingeStanch  = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.80, roughness: 0.30 }); // Slate Steel Clevis
+      const matHingeBoss    = new THREE.MeshStandardMaterial({ color: 0xa855f7, metalness: 0.70, roughness: 0.25 }); // Anodized Purple/Indigo Boss
+      const matConnectRod   = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.85, roughness: 0.20 }); // Polished Gold Rocker Rod
+      const matTouchPad     = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0x713f12, emissiveIntensity: 0.2, roughness: 0.18, metalness: 0.35 }); // Pearl Ivory Touchpad
+      const matKeyCup       = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.88, roughness: 0.22 }); // Polished Amber Brass Flap
+      const matPadGasket    = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.6, roughness: 0.45, metalness: 0.10 }); // Vibrant Soft Cyan TPU Gasket
+      const matChimneyRim   = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.40, roughness: 0.40 }); // Dark Chimney Seat
 
+      // Add High-Contrast Chimney Donut Rim Rings on Tone Holes
+      for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+        const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
+        const hFreq = midiToFreq(rootMidi + targetInterval);
+        const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
+        const absZ = fippleZ - hDist;
+        const frontY = outerD * 0.433;
+
+        const chimRing = new THREE.Mesh(
+          new THREE.TorusGeometry((holeDiam + rimThickness)/2, 0.8, 16, 24),
+          matChimneyRim
+        );
+        chimRing.position.set(-cx, absZ, frontY + chimneyDepth + 0.4 + cy);
+        fluteRootGroup.add(chimRing);
+      }
+
+      // Build Multi-Color Dynamic Animated Articulated Keywork in Three.js
+      if (keyworkMode !== 'none') {
+        const clusterTopZ = fippleZ - 65.0;
+        const keyPitch = 22.0;
+        const frontY = outerD * 0.433;
+        const deckY = frontY + 3.6;
+
+        // Add Multi-Color Hinge Stanchions on Keyboard Deck
+        for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+          const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
+          if (!isKeyed) continue;
+
+          const padZ = clusterTopZ - hIdx * keyPitch;
+          const sideOffset = (hIdx % 2 === 0) ? -12.0 : 12.0;
+
+          // 1. Static Hinge Clevis Stanchions (Fixed on Deck)
+          const stanchGroup = new THREE.Group();
+          stanchGroup.position.set(sideOffset - cx, padZ, deckY + cy);
+
+          const leftClevis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.0, 6.0), matHingeStanch);
+          leftClevis.position.set(-3.2, 0, 0);
+          stanchGroup.add(leftClevis);
+
+          const rightClevis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.0, 6.0), matHingeStanch);
+          rightClevis.position.set(3.2, 0, 0);
+          stanchGroup.add(rightClevis);
+
+          // Transverse Silver Chrome Axle Pin
+          const pin = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 8.2, 16), matAxlePin);
+          pin.rotation.z = Math.PI / 2;
+          stanchGroup.add(pin);
+
+          fluteRootGroup.add(stanchGroup);
+        }
+
+        // 2. Animated Articulated Levers (Rocker Boss + Gold Rod + Pearl Touchpad + Brass Cup + Cyan TPU Gasket)
         for (let hIdx = 0; hIdx < numHoles; hIdx++) {
           const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
           const hFreq = midiToFreq(rootMidi + targetInterval);
@@ -2168,71 +2218,72 @@ function rebuild3DFlute() {
           const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
 
           if (isKeyed) {
-            const clusterTopZ = fippleZ - 65.0;
-            const keyPitch = 22.0;
             const padZ = clusterTopZ - hIdx * keyPitch;
             const sideOffset = (hIdx % 2 === 0) ? -12.0 : 12.0;
             const cupD = holeDiam + rimThickness * 2 + 2.0;
-            const frontY = outerD * 0.433;
-            const deckY = frontY + 3.6;
             const cupY = frontY + chimneyDepth + 1.2;
 
-            // Create Hinge Pivot Root Group at the Axle Position
+            // Hinge Pivot Root Group
             const keyRockerGroup = new THREE.Group();
-            // In Three.js: flute is upright along Y, front face is +Z (pointing to camera)
-            // Three.js coords: X = sideOffset - cx, Y = padZ, Z = deckY + cy
             const pivotX = sideOffset - cx;
             const pivotY = padZ;
             const pivotZ = deckY + cy;
-
             keyRockerGroup.position.set(pivotX, pivotY, pivotZ);
 
-            // A. Touchpad (attached to rocker group)
-            const touchMesh = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 2.5, 24), keyMat);
-            touchMesh.rotation.x = Math.PI / 2;
-            touchMesh.position.set(0, 0, 3.5);
-            keyRockerGroup.add(touchMesh);
+            // A. Pearl Touchpad with Gold Bezel Rim
+            const touchGroup = new THREE.Group();
+            touchGroup.position.set(0, 0, 3.5);
 
-            // B. Hinge Rocker Boss Sleeve
-            const bossMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 4.5, 16), keyMat);
+            const touchBezel = new THREE.Mesh(new THREE.CylinderGeometry(7.8, 7.8, 1.2, 24), matConnectRod);
+            touchBezel.rotation.x = Math.PI / 2;
+            touchGroup.add(touchBezel);
+
+            const touchPearl = new THREE.Mesh(new THREE.CylinderGeometry(6.8, 6.8, 1.6, 24), matTouchPad);
+            touchPearl.rotation.x = Math.PI / 2;
+            touchPearl.position.set(0, 0, 0.4);
+            touchGroup.add(touchPearl);
+
+            keyRockerGroup.add(touchGroup);
+
+            // B. Anodized Purple/Indigo Hinge Rocker Boss Sleeve
+            const bossMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 4.5, 16), matHingeBoss);
             bossMesh.rotation.z = Math.PI / 2;
             keyRockerGroup.add(bossMesh);
 
-            // C. Longitudinal Linkage Rod leading from Pivot to Cup
-            const deltaY = absZ - padZ; // Distance along flute axis
-            const deltaX = -sideOffset; // Distance to center tube
+            // C. Polished Gold Longitudinal Rocker Rod
+            const deltaY = absZ - padZ;
+            const deltaX = -sideOffset;
             const deltaZ = (cupY - deckY);
 
             const rodLen = Math.sqrt(deltaY * deltaY + deltaX * deltaX + deltaZ * deltaZ);
             const rodGeom = new THREE.CylinderGeometry(1.8, 1.8, rodLen, 12);
-            const rodMesh = new THREE.Mesh(rodGeom, keyMat);
+            const rodMesh = new THREE.Mesh(rodGeom, matConnectRod);
             rodMesh.position.set(deltaX / 2, deltaY / 2, deltaZ / 2);
-            // Point cylinder along vector
             const vSource = new THREE.Vector3(0, 1, 0);
             const vTarget = new THREE.Vector3(deltaX, deltaY, deltaZ).normalize();
             const q = new THREE.Quaternion().setFromUnitVectors(vSource, vTarget);
             rodMesh.setRotationFromQuaternion(q);
             keyRockerGroup.add(rodMesh);
 
-            // D. Key Cup (sits directly over the chimney hole)
+            // D. Amber Brass Key Cup Flap + Glowing Cyan TPU Sealing Gasket
             const cupGroup = new THREE.Group();
             cupGroup.position.set(deltaX, deltaY, deltaZ);
             
-            const cupMesh = new THREE.Mesh(new THREE.CylinderGeometry(cupD/2, cupD/2, 2.8, 24), keyMat);
+            const cupMesh = new THREE.Mesh(new THREE.CylinderGeometry(cupD/2, cupD/2, 2.8, 24), matKeyCup);
             cupMesh.rotation.x = Math.PI / 2;
             cupGroup.add(cupMesh);
 
-            const gasketMesh = new THREE.Mesh(new THREE.CylinderGeometry((cupD - 1.2)/2, (cupD - 1.2)/2, 1.2, 24), padGasketMat);
+            const gasketMesh = new THREE.Mesh(new THREE.CylinderGeometry((cupD - 1.2)/2, (cupD - 1.2)/2, 1.2, 24), matPadGasket);
             gasketMesh.rotation.x = Math.PI / 2;
             gasketMesh.position.set(0, 0, -1.2);
             cupGroup.add(gasketMesh);
 
             keyRockerGroup.add(cupGroup);
 
-            // Set up animated rotation states (Pivoting around local X-axis)
+            // Animated Pivot State
             keyRockerGroup.userData = {
-              openAngle: -0.16,  // ~9 degrees elevated open
-              closedAngle: 0.0,  // Flat 0 degrees sealed on chimney
+              openAngle: -0.16,
+              closedAngle: 0.0,
               currAngle: -0.16
             };
             keyRockerGroup.rotation.x = -0.16;
@@ -2244,114 +2295,7 @@ function rebuild3DFlute() {
       }
 
 
-      // Automatically frame camera so entire flute height fits in viewport
-      fitCameraToFlute(fluteRootGroup);
-
-      // Tone Hole Indicators / Finger Pad system
-      const indStyle = document.getElementById('sel-indicator-style') ? document.getElementById('sel-indicator-style').value : 'minimal_gem';
-      
-      let boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0;
-      if (rootMidi >= 74) { boreM = 12.0; boreD1 = 14.0; boreD2 = 10.0; }
-      else if (rootMidi >= 67) { boreM = 16.0; boreD1 = 18.0; boreD2 = 14.0; }
-      else if (rootMidi >= 58) { boreM = 19.0; boreD1 = 22.0; boreD2 = 16.0; }
-      else if (rootMidi >= 46) { boreM = 28.0; boreD1 = 32.0; boreD2 = 24.0; }
-      else { boreM = 40.0; boreD1 = 46.0; boreD2 = 34.0; }
-
-      const fMel = midiToFreq(rootMidi);
-      const fD1 = midiToFreq(rootMidi);
-      const fD2 = midiToFreq(rootMidi + 7);
-      const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
-      const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * boreD1;
-      const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * boreD2;
-      const totalBodyLen = Math.max(lMel, lD1, lD2) + 30.0;
-      const headLen = 42.0;
-      const totalCadLen = totalBodyLen + headLen;
-      const fippleZ = totalCadLen - headLen;
-      const maxBore = Math.max(boreM, boreD1, boreD2);
-      const outerD = maxBore + 8.0;
-      const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
-      const holeDiam = Math.max(5.0, Math.min(9.5, boreM * 0.38));
-
-      const chimneySurfaceZ = -(outerD * 0.433 + chimneyDepth);
-      const { zCut1, zCut2, zCut3 } = computeSmartJointCuts(rootMidi, scaleKey, numHoles, numSegments, jointLen);
-
-      if (indStyle !== 'hidden') {
-        for (let hIdx = 0; hIdx < numHoles; hIdx++) {
-          const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
-          const hFreq = midiToFreq(rootMidi + targetInterval);
-          const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
-          const absZ = fippleZ - hDist;
-          const isLeftHand = hIdx < Math.floor(numHoles / 2);
-          const fingerGroup = new THREE.Group();
-
-          if (indStyle === 'minimal_gem') {
-            // Sleek glowing turquoise / jade gemstone ring
-            const gemGeom = new THREE.TorusGeometry(holeDiam * 0.52, 1.4, 16, 32);
-            const gemMat = new THREE.MeshStandardMaterial({
-              color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.7,
-              roughness: 0.15, metalness: 0.4
-            });
-            const gemMesh = new THREE.Mesh(gemGeom, gemMat);
-            gemMesh.rotation.x = Math.PI / 2;
-            fingerGroup.add(gemMesh);
-
-            const innerCap = new THREE.Mesh(
-              new THREE.CylinderGeometry(holeDiam * 0.45, holeDiam * 0.45, 1.2, 24),
-              new THREE.MeshStandardMaterial({ color: 0x155e75, roughness: 0.3 })
-            );
-            innerCap.rotation.x = Math.PI / 2;
-            fingerGroup.add(innerCap);
-
-          } else if (indStyle === 'floating_orbs') {
-            // Ethereal floating energy orb
-            const orbGeom = new THREE.SphereGeometry(holeDiam * 0.48, 20, 20);
-            const orbMat = new THREE.MeshStandardMaterial({
-              color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.85,
-              roughness: 0.1, transparent: true, opacity: 0.88
-            });
-            const orbMesh = new THREE.Mesh(orbGeom, orbMat);
-            fingerGroup.add(orbMesh);
-
-          } else if (indStyle === 'spirit_pads') {
-            // Carved cedar / ebony spirit block slider
-            const padGeom = new THREE.BoxGeometry(14, 8, 4);
-            const padMat = new THREE.MeshStandardMaterial({
-              color: 0x7c2d12, roughness: 0.35, metalness: 0.15
-            });
-            const padMesh = new THREE.Mesh(padGeom, padMat);
-            fingerGroup.add(padMesh);
-
-          } else {
-            // Default clean gemstone ring
-            const gemGeom = new THREE.TorusGeometry(holeDiam * 0.52, 1.4, 16, 32);
-            const gemMat = new THREE.MeshStandardMaterial({
-              color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.7,
-              roughness: 0.15, metalness: 0.4
-            });
-            const gemMesh = new THREE.Mesh(gemGeom, gemMat);
-            gemMesh.rotation.x = Math.PI / 2;
-            fingerGroup.add(gemMesh);
-          }
-
-          // Align indicator position directly with the mesh center offset (-cx, 0, cy)
-          const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
-          const clusterTopZ = fippleZ - 75.0;
-          const keyPitch = 22.0;
-          const padZ = isKeyed ? (clusterTopZ - hIdx * keyPitch) : absZ;
-          const sideOffset = isKeyed ? ((hIdx < Math.floor(numHoles / 2)) ? -14.0 : 14.0) : 0;
-
-          const posX = -cx + sideOffset;
-          const posY = padZ;
-          const posZ = chimneySurfaceZ + cy;
-
-          fingerGroup.position.set(posX, posY, posZ - 2.5);
-          fingerGroup.userData = {
-            baseZ: posZ,
-            closedZ: posZ - 0.8,
-            openZ: posZ - 13.0
-          };
-
-          fluteRootGroup.add(fingerGroup);
+      fluteRootGroup.add(fingerGroup);
           fingerMeshes.push(fingerGroup);
         }
       }
