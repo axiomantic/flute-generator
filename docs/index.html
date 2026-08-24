@@ -2286,14 +2286,16 @@ class WebPhysicalPipe {
     // Slow Air Chamber (SAC) internal pneumatic pressure state
     this.sacPressure = 0.0;
     this.airNoise = 0.0;
-    this.lastKeyMidi = -1;
+    this.lastTargetFreq = 440.0;
     this.keySlapTimer = 0;
+    this.keySlapGain = 0.65;
     this.currFreq = 440.0;
     this.targetFreq = 440.0;
     this.updateCoeffs(440.0);
   }
 
   updateCoeffs(freq) {
+    if (isNaN(freq) || freq <= 20.0) freq = 440.0;
     for (let m of this.modes) {
       const f = Math.min(this.sr * 0.46, freq * m.freqMult);
       const w0 = 2.0 * Math.PI * f / this.sr;
@@ -2305,25 +2307,25 @@ class WebPhysicalPipe {
   }
 
   setFreq(freq) {
-    if (freq > 20.0) this.targetFreq = freq;
+    if (typeof freq === 'number' && !isNaN(freq) && freq > 20.0) {
+      if (Math.abs(this.targetFreq - freq) > 1.0) {
+        this.keySlapTimer = Math.floor(this.sr * 0.018); // 18ms transient impulse on note transition
+      }
+      this.targetFreq = freq;
+    }
   }
 
   process(breathP) {
+    if (isNaN(breathP)) breathP = 0.0;
     if (breathP <= 0.001 && this.sacPressure <= 0.001) return 0.0;
-
-    // Detect Note Pitch Transition -> Trigger Acoustic Key Pad Snap / Slap Transient
-    if (this.lastKeyMidi !== -1 && this.lastKeyMidi !== this.targetFreq) {
-      this.keySlapTimer = Math.floor(this.sr * 0.018); // 18ms transient impulse
-    }
-    this.lastKeyMidi = this.targetFreq;
 
     let keySlapTransient = 0.0;
     if (this.keySlapTimer > 0) {
-      const slapSlp = this.keySlapTimer / (this.sr * 0.018);
+      const slapSlp = this.keySlapTimer / Math.max(1, Math.floor(this.sr * 0.018));
       // Dual-component transient: soft low wooden thud + sharp pad closure click
       const click = (Math.random() * 2.0 - 1.0) * Math.exp(-6.0 * (1.0 - slapSlp));
       const thud = Math.sin(2.0 * Math.PI * 180.0 * (1.0 - slapSlp)) * Math.exp(-4.0 * (1.0 - slapSlp));
-      keySlapTransient = (click * 0.025 + thud * 0.045) * this.keySlapGain;
+      keySlapTransient = (click * 0.025 + thud * 0.045) * (this.keySlapGain || 0.65);
       this.keySlapTimer--;
     }
 
