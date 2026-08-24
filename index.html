@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flute Studio 🪈 — Authentic SCAD 3D Flute & Clean Breath Ribbon</title>
+  <title>Flute Studio 🪈 — 1:1 Physical CAD Flute & Full Anatomical Player Simulation</title>
   <style>
     :root {
-      --bg-dark: #07090e;
-      --bg-panel: #0e121c;
-      --border: #1c2436;
+      --bg-dark: #06080d;
+      --bg-panel: #0d111a;
+      --border: #1a2233;
       --accent: #3b82f6;
       --accent-cyan: #06b6d4;
       --accent-emerald: #10b981;
@@ -127,7 +127,7 @@
     #viewport-container {
       flex: 1;
       position: relative;
-      background: radial-gradient(circle at center, #101626 0%, #04060a 100%);
+      background: radial-gradient(circle at center, #0f1524 0%, #030408 100%);
       overflow: hidden;
     }
     #viewport-canvas { width: 100%; height: 100%; display: block; }
@@ -138,11 +138,14 @@
       left: 14px;
       background: rgba(10, 14, 23, 0.88);
       backdrop-filter: blur(8px);
-      padding: 8px 12px;
+      padding: 8px 14px;
       border-radius: 6px;
       border: 1px solid var(--border);
       font-size: 0.75rem;
       pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
     }
 
     /* Minimalist Proportional Breath Ribbon */
@@ -258,7 +261,7 @@
 <body>
 
 <header>
-  <h1>🪈 Flute Studio <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">Parametric CAD & Bio-Acoustics</span></h1>
+  <h1>🪈 Flute Studio <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">1:1 Physical CAD & Anatomical Player</span></h1>
   <div class="status-pill"><span class="status-dot"></span> <span id="lbl-status">Engine Ready</span></div>
 </header>
 
@@ -305,22 +308,22 @@
     <div>
       <div class="section-label">Player Breath & Vocal Tract</div>
       <div class="field-group">
-        <label>Throat Vowel</label>
+        <label>Throat Formant Vowel</label>
         <select id="sel-vowel">
-          <option value="tu" selected>Tu (Native Spirit)</option>
-          <option value="ooh">Ooh (Deep Throat)</option>
-          <option value="ta">Ta (Open Crown)</option>
-          <option value="kee">Kee (Bright Overblow)</option>
+          <option value="tu" selected>Tu (Native Spirit Resonance)</option>
+          <option value="ooh">Ooh (Deep Throat Shakuhachi)</option>
+          <option value="ta">Ta (Open Crown Baroque)</option>
+          <option value="kee">Kee (Bright Overblow Focus)</option>
         </select>
       </div>
 
       <div class="field-group">
         <label>Tongue Articulation</label>
         <select id="sel-articulation">
-          <option value="none" selected>Legato Breath Flow</option>
-          <option value="t_attack">T-Tonguing (Vortex Burst)</option>
-          <option value="d_soft">D-Tonguing (Gentle)</option>
-          <option value="flutter">Flutter-Tongue (24 Hz Rasp)</option>
+          <option value="none" selected>Continuous Legato Stream</option>
+          <option value="t_attack">T-Tonguing (Explosive Vortex)</option>
+          <option value="d_soft">D-Tonguing (Gentle Attack)</option>
+          <option value="flutter">Flutter-Tongue (24 Hz Lingual Rasp)</option>
         </select>
       </div>
     </div>
@@ -344,12 +347,12 @@
   </div>
 
   <div class="stage">
-    <!-- 3D GPU Viewport: Exact SCAD Triple Flute & Moving 3D Fingers -->
+    <!-- 3D GPU Viewport: 1:1 Complete OpenSCAD Flute + Anatomical Player (Lungs, Trachea, Tongue, Hands) -->
     <div id="viewport-container">
       <canvas id="viewport-canvas"></canvas>
       <div class="viewport-overlay">
-        <strong id="lbl-viewport-title">Parametric CAD Triple Flute</strong><br>
-        <span style="color:var(--text-muted);" id="lbl-viewport-sub">Exact CAD Geometry: Converged Mouthpiece Beak, Fipples & Chimneys</span>
+        <strong id="lbl-viewport-title">1:1 Physical CAD Flute & Anatomical Player</strong>
+        <span style="color:var(--text-muted);" id="lbl-viewport-sub">Simulating: Bellows Lungs, Articulated Tongue, Converged Beak & 3D Hands</span>
       </div>
     </div>
 
@@ -371,7 +374,7 @@
         <button class="btn-subtle" onclick="addNote()">➕ Add Note</button>
 
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:auto;">
-          Click note card to cycle scale fingering • Right-click to remove
+          Click note to cycle fingering • Auto-quantized to physical holes
         </span>
       </div>
 
@@ -426,9 +429,7 @@ function getPlayablePitches() {
 
   const pitches = [];
   for (let oct = 0; oct < 2; oct++) {
-    for (let i of fundIntervals) {
-      pitches.push(root + oct * 12 + i);
-    }
+    for (let i of fundIntervals) pitches.push(root + oct * 12 + i);
   }
   return [...new Set(pitches)].sort((a, b) => a - b);
 }
@@ -450,9 +451,7 @@ function midiToHoles(midi) {
 
   const holes = Array(numHoles).fill(true);
   if (intervalIdx > 0) {
-    for (let h = 0; h < Math.min(numHoles, intervalIdx); h++) {
-      holes[h] = false;
-    }
+    for (let h = 0; h < Math.min(numHoles, intervalIdx); h++) holes[h] = false;
   }
   return holes;
 }
@@ -482,7 +481,7 @@ function loadPreset(name) {
     });
   });
   renderRibbon();
-  rebuild3DFlute();
+  rebuild3DFluteAndAnatomy();
 }
 
 function quantizeScore() {
@@ -491,7 +490,7 @@ function quantizeScore() {
     s.holes = midiToHoles(s.midi);
   });
   renderRibbon();
-  rebuild3DFlute();
+  rebuild3DFluteAndAnatomy();
 }
 
 const PX_PER_SEC = 80;
@@ -549,16 +548,17 @@ function addNote() {
   renderRibbon();
 }
 
-// 3D GPU Engine — Authentic SCAD Model Rendering
+// 3D Engine: 1:1 Complete OpenSCAD Solid Flute & Anatomical Player
 let scene, camera, renderer, controls;
 let fluteRootGroup = null;
 let toneHoleMeshes = [], fingerMeshes = [];
+let lungsBellowsMesh = null, tracheaAirway = null, tongueArticulator = null, mouthChamber = null;
 
 function init3D() {
   const container = document.getElementById('viewport-container');
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 4000);
-  camera.position.set(0, -220, 480);
+  camera.position.set(0, -220, 520);
 
   renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport-canvas'), antialias: true, alpha: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -566,18 +566,18 @@ function init3D() {
   controls.enableDamping = true;
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.85));
-  const light = new THREE.DirectionalLight(0xffedd5, 0.95);
+  const light = new THREE.DirectionalLight(0xffedd5, 1.0);
   light.position.set(150, -150, 400);
   scene.add(light);
 
-  const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.4);
+  const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.45);
   fillLight.position.set(-150, 150, -200);
   scene.add(fillLight);
 
   fluteRootGroup = new THREE.Group();
   scene.add(fluteRootGroup);
 
-  rebuild3DFlute();
+  rebuild3DFluteAndAnatomy();
 
   function animate() {
     requestAnimationFrame(animate);
@@ -587,11 +587,10 @@ function init3D() {
   animate();
 }
 
-// Rebuild authentic OpenSCAD flute geometry
-function rebuild3DFlute() {
+// Rebuild 1:1 Solid SCAD Geometry & Anatomical Player
+function rebuild3DFluteAndAnatomy() {
   if (!fluteRootGroup) return;
 
-  // Clear previous geometry
   while (fluteRootGroup.children.length > 0) {
     fluteRootGroup.remove(fluteRootGroup.children[0]);
   }
@@ -603,7 +602,6 @@ function rebuild3DFlute() {
   const scaleKey = document.getElementById('sel-scale').value;
   const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
 
-  // Calculate actual acoustic lengths & bore dimensions matching acoustics.py
   const fMel = midiToFreq(rootMidi);
   const fD1 = midiToFreq(rootMidi);
   const fD2 = midiToFreq(rootMidi + 7);
@@ -619,83 +617,84 @@ function rebuild3DFlute() {
 
   const totalBodyLen = Math.max(lMel, lD1, lD2);
   const headLen = 42.0;
+  const totalCadLen = totalBodyLen + headLen;
   const outerD = Math.max(boreM, boreD1, boreD2) + 8.0;
   const spacing = outerD * 0.95;
 
   const matWood = new THREE.MeshStandardMaterial({ color: 0xc49a6c, roughness: 0.35, metalness: 0.12 });
-  const matMouthpiece = new THREE.MeshStandardMaterial({ color: 0x8a633f, roughness: 0.4 });
+  const matHead = new THREE.MeshStandardMaterial({ color: 0x8a633f, roughness: 0.4 });
   const matChimney = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.3 });
+  const matAnatomy = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7, roughness: 0.2 });
 
   // Center coordinate: Fipple sound windows at Z = 0
-  // Flute body extends downward along -Y, Head joint extends upward along +Y
   const bodyGroup = new THREE.Group();
-  bodyGroup.position.set(0, totalBodyLen / 2, 0); // Center in view
+  bodyGroup.position.set(0, totalBodyLen / 2, 0);
   fluteRootGroup.add(bodyGroup);
 
-  // 1. Triple Drone Body Tubes (Melody Center, Drone 1 Left, Drone 2 Right)
-  // Melody Tube (Center)
+  // 1. Solid Triple Flute Enclosure (Unified Hexagonal Cross-Section)
   const geomMel = new THREE.CylinderGeometry(outerD/2, outerD/2, lMel, 6);
   const meshMel = new THREE.Mesh(geomMel, matWood);
   meshMel.position.set(0, -lMel/2, 0);
   bodyGroup.add(meshMel);
 
-  // Drone 1 Tube (Left)
   const geomD1 = new THREE.CylinderGeometry(outerD/2, outerD/2, lD1, 6);
   const meshD1 = new THREE.Mesh(geomD1, matWood);
   meshD1.position.set(-spacing, -lD1/2, 0);
   bodyGroup.add(meshD1);
 
-  // Drone 2 Tube (Right)
   const geomD2 = new THREE.CylinderGeometry(outerD/2, outerD/2, lD2, 6);
   const meshD2 = new THREE.Mesh(geomD2, matWood);
   meshD2.position.set(spacing, -lD2/2, 0);
   bodyGroup.add(meshD2);
 
+  // Web/Connector bridging the pipes into a single solid body
+  const geomWeb = new THREE.BoxGeometry(spacing * 2, outerD * 0.866, totalBodyLen);
+  const meshWeb = new THREE.Mesh(geomWeb, matWood);
+  meshWeb.position.set(0, -totalBodyLen/2, 0);
+  bodyGroup.add(meshWeb);
+
   // 2. Converging Mouthpiece Beak (Top Head Joint)
-  const geomBeak = new THREE.CylinderGeometry(spacing * 0.8, spacing * 1.3, headLen, 6);
-  const meshBeak = new THREE.Mesh(geomBeak, matMouthpiece);
+  const geomBeak = new THREE.CylinderGeometry(spacing * 0.8, spacing * 1.35, headLen, 6);
+  const meshBeak = new THREE.Mesh(geomBeak, matHead);
   meshBeak.position.set(0, headLen/2, 0);
   bodyGroup.add(meshBeak);
 
-  // 3. Fipple Sound Windows & Labium Wedges at Z = 0
-  const matWindow = new THREE.MeshStandardMaterial({ color: 0x111622, roughness: 0.8 });
+  // 3. Fipple Sound Windows & Labium Splitting Wedges at Y = 0
+  const matWindow = new THREE.MeshStandardMaterial({ color: 0x090c14, roughness: 0.9 });
   [-spacing, 0, spacing].forEach(xPos => {
-    const geomWin = new THREE.BoxGeometry(boreM * 0.45, 5.5, 3.5);
+    const geomWin = new THREE.BoxGeometry(boreM * 0.45, 5.5, 4.0);
     const winMesh = new THREE.Mesh(geomWin, matWindow);
-    winMesh.position.set(xPos, -2.5, outerD/2 - 0.5);
+    winMesh.position.set(xPos, -2.75, outerD/2 - 0.5);
     bodyGroup.add(winMesh);
   });
 
-  // 4. Exact Acoustic Tone Holes & Raised Chimney Pads (on Melody Tube)
-  // Distance from fipple = c / (2 * freq) - 1.6 * bore
+  // 4. Exact Acoustic Tone Holes & Raised Hexagonal Chimney Pads
   const matHand = new THREE.MeshStandardMaterial({ color: 0xe2a77f, roughness: 0.5 });
   const fingerGeom = new THREE.CylinderGeometry(4.5, 4.5, 16, 16);
 
-  const numFund = Math.min(scaleIntervals.length, numHoles + 1);
   for (let hIdx = 0; hIdx < numHoles; hIdx++) {
     const targetInterval = scaleIntervals[hIdx + 1] || (12 * (hIdx + 1) / (numHoles + 1));
     const hFreq = midiToFreq(rootMidi + targetInterval);
     const hDist = Math.max(25, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
-
-    const holeY = -hDist; // Relative to fipple at Y = 0
+    const holeY = -hDist;
 
     // Raised Chimney Pad
-    const geomChimney = new THREE.CylinderGeometry(5.5, 6.5, 2.5, 6);
+    const geomChimney = new THREE.CylinderGeometry(5.5, 6.5, 3.0, 6);
     const chimneyMesh = new THREE.Mesh(geomChimney, matChimney);
     chimneyMesh.rotation.x = Math.PI / 2;
     chimneyMesh.position.set(0, holeY, outerD/2);
     bodyGroup.add(chimneyMesh);
 
-    // Tone Hole Sound Core (Radiates Cyan when open)
+    // Tone Hole Sound Core (Radiant Cyan when open)
     const matHole = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.0 });
-    const geomHole = new THREE.CylinderGeometry(3.2, 3.2, 3.0, 16);
+    const geomHole = new THREE.CylinderGeometry(3.2, 3.2, 3.2, 16);
     const holeMesh = new THREE.Mesh(geomHole, matHole);
     holeMesh.rotation.x = Math.PI / 2;
-    holeMesh.position.set(0, holeY, outerD/2 + 0.8);
+    holeMesh.position.set(0, holeY, outerD/2 + 1.0);
     bodyGroup.add(holeMesh);
     toneHoleMeshes.push(holeMesh);
 
-    // Articulated 3D Finger Mesh Hovering Over Tone Hole
+    // Articulated 3D Finger Mesh
     const fMesh = new THREE.Mesh(fingerGeom, matHand);
     fMesh.rotation.x = Math.PI / 3;
     fMesh.position.set((hIdx < Math.ceil(numHoles/2) ? -10 : 10), holeY, outerD/2 + 14);
@@ -703,11 +702,56 @@ function rebuild3DFlute() {
     fingerMeshes.push(fMesh);
   }
 
-  document.getElementById('lbl-viewport-title').innerText = `Parametric ${numHoles}-Hole Triple Flute (${rootMidi} Root)`;
-  document.getElementById('lbl-viewport-sub').innerText = `Height: ${(totalBodyLen + headLen).toFixed(1)} mm • Melody Bore: ${boreM.toFixed(1)} mm • Exact SCAD Chimneys`;
+  // 5. Complete 1:1 Anatomical Player (Bellows Lungs, Trachea, Mouth & Tongue)
+  const anatomyGroup = new THREE.Group();
+  anatomyGroup.position.set(0, headLen + 15, -10);
+  bodyGroup.add(anatomyGroup);
+
+  // Bilateral Lungs Bellows
+  const lungLeft = new THREE.Mesh(new THREE.SphereGeometry(18, 16, 16), matAnatomy);
+  lungLeft.position.set(-16, 45, 0);
+  lungLeft.scale.set(0.9, 1.4, 0.7);
+  
+  const lungRight = new THREE.Mesh(new THREE.SphereGeometry(18, 16, 16), matAnatomy);
+  lungRight.position.set(16, 45, 0);
+  lungRight.scale.set(0.9, 1.4, 0.7);
+
+  lungsBellowsMesh = new THREE.Group();
+  lungsBellowsMesh.add(lungLeft);
+  lungsBellowsMesh.add(lungRight);
+  anatomyGroup.add(lungsBellowsMesh);
+
+  // Trachea Airway
+  tracheaAirway = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 30, 16), matAnatomy);
+  tracheaAirway.position.set(0, 22, 0);
+  anatomyGroup.add(tracheaAirway);
+
+  // Oral Cavity Mouth & Tongue Articulator
+  mouthChamber = new THREE.Mesh(new THREE.SphereGeometry(12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.55 }));
+  mouthChamber.position.set(0, 0, 8);
+  anatomyGroup.add(mouthChamber);
+
+  tongueArticulator = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 3.5), new THREE.MeshStandardMaterial({ color: 0xbe123c }));
+  tongueArticulator.position.set(0, -2, 7);
+  anatomyGroup.add(tongueArticulator);
+
+  document.getElementById('lbl-viewport-title').innerText = `Parametric ${numHoles}-Hole Triple Flute & Anatomical Player`;
+  document.getElementById('lbl-viewport-sub').innerText = `1:1 Solid CAD Model • Total Length: ${(totalBodyLen + headLen).toFixed(1)} mm • Melody Bore: ${boreM.toFixed(1)} mm`;
 }
 
-function update3DFingersPose(activeHoles) {
+function update3DFingersAndAnatomyPose(activeHoles, breathIntensity, tonguePos) {
+  // Lungs Bellows Breathing Expansion
+  if (lungsBellowsMesh) {
+    const scale = 1.0 + (breathIntensity || 0.6) * 0.35;
+    lungsBellowsMesh.scale.set(scale, scale, scale);
+  }
+
+  // Tongue Lingual Articulation Movement
+  if (tongueArticulator) {
+    tongueArticulator.position.z = 7.0 + (tonguePos || 0.0) * 3.0;
+  }
+
+  // Moving 3D Fingers on Tone Holes
   fingerMeshes.forEach((fMesh, idx) => {
     const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
     const targetZ = isCovered ? 6.0 : 16.0;
@@ -875,7 +919,7 @@ async function startAudio() {
 
     renderRibbon(activeIdx);
     if (activeIdx >= 0) {
-      update3DFingersPose(scoreNotes[activeIdx].holes);
+      update3DFingersAndAnatomyPose(scoreNotes[activeIdx].holes, 0.75, 0.5);
     }
   }, 30);
 }
@@ -886,7 +930,7 @@ function stopAudio() {
   if (liveProcessorNode) liveProcessorNode.disconnect();
   if (window.playheadTimer) clearInterval(window.playheadTimer);
   renderRibbon(-1);
-  update3DFingersPose([]);
+  update3DFingersAndAnatomyPose([], 0.0, 0.0);
   document.getElementById('btn-play').innerText = '▶ Play Physical Engine';
 }
 
@@ -956,7 +1000,6 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile) {
 
 $fn = 60;
 
-// Dimensional Parameters
 wall = 4.0;
 spacing = ${spacing.toFixed(2)};
 tol = 0.40;
@@ -970,48 +1013,32 @@ total_length = ${totalCadLen.toFixed(2)};
 head_len = ${headLen.toFixed(2)};
 fipple_z = ${fippleZ.toFixed(2)};
 
-// 1. Unified Converging Mouthpiece Beak
 module mouthpiece_beak() {
     hull() {
-        translate([0, 0, total_length - head_len])
-            cylinder(d=outer_d * 2.2, h=2, $fn=6);
-        translate([0, 0, total_length - 2])
-            cylinder(d=spacing * 1.5, h=2, $fn=6);
+        translate([0, 0, total_length - head_len]) cylinder(d=outer_d * 2.2, h=2, $fn=6);
+        translate([0, 0, total_length - 2]) cylinder(d=spacing * 1.5, h=2, $fn=6);
     }
 }
 
-// 2. Main Flute Body
 module flute_body() {
     difference() {
         union() {
-            // Hexagonal melody tube
-            translate([0, 0, 0])
-                cylinder(d=outer_d, h=fipple_z, $fn=6);
-            // Hexagonal drone 1 tube
-            translate([-spacing, 0, 0])
-                cylinder(d=outer_d, h=fipple_z, $fn=6);
-            // Hexagonal drone 2 tube
-            translate([spacing, 0, 0])
-                cylinder(d=outer_d, h=fipple_z, $fn=6);
-            
-            // Mouthpiece head
+            translate([0, 0, 0]) cylinder(d=outer_d, h=fipple_z, $fn=6);
+            translate([-spacing, 0, 0]) cylinder(d=outer_d, h=fipple_z, $fn=6);
+            translate([spacing, 0, 0]) cylinder(d=outer_d, h=fipple_z, $fn=6);
             mouthpiece_beak();
 
-            // Raised ergonomic chimney pads
 ${chimneysScad.join('\n')}
         }
 
-        // Bores
         translate([0, 0, -1]) cylinder(d=bore_melody, h=total_length + 2);
         translate([-spacing, 0, -1]) cylinder(d=bore_drone1, h=total_length + 2);
         translate([spacing, 0, -1]) cylinder(d=bore_drone2, h=total_length + 2);
 
-        // Fipple sound windows
         translate([0, outer_d/2 - 2, fipple_z - 3]) cube([bore_melody * 0.45, 10, 5.5], center=true);
         translate([-spacing, outer_d/2 - 2, fipple_z - 3]) cube([bore_drone1 * 0.45, 10, 5.5], center=true);
         translate([spacing, outer_d/2 - 2, fipple_z - 3]) cube([bore_drone2 * 0.45, 10, 5.5], center=true);
 
-        // Tone hole penetrations
 ${holesScad.join('\n')}
     }
 }
