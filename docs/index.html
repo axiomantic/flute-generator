@@ -2802,14 +2802,24 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
   const zCut2 = (numSegments >= 3) ? findSafeCutZ(totalCadLen * (2.0 / numSegments)) : totalCadLen;
   const zCut3 = (numSegments >= 4) ? findSafeCutZ(totalCadLen * (3.0 / numSegments)) : totalCadLen;
   
-        // Ergonomic Clustered Touchpad Keywork (Boehm / Saxophone Remote Linkage)
-    // Tone holes are physically far apart (absZ), but all touchpads are grouped in a compact 22mm-spaced hand cluster!
+            // Ergonomic Clustered Keyboard & Mechanical Keywork Architecture
     let keysScad = [];
     let tpuGasketsScad = [];
 
-    // Calculate ergonomic hand cluster center (anchored comfortably below fipple)
-    const clusterTopZ = fippleZ - 75.0;
-    const keyPitch = 22.0; // 22mm spacing between adjacent fingertip touchpads
+    const clusterTopZ = fippleZ - 65.0;
+    const keyPitch = 22.0; // 22mm pitch between touchpads in the compact keyboard
+    const frontY = outerD * 0.433; // Front hexagonal flat face
+
+    if (keyworkMode !== 'none') {
+      const keyboardBottomZ = clusterTopZ - (numHoles - 1) * keyPitch - 12.0;
+      const keyboardTopZ = clusterTopZ + 14.0;
+      const keyboardLen = keyboardTopZ - keyboardBottomZ;
+
+      // 1. Sleek Integrated Keyboard Mounting Deck / Baseplate Rib
+      keysScad.push(`        // Integrated Ergonomic Keyboard Deck & Hinge Stanchion Rail
+        translate([0, ${(frontY + 1.2).toFixed(2)}, ${(keyboardBottomZ + keyboardLen/2).toFixed(2)}])
+            cube([spacing * 2.2, 4.5, ${keyboardLen.toFixed(2)}], center=true);`);
+    }
 
     for (let hIdx = 0; hIdx < numHoles; hIdx++) {
       const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
@@ -2819,49 +2829,66 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
       const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
 
       if (isKeyed) {
-        const cupD = holeDiam + rimThickness * 2 + 2.4;
-        // The finger touchpad Z position in the compact stationary hand cluster
-        const padZ = clusterTopZ - hIdx * keyPitch;
-        // Longitudinal travel distance from touchpad to hole cup
-        const deltaZ = padZ - absZ;
-        const sideOffset = (hIdx < Math.floor(numHoles / 2)) ? -14.0 : 14.0;
+        const cupD = holeDiam + rimThickness * 2 + 2.0;
+        const padZ = clusterTopZ - hIdx * keyPitch; // Compact stationary keyboard key position
+        const sideOffset = (hIdx % 2 === 0) ? -12.0 : 12.0; // Left hand / Right hand split
+        const cupY = frontY + chimneyDepth + 0.6;
+        const deckY = frontY + 3.6;
 
-        keysScad.push(`        // Ergonomic Clustered Key Lever for Hole ${hIdx + 1} (Hole Z=${absZ.toFixed(1)}, Touchpad Z=${padZ.toFixed(1)})
-        translate([0, ${(outerD * 0.433 + chimneyDepth + 0.6).toFixed(2)}, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
-            // 1. Pivot Hinge Stanchion Pillar attached to Body at hole location
-            translate([${sideOffset * 0.45}, 0, -${(chimneyDepth + 0.8).toFixed(2)}]) {
-                cube([5.0, 6.0, ${(chimneyDepth + 1.2).toFixed(2)}], center=true);
-                translate([0, 0, ${(chimneyDepth/2).toFixed(2)}]) rotate([0, 90, 0]) cylinder(d=4.2, h=5.0, center=true, $fn=16);
+        keysScad.push(`        // === Articulated Keywork Mechanism for Hole ${hIdx + 1} ===
+        // Hinge Pivot Stanchions (Fixed to Keyboard Deck at Touchpad Z=${padZ.toFixed(1)})
+        translate([${sideOffset.toFixed(2)}, ${deckY.toFixed(2)}, ${padZ.toFixed(2)}]) {
+            // Left & Right captive clevis stanchions
+            translate([-3.2, 0, 0]) cube([1.8, 5.0, 6.0], center=true);
+            translate([3.2, 0, 0]) cube([1.8, 5.0, 6.0], center=true);
+            // Transverse Axle Pin (X-axis)
+            rotate([0, 90, 0]) cylinder(d=2.8, h=8.0, center=true, $fn=16);
+        }
+
+        // Articulated Rocker Lever + Longitudinal Rod + Tone Hole Cup
+        // (Built along global Z axis, 0.35mm print-in-place clearance gap)
+        difference() {
+            union() {
+                // A. Touchpad on Keyboard Deck (Fingertip Press Area)
+                translate([${sideOffset.toFixed(2)}, ${(deckY + 3.2).toFixed(2)}, ${padZ.toFixed(2)}])
+                    rotate([0, 0, 0]) cylinder(d=15.0, h=2.6, center=true, $fn=24);
+
+                // B. Hinge Rocker Boss (Captive sleeve over Axle Pin)
+                translate([${sideOffset.toFixed(2)}, ${deckY.toFixed(2)}, ${padZ.toFixed(2)}])
+                    rotate([0, 90, 0]) cylinder(d=5.2, h=4.2, center=true, $fn=16);
+
+                // C. Longitudinal Rod Linking Keyboard Touchpad to Tone Hole Cup
+                hull() {
+                    // Start at Hinge Rocker Boss
+                    translate([${sideOffset.toFixed(2)}, ${deckY.toFixed(2)}, ${padZ.toFixed(2)}])
+                        cylinder(d=4.2, h=2.0, center=true, $fn=16);
+                    // End at Tone Hole Cup
+                    translate([0, ${cupY.toFixed(2)}, ${absZ.toFixed(2)}])
+                        cylinder(d=4.2, h=2.0, center=true, $fn=16);
+                }
+
+                // D. Key Cup over Chimney Lip (Oriented perpendicular to Hole along +Y)
+                translate([0, ${(frontY + chimneyDepth + 1.2).toFixed(2)}, ${absZ.toFixed(2)}])
+                    rotate([-90, 0, 0])
+                        cylinder(d=${cupD.toFixed(2)}, h=2.8, $fn=24);
+
+                // E. Compliant Leaf Spring (Returns key open)
+                translate([${sideOffset.toFixed(2)}, ${(deckY - 1.8).toFixed(2)}, ${(padZ + 4.0).toFixed(2)}])
+                    cube([2.0, 1.2, 7.0], center=true);
             }
 
-            // 2. Articulated Key Lever Arm with Longitudinal Linkage Beam
-            difference() {
-                union() {
-                    // Key Cup sealing over Chimney Lip
-                    cylinder(d=${cupD.toFixed(2)}, h=2.8, $fn=24);
-                    
-                    // Stationary Ergonomic Touchpad in the hand cluster
-                    translate([${sideOffset.toFixed(2)}, 0, ${deltaZ.toFixed(2)}])
-                        cylinder(d=16.0, h=2.8, $fn=24);
+            // Subtraction: 0.35mm Print-in-Place Hinge Axle Clearance Bore
+            translate([${sideOffset.toFixed(2)}, ${deckY.toFixed(2)}, ${padZ.toFixed(2)}])
+                rotate([0, 90, 0]) cylinder(d=3.5, h=10.0, center=true, $fn=16);
 
-                    // Longitudinal Connecting Rod linking remote hole cup to compact fingertip touchpad
-                    hull() {
-                        translate([0, 0, 1.4]) cylinder(d=5.0, h=1.4, center=true, $fn=16);
-                        translate([${sideOffset.toFixed(2)}, 0, ${(deltaZ * 0.5).toFixed(2)}]) cylinder(d=4.5, h=1.4, center=true, $fn=16);
-                        translate([${sideOffset.toFixed(2)}, 0, ${deltaZ.toFixed(2)}]) cylinder(d=5.0, h=1.4, center=true, $fn=16);
-                    }
-
-                    // Compliant Leaf Spring Beam
-                    translate([${sideOffset * 0.45}, -4.0, 0])
-                        cube([1.2, 8.0, 1.8], center=true);
-                }
-                // Recessed TPU Pad / O-Ring Gasket Groove underneath Key Cup
-                translate([0, 0, -0.2])
+            // Subtraction: Recessed TPU Pad Gasket Groove inside Key Cup
+            translate([0, ${(frontY + chimneyDepth + 1.0).toFixed(2)}, ${absZ.toFixed(2)}])
+                rotate([-90, 0, 0]) {
                     difference() {
                         cylinder(d=${(cupD - 1.2).toFixed(2)}, h=1.6, $fn=24);
                         cylinder(d=${(holeDiam + 0.8).toFixed(2)}, h=2.0, center=true, $fn=24);
                     }
-            }
+                }
         }`);
 
         tpuGasketsScad.push(`    // TPU Soft Key Gasket Ring for Hole ${hIdx + 1}
