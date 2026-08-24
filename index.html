@@ -191,13 +191,49 @@
 
     /* Finger-Hole Piano Roll Dock */
     .timeline-dock {
-      height: 220px !important;
+      height: 280px !important;
       background: #090c14 !important;
       border-top: 1px solid var(--border) !important;
       display: flex !important;
       flex-direction: column !important;
       flex: 0 0 auto !important;
       user-select: none !important;
+    }
+
+    .shaper-wrapper {
+      height: 62px !important;
+      background: #080b12 !important;
+      border-top: 1px solid #141a29 !important;
+      display: flex !important;
+      position: relative !important;
+    }
+
+    .shaper-label {
+      width: 140px !important;
+      flex-shrink: 0 !important;
+      background: #0a0e1a !important;
+      border-right: 1px solid #1e293b !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      padding: 0 10px !important;
+      font-size: 0.65rem !important;
+      font-family: monospace !important;
+      color: #38bdf8 !important;
+      font-weight: 600 !important;
+    }
+
+    .shaper-canvas-container {
+      flex: 1 !important;
+      position: relative !important;
+      overflow: hidden !important;
+    }
+
+    #shaper-canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block !important;
+      cursor: crosshair !important;
     }
 
     .transport-bar {
@@ -522,6 +558,19 @@
           </div>
         </div>
       </div>
+
+      <!-- Live Interactive Breath Intensity Wave Shaper -->
+      <div class="shaper-wrapper">
+        <div class="shaper-label">
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span>🌬️ Breath Curve</span>
+          </div>
+          <span style="font-size:0.58rem; color:var(--text-muted); font-weight:normal;">Draw / Drag to Shape</span>
+        </div>
+        <div class="shaper-canvas-container" id="shaper-container">
+          <canvas id="shaper-canvas"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -558,6 +607,159 @@ function midiToFreq(m) {
 }
 
 let scoreNotes = [];
+
+// Interactive Breath Curve Wave Shaper State (Normalized 0.0 to 1.0 curve over time)
+let breathCurvePoints = [
+  { t: 0.0, v: 0.70 },
+  { t: 0.25, v: 0.85 },
+  { t: 0.50, v: 0.65 },
+  { t: 0.75, v: 0.90 },
+  { t: 1.0, v: 0.70 }
+];
+let isDrawingCurve = false;
+
+function initBreathShaperCanvas() {
+  const canvas = document.getElementById('shaper-canvas');
+  const container = document.getElementById('shaper-container');
+  if (!canvas || !container) return;
+
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+
+  function renderCurve() {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Background horizontal grid lines (25%, 50%, 75%)
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    [0.25, 0.50, 0.75].forEach(pct => {
+      ctx.beginPath();
+      ctx.moveTo(0, h * (1 - pct));
+      ctx.lineTo(w, h * (1 - pct));
+      ctx.stroke();
+    });
+
+    // Draw Smooth Breath Curve Gradient Area
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+    grad.addColorStop(1, 'rgba(56, 189, 248, 0.02)');
+
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    breathCurvePoints.forEach((pt, i) => {
+      const x = pt.t * w;
+      const y = (1 - pt.v) * h;
+      if (i === 0) ctx.lineTo(x, y);
+      else {
+        const prev = breathCurvePoints[i - 1];
+        const cx = (prev.t * w + x) / 2;
+        ctx.bezierCurveTo(cx, (1 - prev.v) * h, cx, y, x, y);
+      }
+    });
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Draw Curve Stroke
+    ctx.beginPath();
+    breathCurvePoints.forEach((pt, i) => {
+      const x = pt.t * w;
+      const y = (1 - pt.v) * h;
+      if (i === 0) ctx.moveTo(x, y);
+      else {
+        const prev = breathCurvePoints[i - 1];
+        const cx = (prev.t * w + x) / 2;
+        ctx.bezierCurveTo(cx, (1 - prev.v) * h, cx, y, x, y);
+      }
+    });
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Draw Control Points
+    breathCurvePoints.forEach(pt => {
+      const x = pt.t * w;
+      const y = (1 - pt.v) * h;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    // Draw Current Playhead Line on Shaper
+    const totalScoreDur = scoreNotes.reduce((max, n) => Math.max(max, (n.startTime || 0) + n.duration), 0) || 4.0;
+    const playheadNorm = (currentPlaybackTime % totalScoreDur) / totalScoreDur;
+    const phX = playheadNorm * w;
+    ctx.beginPath();
+    ctx.moveTo(phX, 0);
+    ctx.lineTo(phX, h);
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function handlePointer(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const y = Math.max(0.1, Math.min(1.0, 1.0 - ((e.clientY - rect.top) / rect.height)));
+
+    // Find nearest point or insert
+    const existing = breathCurvePoints.find(p => Math.abs(p.t - x) < 0.04);
+    if (existing) {
+      existing.v = parseFloat(y.toFixed(2));
+    } else {
+      breathCurvePoints.push({ t: parseFloat(x.toFixed(3)), v: parseFloat(y.toFixed(2)) });
+      breathCurvePoints.sort((a, b) => a.t - b.t);
+    }
+    // Ensure endpoints exist
+    if (breathCurvePoints[0].t > 0) breathCurvePoints.unshift({ t: 0.0, v: breathCurvePoints[0].v });
+    if (breathCurvePoints[breathCurvePoints.length - 1].t < 1.0) breathCurvePoints.push({ t: 1.0, v: breathCurvePoints[breathCurvePoints.length - 1].v });
+    renderCurve();
+  }
+
+  canvas.onmousedown = (e) => {
+    isDrawingCurve = true;
+    handlePointer(e);
+    window.addEventListener('mousemove', onCanvasMove);
+    window.addEventListener('mouseup', onCanvasUp);
+  };
+
+  function onCanvasMove(e) {
+    if (isDrawingCurve) handlePointer(e);
+  }
+
+  function onCanvasUp() {
+    isDrawingCurve = false;
+    window.removeEventListener('mousemove', onCanvasMove);
+    window.removeEventListener('mouseup', onCanvasUp);
+  }
+
+  renderCurve();
+  window.renderBreathShaper = renderCurve;
+}
+
+function getBreathPressureAtTime(tNorm) {
+  if (!breathCurvePoints || breathCurvePoints.length === 0) return 0.70;
+  const clampedT = Math.max(0, Math.min(1, tNorm));
+  for (let i = 0; i < breathCurvePoints.length - 1; i++) {
+    const p1 = breathCurvePoints[i];
+    const p2 = breathCurvePoints[i + 1];
+    if (clampedT >= p1.t && clampedT <= p2.t) {
+      const span = p2.t - p1.t;
+      const alpha = span > 0 ? (clampedT - p1.t) / span : 0;
+      return p1.v + alpha * (p2.v - p1.v);
+    }
+  }
+  return breathCurvePoints[breathCurvePoints.length - 1].v;
+}
+
 let lastSelectedDuration = 0.5; // Memory for last selected/created duration
 let draggedNoteIdx = -1;
 let isResizingRight = false;
@@ -1835,17 +2037,20 @@ async function startAudio() {
         }
       }
 
+      const normTime = (currentPlaybackTime % totalDur) / totalDur;
+      const liveBreathIntensity = getBreathPressureAtTime(normTime);
+
       let sM = 0;
       if (activeNotes.length > 0) {
         const topNote = activeNotes[activeNotes.length - 1];
         liveMelPipe.setFreq(midiToFreq(topNote.midi));
-        sM = liveMelPipe.process(0.70);
+        sM = liveMelPipe.process(liveBreathIntensity * 0.90);
       } else {
         sM = liveMelPipe.process(0.0);
       }
 
-      const sD1 = liveD1Pipe.process(0.60);
-      const sD2 = liveD2Pipe.process(0.50);
+      const sD1 = liveD1Pipe.process(liveBreathIntensity * 0.75);
+      const sD2 = liveD2Pipe.process(liveBreathIntensity * 0.65);
 
       const dryL = (sD1 * 0.35 + sD2 * 0.18 + sM * 0.65) * 0.45;
       const dryR = (sD1 * 0.18 + sD2 * 0.35 + sM * 0.65) * 0.45;
@@ -1877,6 +2082,7 @@ async function startAudio() {
     const pxPerSec = track ? (track.clientWidth / Math.max(2.0, totalScoreDur)) : 80;
 
     updatePlayheadUI(activeIdx);
+    if (window.renderBreathShaper) window.renderBreathShaper();
     if (activeIdx >= 0) {
       update3DFingersPose(scoreNotes[activeIdx].holes);
     }
@@ -1916,7 +2122,7 @@ window.addEventListener('keydown', (e) => {
 
 document.getElementById('btn-add-note').addEventListener('click', addNote);
 document.getElementById('sel-roll-bars').addEventListener('change', () => { renderPianoRoll(); });
-window.addEventListener('resize', () => { if (document.getElementById('pianoroll-track')) renderPianoRoll(); });
+window.addEventListener('resize', () => { if (document.getElementById('pianoroll-track')) renderPianoRoll(); if (window.renderBreathShaper) initBreathShaperCanvas(); });
 
 // Scale, Hole Count, Root Pitch & Chimney Listeners
 function onAcousticsChanged() {
@@ -2215,6 +2421,7 @@ async function initPyodideEngine() {
 setTimeout(() => {
   restoreStudioState();
   init3D();
+  setTimeout(initBreathShaperCanvas, 100);
   initPyodideEngine();
 }, 80);
 </script>
