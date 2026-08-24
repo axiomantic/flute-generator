@@ -1848,6 +1848,22 @@ document.getElementById('btn-play').addEventListener('click', async () => {
   else await startAudio();
 });
 document.getElementById('btn-stop').addEventListener('click', stopAudio);
+// Spacebar global Play/Pause toggle (ignored when typing in form inputs)
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.key === ' ') {
+    const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+      return; // allow normal typing/selection inside form controls
+    }
+    e.preventDefault();
+    if (isAudioRunning) {
+      stopAudio();
+    } else {
+      startAudio();
+    }
+  }
+});
+
 document.getElementById('btn-add-note').addEventListener('click', addNote);
 document.getElementById('sel-roll-bars').addEventListener('change', () => { renderPianoRoll(); });
 window.addEventListener('resize', () => { if (document.getElementById('pianoroll-track')) renderPianoRoll(); });
