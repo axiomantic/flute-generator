@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flute Studio 🪈 — Bio-Acoustic Vocal Tract & Tone Hole Fingering Engine</title>
+  <title>Flute Studio 🪈 — Flute Tablature, Anatomical Hands & Bio-Acoustic Engine</title>
   <style>
     :root {
       --bg-dark: #0b0d13;
@@ -161,19 +161,50 @@
       overflow: hidden;
     }
     #viewport-canvas { width: 100%; height: 100%; display: block; }
-    .viewport-overlay {
+    
+    .hud-overlay {
       position: absolute;
       top: 12px;
       left: 12px;
-      background: rgba(15, 18, 26, 0.85);
-      backdrop-filter: blur(6px);
-      padding: 8px 14px;
-      border-radius: 6px;
+      background: rgba(15, 18, 26, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 12px 16px;
+      border-radius: 8px;
       border: 1px solid var(--border);
       font-size: 0.78rem;
+      max-width: 320px;
     }
+    .hud-title { font-weight: 700; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .hand-diagram {
+      display: flex;
+      gap: 14px;
+      margin-top: 8px;
+      background: #0a0d14;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #1c2333;
+    }
+    .hand-box { flex: 1; }
+    .hand-box strong { font-size: 0.72rem; color: var(--accent-cyan); display: block; margin-bottom: 4px; }
+    .finger-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.70rem;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+    .finger-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1px solid #475569;
+    }
+    .finger-dot.closed { background: #3b82f6; border-color: #60a5fa; box-shadow: 0 0 5px #3b82f6; }
+    .finger-dot.open { background: transparent; border-color: #06b6d4; }
 
-    .sequencer-card {
+    .tablature-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -183,7 +214,7 @@
       gap: 12px;
     }
     .transport-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .sequencer-wrapper {
+    .tablature-wrapper {
       position: relative;
       height: 340px;
       border: 1px solid var(--border);
@@ -191,7 +222,7 @@
       overflow: hidden;
       background: #080a0f;
     }
-    #sequencer-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+    #tablature-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 
     .specs-grid {
       display: grid;
@@ -231,7 +262,7 @@
 <body>
 
 <header>
-  <h1>🪈 Flute Studio <span class="badge-wasm">Bio-Acoustic Vocal Tract & Finger Model</span></h1>
+  <h1>🪈 Flute Studio <span class="badge-wasm">Flute Tablature & Bio-Acoustics</span></h1>
   <div class="badge-status"><span class="status-dot"></span> <span id="lbl-pyodide-status">Loading Pyodide WASM...</span></div>
 </header>
 
@@ -239,13 +270,13 @@
   <!-- Left Sidebar Controls -->
   <div class="sidebar">
     <div>
-      <div class="section-title">🫁 Human Player Bio-Acoustics</div>
+      <div class="section-title">🫁 Player Bio-Acoustics & Mouth</div>
       <div class="control-group">
-        <label>Throat Formant / Vowel</label>
+        <label>Throat Formant (Vocal Vowel)</label>
         <select id="sel-vowel">
-          <option value="tu" selected>Tu (Native American Resonant)</option>
+          <option value="tu" selected>Tu (Native Spirit Resonance)</option>
           <option value="ooh">Ooh (Deep Throat Shakuhachi)</option>
-          <option value="ta">Ta (Open Throat Baroque)</option>
+          <option value="ta">Ta (Open Crown Baroque)</option>
           <option value="kee">Kee (Bright Overblowing Focus)</option>
         </select>
       </div>
@@ -254,7 +285,7 @@
         <label>Tongue Articulation</label>
         <select id="sel-articulation">
           <option value="none" selected>Continuous Legato Breath Stream</option>
-          <option value="t_attack">T-Tonguing (Explosive Vortex)</option>
+          <option value="t_attack">T-Tonguing (Explosive Labium Vortex)</option>
           <option value="d_soft">D-Tonguing (Soft Legato Attack)</option>
           <option value="flutter">Flutter-Tongue (24 Hz Lingual Rasp)</option>
         </select>
@@ -284,7 +315,7 @@
       </div>
 
       <div class="control-group">
-        <label>Musical Scale & Fingerings</label>
+        <label>Musical Scale & Tablature</label>
         <select id="sel-scale">
           <option value="native_american" selected>Native American (Minor Pentatonic)</option>
           <option value="hijaz">Hijaz (Middle Eastern)</option>
@@ -365,13 +396,13 @@
 
   <div class="content-area">
     <div class="tabs-bar">
-      <button class="tab-btn active" data-tab="studio">🖐️ Breath & Finger Timeline</button>
-      <button class="tab-btn" data-tab="cad">📐 3D Flute View & Finger Glow</button>
+      <button class="tab-btn active" data-tab="studio">🖐️ Flute Fingering Tablature & Breath Timeline</button>
+      <button class="tab-btn" data-tab="cad">📐 3D Flute View & Finger HUD</button>
       <button class="tab-btn" data-tab="gallery">🌟 Showcase Gallery</button>
     </div>
 
     <div class="tab-pane active" id="tab-studio">
-      <div class="sequencer-card">
+      <div class="tablature-card">
         <div class="transport-bar">
           <button class="btn btn-emerald" id="btn-play">▶ Play Bio-Acoustic Engine</button>
           <button class="btn btn-secondary" id="btn-stop">⏹ Stop</button>
@@ -386,12 +417,12 @@
           </select>
 
           <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: auto;">
-            🌬️ 100% Breath & Finger Acoustic Physics
+            ● = Covered Hole • ○ = Open Hole • 🌬️ Single Continuous Breath
           </span>
         </div>
 
-        <div class="sequencer-wrapper">
-          <canvas id="sequencer-canvas"></canvas>
+        <div class="tablature-wrapper">
+          <canvas id="tablature-canvas"></canvas>
         </div>
       </div>
 
@@ -406,9 +437,29 @@
     <div class="tab-pane" id="tab-cad">
       <div id="viewport-container">
         <canvas id="viewport-canvas"></canvas>
-        <div class="viewport-overlay">
-          <strong>Parametric Triple Flute & Live Finger Highlights</strong><br>
-          <span style="color: var(--text-dim);">Cyan glow = Radiating Open Tone Hole • Dark = Finger Covered Hole</span>
+        
+        <!-- Live Anatomical Hand & Mouth HUD -->
+        <div class="hud-overlay">
+          <div class="hud-title">🫁 Bio-Acoustic Anatomy HUD</div>
+          <div style="font-size: 0.72rem; color: #94a3b8;">
+            Lungs: <span style="color:#10b981; font-weight:600;" id="hud-lung-val">0.68 atm</span> • 
+            Vowel: <span style="color:#60a5fa; font-weight:600;" id="hud-vowel-val">"Tu"</span>
+          </div>
+
+          <div class="hand-diagram">
+            <div class="hand-box">
+              <strong>Left Hand (Top)</strong>
+              <div class="finger-indicator"><span>Hole 1 (Index)</span><span class="finger-dot closed" id="f-dot-0"></span></div>
+              <div class="finger-indicator"><span>Hole 2 (Mid)</span><span class="finger-dot closed" id="f-dot-1"></span></div>
+              <div class="finger-indicator"><span>Hole 3 (Ring)</span><span class="finger-dot closed" id="f-dot-2"></span></div>
+            </div>
+            <div class="hand-box">
+              <strong>Right Hand (Bottom)</strong>
+              <div class="finger-indicator"><span>Hole 4 (Index)</span><span class="finger-dot closed" id="f-dot-3"></span></div>
+              <div class="finger-indicator"><span>Hole 5 (Mid)</span><span class="finger-dot closed" id="f-dot-4"></span></div>
+              <div class="finger-indicator"><span>Hole 6 (Ring)</span><span class="finger-dot closed" id="f-dot-5"></span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -526,16 +577,16 @@ function loadPresetMelody(presetName) {
     }
     beat += item.d;
   });
-  drawSequencer();
+  drawTablature();
 }
 
-const seqCanvas = document.getElementById('sequencer-canvas');
-const seqCtx = seqCanvas.getContext('2d');
+const tabCanvas = document.getElementById('tablature-canvas');
+const tabCtx = tabCanvas.getContext('2d');
 
 function resizeCanvas() {
-  seqCanvas.width = seqCanvas.parentElement.clientWidth * window.devicePixelRatio;
-  seqCanvas.height = seqCanvas.parentElement.clientHeight * window.devicePixelRatio;
-  drawSequencer();
+  tabCanvas.width = tabCanvas.parentElement.clientWidth * window.devicePixelRatio;
+  tabCanvas.height = tabCanvas.parentElement.clientHeight * window.devicePixelRatio;
+  drawTablature();
 }
 window.addEventListener('resize', resizeCanvas);
 
@@ -549,11 +600,12 @@ function midiToFreq(m) {
   return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
 }
 
-function drawSequencer(playheadBeat = null) {
-  if (!seqCanvas.width) return;
-  const w = seqCanvas.width;
-  const h = seqCanvas.height;
-  seqCtx.clearRect(0, 0, w, h);
+// Render Traditional Woodwind Tablature & Continuous Breath Track
+function drawTablature(playheadBeat = null) {
+  if (!tabCanvas.width) return;
+  const w = tabCanvas.width;
+  const h = tabCanvas.height;
+  tabCtx.clearRect(0, 0, w, h);
 
   const rootMidi = parseInt(document.getElementById('sel-root').value);
   const d1Offset = parseInt(document.getElementById('sel-d1').value);
@@ -563,149 +615,178 @@ function drawSequencer(playheadBeat = null) {
 
   const scaleKey = document.getElementById('sel-scale').value;
   const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
-  const inScaleSet = new Set(scaleIntervals.map(i => (rootMidi + i) % 12));
+  const scaleMidis = scaleIntervals.map(i => rootMidi + i);
 
-  const minNote = Math.min(rootMidi - 2, d1Midi - 1, d2Midi - 1);
-  const maxNote = Math.max(rootMidi + 16, d1Midi + 1, d2Midi + 1);
-  const totalNotes = maxNote - minNote + 1;
-  const noteH = h / totalNotes;
   const totalBeats = Math.max(16, Math.ceil((currentScore.length ? Math.max(...currentScore.map(n => n.startBeat + n.durationBeats)) : 16) / 4) * 4);
   const beatW = w / totalBeats;
 
-  // Background Grid & Piano Keys
-  for (let n = minNote; n <= maxNote; n++) {
-    const y = h - (n - minNote + 1) * noteH;
-    const isRoot = (n % 12) === (rootMidi % 12);
-    const isInScale = inScaleSet.has(n % 12);
-    const isDrone = (n === d1Midi || n === d2Midi);
+  // Layout: Top Track = Breath (45px), Middle Tracks = 6 Tone Holes (32px each), Bottom = Drones (40px)
+  const breathH = 45;
+  const holeH = 34;
+  const numHoles = 6;
+  const droneH = 36;
 
-    if (isDrone) {
-      seqCtx.fillStyle = 'rgba(100, 116, 139, 0.18)';
-    } else if (isRoot) {
-      seqCtx.fillStyle = 'rgba(59, 130, 246, 0.22)';
-    } else if (isInScale) {
-      seqCtx.fillStyle = 'rgba(6, 182, 212, 0.08)';
-    } else {
-      seqCtx.fillStyle = '#0a0d14';
-    }
-    seqCtx.fillRect(0, y, w, noteH);
+  // 1. Draw Breath & Diaphragm Track (Top)
+  tabCtx.fillStyle = '#080d1a';
+  tabCtx.fillRect(0, 0, w, breathH);
+  tabCtx.strokeStyle = '#1e293b';
+  tabCtx.strokeRect(0, 0, w, breathH);
 
-    seqCtx.strokeStyle = '#181d2a';
-    seqCtx.lineWidth = 1;
-    seqCtx.strokeRect(0, y, w, noteH);
+  tabCtx.fillStyle = '#60a5fa';
+  tabCtx.font = 'bold 11px sans-serif';
+  tabCtx.fillText('🌬️ BREATH & LUNG PRESSURE STREAM', 12, 18);
 
-    seqCtx.fillStyle = isDrone ? '#94a3b8' : (isRoot ? '#60a5fa' : (isInScale ? '#67e8f9' : '#475569'));
-    seqCtx.font = `${Math.max(9, Math.floor(noteH * 0.65))}px sans-serif`;
-    seqCtx.fillText(getMidiNoteLabel(n), 6, y + noteH * 0.72);
+  // Render Continuous Breath Waveform
+  tabCtx.beginPath();
+  tabCtx.moveTo(0, breathH - 6);
+  for (let b = 0; b <= totalBeats; b += 0.2) {
+    const isPlayingNote = currentScore.some(n => b >= n.startBeat && b < n.startBeat + n.durationBeats);
+    const x = b * beatW;
+    const p = isPlayingNote ? (0.65 + 0.08 * Math.sin(b * 3.5)) : 0.05;
+    const y = breathH - 6 - p * 24;
+    tabCtx.lineTo(x, y);
   }
+  tabCtx.strokeStyle = '#06b6d4';
+  tabCtx.lineWidth = 2;
+  tabCtx.stroke();
 
-  // Beat vertical lines
-  for (let b = 0; b <= totalBeats; b++) {
-    seqCtx.strokeStyle = (b % 4 === 0) ? '#2e384e' : '#141924';
-    seqCtx.lineWidth = (b % 4 === 0) ? 1.5 : 1;
-    seqCtx.beginPath();
-    seqCtx.moveTo(b * beatW, 0);
-    seqCtx.lineTo(b * beatW, h);
-    seqCtx.stroke();
-  }
-
-  // 1. Render Greyed-Out Un-editable Continuous Drone Tracks
-  const droneTracks = [
-    { midi: d1Midi, label: `🔒 Drone 1 (${getMidiNoteLabel(d1Midi)} - Root)` },
-    { midi: d2Midi, label: `🔒 Drone 2 (${getMidiNoteLabel(d2Midi)} - Harmonic)` }
+  // 2. Draw 6 Tone Hole Rails (Hole 1 at top to Hole 6 at bottom)
+  const holeLabels = [
+    'Hole 1 (LH Index)', 'Hole 2 (LH Mid)', 'Hole 3 (LH Ring)',
+    'Hole 4 (RH Index)', 'Hole 5 (RH Mid)', 'Hole 6 (RH Ring)'
   ];
 
-  droneTracks.forEach(d => {
-    const y = h - (d.midi - minNote + 1) * noteH;
-    const nw = totalBeats * beatW - 2;
-    const nh = noteH - 2;
+  for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+    const y = breathH + hIdx * holeH;
+    tabCtx.fillStyle = (hIdx % 2 === 0) ? '#0d111c' : '#0a0e17';
+    tabCtx.fillRect(0, y, w, holeH);
+    tabCtx.strokeStyle = '#181f2f';
+    tabCtx.strokeRect(0, y, w, holeH);
 
-    seqCtx.fillStyle = 'rgba(71, 85, 105, 0.35)';
-    seqCtx.fillRect(1, y + 1, nw, nh);
+    tabCtx.fillStyle = '#94a3b8';
+    tabCtx.font = '10px monospace';
+    tabCtx.fillText(`[●] ${holeLabels[hIdx]}`, 10, y + holeH * 0.65);
+  }
 
-    seqCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
-    seqCtx.setLineDash([4, 4]);
-    seqCtx.strokeRect(1, y + 1, nw, nh);
-    seqCtx.setLineDash([]);
+  // Vertical Beat Division Lines
+  for (let b = 0; b <= totalBeats; b++) {
+    const x = b * beatW;
+    tabCtx.strokeStyle = (b % 4 === 0) ? '#2e384e' : '#141924';
+    tabCtx.lineWidth = (b % 4 === 0) ? 1.5 : 1;
+    tabCtx.beginPath();
+    tabCtx.moveTo(x, 0);
+    tabCtx.lineTo(x, h);
+    tabCtx.stroke();
+  }
 
-    seqCtx.fillStyle = '#cbd5e1';
-    seqCtx.font = `italic 600 ${Math.max(8, Math.floor(nh * 0.58))}px sans-serif`;
-    seqCtx.fillText(d.label, 40, y + nh * 0.72);
+  // 3. Render Finger Blocks on Tone Hole Rails
+  currentScore.forEach(note => {
+    const activeIdx = scaleMidis.indexOf(note.midiNote);
+    const x = note.startBeat * beatW;
+    const nw = Math.max(4, note.durationBeats * beatW - 2);
+
+    for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+      const y = breathH + hIdx * holeH;
+      // In woodwind acoustics: holes above active tone hole are OPEN, holes at/below are COVERED
+      const isCovered = (activeIdx < 0 || hIdx >= activeIdx);
+
+      if (isCovered) {
+        // Covered Finger (Solid Blue Block)
+        tabCtx.fillStyle = '#2563eb';
+        tabCtx.fillRect(x + 1, y + 2, nw, holeH - 4);
+        tabCtx.strokeStyle = '#60a5fa';
+        tabCtx.strokeRect(x + 1, y + 2, nw, holeH - 4);
+
+        // Tablature Solid Circle ●
+        tabCtx.fillStyle = '#ffffff';
+        tabCtx.font = 'bold 12px sans-serif';
+        tabCtx.fillText('●', x + Math.min(10, nw / 2 - 4), y + holeH * 0.65);
+      } else {
+        // Open Hole (Radiant Cyan Ring ○)
+        tabCtx.fillStyle = 'rgba(6, 182, 212, 0.15)';
+        tabCtx.fillRect(x + 1, y + 2, nw, holeH - 4);
+        tabCtx.strokeStyle = 'rgba(6, 182, 212, 0.5)';
+        tabCtx.strokeRect(x + 1, y + 2, nw, holeH - 4);
+
+        tabCtx.fillStyle = '#67e8f9';
+        tabCtx.font = 'bold 12px sans-serif';
+        tabCtx.fillText('○', x + Math.min(10, nw / 2 - 4), y + holeH * 0.65);
+      }
+    }
+
+    // Note name badge
+    tabCtx.fillStyle = '#f59e0b';
+    tabCtx.font = 'bold 10px sans-serif';
+    tabCtx.fillText(getMidiNoteLabel(note.midiNote), x + 4, breathH + numHoles * holeH - 6);
   });
 
-  // 2. Render Interactive Melody Notes (Finger Positions)
-  currentScore.forEach(n => {
-    const x = n.startBeat * beatW;
-    const y = h - (n.midiNote - minNote + 1) * noteH;
-    const nw = Math.max(4, n.durationBeats * beatW - 2);
-    const nh = noteH - 2;
+  // 4. Drone Continuous Rails (Bottom)
+  const dY = breathH + numHoles * holeH;
+  tabCtx.fillStyle = 'rgba(71, 85, 105, 0.35)';
+  tabCtx.fillRect(1, dY + 4, w - 2, droneH - 8);
+  tabCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+  tabCtx.setLineDash([4, 4]);
+  tabCtx.strokeRect(1, dY + 4, w - 2, droneH - 8);
+  tabCtx.setLineDash([]);
 
-    seqCtx.fillStyle = '#3b82f6';
-    seqCtx.shadowColor = 'rgba(59, 130, 246, 0.6)';
-    seqCtx.shadowBlur = 8;
-    seqCtx.fillRect(x + 1, y + 1, nw, nh);
-    seqCtx.shadowBlur = 0;
-
-    seqCtx.strokeStyle = '#93c5fd';
-    seqCtx.lineWidth = 1;
-    seqCtx.strokeRect(x + 1, y + 1, nw, nh);
-
-    seqCtx.fillStyle = '#ffffff';
-    seqCtx.font = `bold ${Math.max(8, Math.floor(nh * 0.6))}px sans-serif`;
-    seqCtx.fillText(getMidiNoteLabel(n.midiNote), x + 5, y + nh * 0.72);
-  });
+  tabCtx.fillStyle = '#cbd5e1';
+  tabCtx.font = 'italic 10px sans-serif';
+  tabCtx.fillText(`🔒 Drone 1 (${getMidiNoteLabel(d1Midi)} Root) • Drone 2 (${getMidiNoteLabel(d2Midi)} Harmonic)`, 20, dY + droneH * 0.55);
 
   // Playhead
   if (playheadBeat !== null) {
     const px = playheadBeat * beatW;
-    seqCtx.strokeStyle = '#ef4444';
-    seqCtx.lineWidth = 2.5;
-    seqCtx.beginPath();
-    seqCtx.moveTo(px, 0);
-    seqCtx.lineTo(px, h);
-    seqCtx.stroke();
+    tabCtx.strokeStyle = '#ef4444';
+    tabCtx.lineWidth = 2.5;
+    tabCtx.beginPath();
+    tabCtx.moveTo(px, 0);
+    tabCtx.lineTo(px, h);
+    tabCtx.stroke();
   }
 }
 
-// Click to toggle/add notes
-seqCanvas.addEventListener('click', (e) => {
-  const rect = seqCanvas.getBoundingClientRect();
-  const scaleX = seqCanvas.width / rect.width;
-  const scaleY = seqCanvas.height / rect.height;
+// Click to toggle/shift finger positions
+tabCanvas.addEventListener('click', (e) => {
+  const rect = tabCanvas.getBoundingClientRect();
+  const scaleX = tabCanvas.width / rect.width;
+  const scaleY = tabCanvas.height / rect.height;
   const clickX = (e.clientX - rect.left) * scaleX;
   const clickY = (e.clientY - rect.top) * scaleY;
 
   const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const d1Offset = parseInt(document.getElementById('sel-d1').value);
-  const d2Offset = parseInt(document.getElementById('sel-d2').value);
-  const d1Midi = rootMidi + d1Offset;
-  const d2Midi = rootMidi + d2Offset;
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  const scaleMidis = scaleIntervals.map(i => rootMidi + i);
 
-  const minNote = Math.min(rootMidi - 2, d1Midi - 1, d2Midi - 1);
-  const maxNote = Math.max(rootMidi + 16, d1Midi + 1, d2Midi + 1);
-  const totalNotes = maxNote - minNote + 1;
-  const noteH = seqCanvas.height / totalNotes;
   const totalBeats = Math.max(16, Math.ceil((currentScore.length ? Math.max(...currentScore.map(n => n.startBeat + n.durationBeats)) : 16) / 4) * 4);
-  const beatW = seqCanvas.width / totalBeats;
-
+  const beatW = tabCanvas.width / totalBeats;
   const targetBeat = Math.floor(clickX / beatW);
-  const noteIndex = Math.floor((seqCanvas.height - clickY) / noteH);
-  const clickedMidi = minNote + noteIndex;
 
-  if (clickedMidi === d1Midi || clickedMidi === d2Midi) return;
+  const breathH = 45;
+  const holeH = 34;
+  const numHoles = 6;
 
-  const existingIdx = currentScore.findIndex(n => n.midiNote === clickedMidi && targetBeat >= n.startBeat && targetBeat < n.startBeat + n.durationBeats);
-  if (existingIdx >= 0) {
-    currentScore.splice(existingIdx, 1);
-  } else {
-    currentScore.push({
-      startBeat: targetBeat,
-      durationBeats: 1.0,
-      midiNote: clickedMidi,
-      velocity: 84
-    });
+  if (clickY > breathH && clickY < breathH + numHoles * holeH) {
+    const holeIdx = Math.floor((clickY - breathH) / holeH);
+    const targetMidi = scaleMidis[Math.min(holeIdx, scaleMidis.length - 1)];
+
+    const existingIdx = currentScore.findIndex(n => targetBeat >= n.startBeat && targetBeat < n.startBeat + n.durationBeats);
+    if (existingIdx >= 0) {
+      if (currentScore[existingIdx].midiNote === targetMidi) {
+        currentScore.splice(existingIdx, 1);
+      } else {
+        currentScore[existingIdx].midiNote = targetMidi;
+      }
+    } else {
+      currentScore.push({
+        startBeat: targetBeat,
+        durationBeats: 1.0,
+        midiNote: targetMidi,
+        velocity: 84
+      });
+    }
+    drawTablature();
   }
-  drawSequencer();
 });
 
 // Human Vocal Tract Bio-Acoustic Model in JS
@@ -799,7 +880,7 @@ class WebHumanVocalTract {
   }
 }
 
-// Physical Modeling Flute Pipe with Modal Standing Waves & Chimney Impedance in JS
+// Physical Modeling Flute Pipe with Modal Standing Waves & Clean Headroom in JS
 class WebPhysicalPipe {
   constructor(sampleRate, boreDiameter = 19.0, windwayProfile = "flat", windwayTexture = "smooth") {
     this.sr = sampleRate;
@@ -908,7 +989,7 @@ class WebPhysicalPipe {
       totalOut += y * m.gain;
     }
 
-    return totalOut * 0.55;
+    return totalOut * 0.22;
   }
 }
 
@@ -1084,7 +1165,7 @@ function update3DModel(lMel, lD1, lD2) {
   tubeDrone2.position.y = -lD2 / 2.0;
 }
 
-function updateHoleGlow(activeMidi) {
+function updateHoleGlowAndHUD(activeMidi, breathP) {
   if (!holeMeshes.length) return;
   const rootMidi = parseInt(document.getElementById('sel-root').value);
   const scaleKey = document.getElementById('sel-scale').value;
@@ -1093,12 +1174,20 @@ function updateHoleGlow(activeMidi) {
   const scaleMidis = scaleIntervals.map(i => rootMidi + i);
   const activeIdx = scaleMidis.indexOf(activeMidi);
 
+  document.getElementById('hud-lung-val').innerText = `${(breathP || 0.65).toFixed(2)} atm`;
+  document.getElementById('hud-vowel-val').innerText = document.getElementById('sel-vowel').value.toUpperCase();
+
   holeMeshes.forEach((mesh, idx) => {
-    // When playing a note higher up the scale, holes above it are OPEN (glow cyan), holes below are covered (dark wood)
     const isOpen = (activeIdx >= 0 && idx < activeIdx);
     mesh.material.color.setHex(isOpen ? 0x06b6d4 : 0x221c16);
     mesh.material.emissive.setHex(isOpen ? 0x06b6d4 : 0x000000);
     mesh.material.emissiveIntensity = isOpen ? 0.8 : 0.0;
+
+    // Update Anatomical Finger Indicators
+    const dot = document.getElementById(`f-dot-${idx}`);
+    if (dot) {
+      dot.className = isOpen ? 'finger-dot open' : 'finger-dot closed';
+    }
   });
 }
 
@@ -1205,8 +1294,9 @@ async function startLivePhysicalSynth() {
       const sD1 = liveD1Pipe.process(droneP1);
       const sD2 = liveD2Pipe.process(droneP2);
 
-      const dryL = (sD1 * 0.40 + sD2 * 0.18 + sM * 0.62) * 0.70;
-      const dryR = (sD1 * 0.18 + sD2 * 0.40 + sM * 0.62) * 0.70;
+      // Clean headroom mixing (distortion-free linear range)
+      const dryL = (sD1 * 0.35 + sD2 * 0.18 + sM * 0.65) * 0.45;
+      const dryR = (sD1 * 0.18 + sD2 * 0.35 + sM * 0.65) * 0.45;
 
       const [rvL, rvR] = liveReverb.process(dryL, dryR, roomSize, 0.25, reverbWet, 0.85);
 
@@ -1223,10 +1313,10 @@ async function startLivePhysicalSynth() {
     if (!isAudioRunning) return;
     const secPerBeat = 60.0 / bpm;
     const curBeat = currentPlaybackTime / secPerBeat;
-    drawSequencer(curBeat);
+    drawTablature(curBeat);
 
     const activeNote = currentScore.find(n => curBeat >= n.startBeat && curBeat < n.startBeat + n.durationBeats);
-    if (activeNote) updateHoleGlow(activeNote.midiNote);
+    updateHoleGlowAndHUD(activeNote ? activeNote.midiNote : null, 0.65);
   }, 25);
 }
 
@@ -1244,8 +1334,8 @@ function stopLivePhysicalSynth() {
     clearInterval(window.livePlayheadTimer);
     window.livePlayheadTimer = null;
   }
-  drawSequencer(null);
-  updateHoleGlow(null);
+  drawTablature(null);
+  updateHoleGlowAndHUD(null, 0.0);
   document.getElementById('btn-play').innerText = '▶ Play Bio-Acoustic Engine';
 }
 
@@ -1265,7 +1355,7 @@ document.getElementById('sel-root').addEventListener('change', () => {
   updateAcousticSpecs();
 });
 document.getElementById('sel-scale').addEventListener('change', () => {
-  drawSequencer();
+  drawTablature();
   updateAcousticSpecs();
 });
 document.getElementById('sel-d1').addEventListener('change', updateAcousticSpecs);

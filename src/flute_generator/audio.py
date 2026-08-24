@@ -382,7 +382,7 @@ class PhysicalWaveguidePipe:
             m['y1'] = y
             total_out += y * m['gain']
 
-        return total_out * 0.55
+        return total_out * 0.22
 
 
 def create_flute_midi(
@@ -568,7 +568,6 @@ def synthesize_flute_audio(
                 break
 
         if active_f is not None:
-            # Diaphragm vibrato & breath dynamics
             if dur > 0.6 and elapsed > dur * 0.45:
                 vib = 1.0 + 0.0030 * math.sin(2.0 * math.pi * 5.2 * elapsed)
             else:
@@ -599,9 +598,9 @@ def synthesize_flute_audio(
         s_d1 = drone1_pipe.process(breath_d1, noise_gain=noise_drone, rng=rng)
         s_d2 = drone2_pipe.process(breath_d2, noise_gain=noise_drone, rng=rng)
 
-        # Balanced spatial stereo mix
-        dry_l = (s_d1 * 0.40 + s_d2 * 0.18 + s_m * 0.62) * 0.70
-        dry_r = (s_d1 * 0.18 + s_d2 * 0.40 + s_m * 0.62) * 0.70
+        # Balanced spatial stereo mix with distortion-free headroom
+        dry_l = (s_d1 * 0.35 + s_d2 * 0.18 + s_m * 0.65) * 0.45
+        dry_r = (s_d1 * 0.18 + s_d2 * 0.35 + s_m * 0.65) * 0.45
 
         out_l, out_r = reverb.process(
             dry_l,
