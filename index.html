@@ -1136,27 +1136,36 @@ function updateFluteMaterialOnly() {
 
 
 // Dynamically frame the flute so top and bottom fit comfortably within viewport window
-function fitCameraToFlute(totalHeight, outerDiameter) {
-  if (!camera || !controls) return;
+function fitCameraToFlute(targetGroup) {
+  if (!camera || !controls || !targetGroup) return;
+  
+  // Compute true Three.js world-space bounding box of the entire assembled model + indicators
+  const box = new THREE.Box3().setFromObject(targetGroup);
+  if (box.isEmpty()) return;
+
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+
   const container = document.getElementById('viewport-container');
   const aspect = container ? (container.clientWidth / container.clientHeight) : 1.5;
   const fov = camera.fov * (Math.PI / 180);
 
-  // Vertical framing with comfortable padding margin (1.18x)
-  const verticalMargin = 1.18;
-  const distForHeight = (totalHeight * verticalMargin) / (2 * Math.tan(fov / 2));
-  
-  // Horizontal framing check
-  const horizontalMargin = 1.25;
-  const distForWidth = (Math.max(outerDiameter * 3.5, 120) * horizontalMargin) / (2 * Math.tan(fov / 2) * aspect);
+  // Determine required distance for both height and width with 25% safety margin
+  const distY = (size.y * 1.25) / (2 * Math.tan(fov / 2));
+  const distX = (size.x * 1.30) / (2 * Math.tan(fov / 2) * aspect);
+  const dist = Math.max(distY, distX, 180);
 
-  const targetDist = Math.max(distForHeight, distForWidth, 220);
-  const targetCenterY = totalHeight / 2;
+  // Set near and far planes appropriately for wide scale ranges (Piccolo to Contrabass)
+  camera.near = Math.max(0.5, dist / 50);
+  camera.far = Math.max(5000, dist * 10);
+  camera.updateProjectionMatrix();
 
-  // Smoothly update controls target and camera position facing the front face (-Z)
-  controls.target.set(0, targetCenterY, 0);
-  camera.position.set(0, targetCenterY, -targetDist);
-  camera.lookAt(0, targetCenterY, 0);
+  // Position camera directly in front of the center point looking along +Z onto the front face (-Z direction)
+  controls.target.copy(center);
+  camera.position.set(center.x, center.y, center.z - dist);
+  camera.lookAt(center);
   controls.update();
 }
 
@@ -1328,7 +1337,7 @@ function rebuild3DFlute() {
       fluteRootGroup.add(fluteMesh);
 
       // Automatically frame camera so entire flute height fits in viewport
-      fitCameraToFlute(totalCadLen, outerD);
+      fitCameraToFlute(fluteRootGroup);
 
       // Tone Hole Indicators / Finger Pad system
       const indStyle = document.getElementById('sel-indicator-style') ? document.getElementById('sel-indicator-style').value : 'minimal_gem';
