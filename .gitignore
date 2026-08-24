@@ -48,3 +48,5 @@ htmlcov/
 .idea/
 .vscode/
 *.swp
+.openscad-studio-*
+build_wasm/
