@@ -1966,15 +1966,17 @@ function update3DFingersPose(activeHoles) {
   });
 }
 
-// Live Bio-Acoustic Audio Engine
+// True Bio-Acoustic Aeroacoustic Waveguide Model (Physical Blowing Dynamics)
 class WebPhysicalPipe {
   constructor(sampleRate, boreDiameter = 19.0) {
     this.sr = sampleRate;
-    const baseQ = 26.0 + (boreDiameter / 25.0) * 14.0;
+    this.bore = boreDiameter;
+    const baseQ = 24.0 + (boreDiameter / 25.0) * 16.0;
     this.modes = [
       { freqMult: 1.0, gain: 1.00, q: baseQ, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: 2.0, gain: 0.20, q: baseQ * 0.85, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: 3.0, gain: 0.05, q: baseQ * 0.70, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
+      { freqMult: 2.0, gain: 0.28, q: baseQ * 0.90, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 3.0, gain: 0.12, q: baseQ * 0.75, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 4.0, gain: 0.04, q: baseQ * 0.60, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
     ];
     this.jetDelay = new Float32Array(Math.floor(sampleRate * 0.05));
     this.writeJet = 0;
@@ -1982,14 +1984,19 @@ class WebPhysicalPipe {
     this.sacState = 0;
     this.currFreq = 440.0;
     this.targetFreq = 440.0;
-    this.updateCoeffs(440.0);
+    this.updateCoeffs(440.0, 0.7);
   }
 
-  updateCoeffs(freq) {
+  updateCoeffs(freq, breathP) {
+    // Blowing pressure slightly increases resonant pitch (~10-25 cents) just like a real flute embouchure
+    const blownFreq = freq * (1.0 + (breathP - 0.7) * 0.028);
+
     for (let m of this.modes) {
-      const f = Math.min(this.sr * 0.45, freq * m.freqMult);
+      const f = Math.min(this.sr * 0.46, blownFreq * m.freqMult);
       const w0 = 2.0 * Math.PI * f / this.sr;
-      const alpha = Math.sin(w0) / (2.0 * m.q);
+      // High breath pressure increases mode coupling and reduces damping
+      const dynamicQ = m.q * (0.75 + breathP * 0.35);
+      const alpha = Math.sin(w0) / (2.0 * dynamicQ);
       m.b0 = (Math.sin(w0) / 2.0) / (1.0 + alpha);
       m.a1 = (-2.0 * Math.cos(w0)) / (1.0 + alpha);
       m.a2 = (1.0 - alpha) / (1.0 + alpha);
@@ -1999,29 +2006,47 @@ class WebPhysicalPipe {
   setFreq(freq) { if (freq > 20.0) this.targetFreq = freq; }
 
   process(breathP) {
-    if (breathP <= 0.0001) return 0.0;
-    if (Math.abs(this.targetFreq - this.currFreq) > 0.1) {
-      this.currFreq += (this.targetFreq - this.currFreq) * 0.03;
-      this.updateCoeffs(this.currFreq);
+    if (breathP <= 0.001) {
+      this.sacState *= 0.90;
+      return 0.0;
     }
 
-    this.sacState = this.sacState * 0.85 + breathP * 0.15;
-    const effB = this.sacState;
+    // Smooth breath through the Slow Air Chamber (SAC)
+    this.sacState = this.sacState * 0.88 + breathP * 0.12;
+    const pBreath = this.sacState;
 
-    const rawN = Math.random() * 2.0 - 1.0;
-    this.noiseState = this.noiseState * 0.92 + rawN * 0.08;
-    const pJet = effB + this.noiseState * 0.0015 * Math.sqrt(effB);
+    if (Math.abs(this.targetFreq - this.currFreq) > 0.05) {
+      this.currFreq += (this.targetFreq - this.currFreq) * 0.04;
+    }
+    this.updateCoeffs(this.currFreq, pBreath);
+
+    // 1. Turbulent Aeroacoustic Breath Noise (scales non-linearly with blowing velocity: noise ~ P^1.5)
+    const whiteNoise = (Math.random() * 2.0 - 1.0);
+    // Pinkish/brownish turbulent filtering
+    this.noiseState = this.noiseState * 0.70 + whiteNoise * 0.30;
+    const breathTurbulence = this.noiseState * Math.pow(pBreath, 1.45) * 0.035;
+
+    // 2. Non-linear Vortex Jet Delay (Jet transit time is inversely proportional to jet velocity: v ~ sqrt(P))
+    const jetSpeedFactor = Math.sqrt(Math.max(0.2, pBreath));
+    const dJet = Math.max(2.0, (this.sr / this.currFreq) * (0.32 / jetSpeedFactor));
 
     let pAcoustic = 0;
     for (let m of this.modes) pAcoustic += m.y1 * m.gain;
 
-    const dJet = Math.max(2.0, (this.sr / this.currFreq) * 0.25);
-    this.jetDelay[this.writeJet] = pAcoustic * 0.65 + this.noiseState * 0.0005;
+    this.jetDelay[this.writeJet] = pAcoustic * 0.55 + breathTurbulence * 0.30;
     this.writeJet = (this.writeJet + 1) % this.jetDelay.length;
 
-    const delayed = this.jetDelay[(this.writeJet - 1 - Math.floor(dJet) + this.jetDelay.length) % this.jetDelay.length];
-    const qVortex = pJet * Math.tanh(delayed * 1.35 + this.noiseState * 0.0015);
+    // Read delayed jet acoustic feedback
+    const readIdx = (this.writeJet - 1 - Math.floor(dJet) + this.jetDelay.length) % this.jetDelay.length;
+    const delayedJet = this.jetDelay[readIdx];
 
+    // 3. Non-linear Labium Splitting Edge Vortex Clipping f(x) = tanh(x - x^3)
+    // Stronger blowing drives richer odd & even upper harmonics and breath rasp
+    const jetDrive = pBreath * 1.35;
+    const totalJetIn = (delayedJet * 1.55 + breathTurbulence);
+    const qVortex = jetDrive * Math.tanh(totalJetIn - 0.12 * Math.pow(totalJetIn, 3));
+
+    // 4. Modal Resonator Transmission Filter
     let totalOut = 0;
     for (let m of this.modes) {
       const y = m.b0 * (qVortex - m.x2) - m.a1 * m.y1 - m.a2 * m.y2;
@@ -2029,7 +2054,10 @@ class WebPhysicalPipe {
       m.y2 = m.y1; m.y1 = y;
       totalOut += y * m.gain;
     }
-    return totalOut * 0.22;
+
+    // Add acoustic chuff & edge hiss that naturally bleeds into the air
+    const directChuff = breathTurbulence * 0.40 * Math.sqrt(pBreath);
+    return (totalOut * 0.32 + directChuff);
   }
 }
 
