@@ -130,66 +130,106 @@ class StereoFreeverb:
 
 
 class PhysicalWaveguidePipe:
-    """1D Digital Waveguide Acoustic Flute Resonator with smooth cubic/tanh labium jet excitation."""
-    def __init__(self, sample_rate: int = 44100):
+    """Multi-mode physical woodwind resonator driven by non-linear labium vortex jet and CAD shape."""
+    def __init__(
+        self,
+        sample_rate: int = 44100,
+        bore_diameter: float = 19.0,
+        windway_profile: str = "flat",
+        windway_texture: str = "smooth",
+    ):
         self.sr = sample_rate
-        self.bore_delay = DelayLine(int(sample_rate * 0.1))
+        self.bore_diameter = bore_diameter
+        self.windway_profile = windway_profile
+        self.windway_texture = windway_texture
+
+        # Quality factor Q derived from CAD bore diameter (wider bore = higher Q resonance)
+        self.base_q = 26.0 + (bore_diameter / 25.0) * 14.0
+        self.tune_ratio = 1.221
+
+        # Resonant standing wave acoustic modes (Fundamental, 2nd overtone, 3rd overtone)
+        self.modes = [
+            {'freq_mult': self.tune_ratio * 1.0, 'gain': 1.00, 'q': self.base_q, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
+            {'freq_mult': self.tune_ratio * 2.0, 'gain': 0.20, 'q': self.base_q * 0.85, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
+            {'freq_mult': self.tune_ratio * 3.0, 'gain': 0.05, 'q': self.base_q * 0.70, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
+        ]
+
+        # Jet delay line for fipple window transit time
         self.jet_delay = DelayLine(int(sample_rate * 0.05))
-        self.lp_filter = OnePoleLowpass(1200.0, sample_rate)
-        self.dc_x = 0.0
-        self.dc_y = 0.0
         self.noise_state = 0.0
-        
+        self.sac_state = 0.0
+
         self.target_freq = 440.0
         self.curr_freq = 440.0
+
+        self.update_coefficients(440.0)
+
+    def update_coefficients(self, freq: float):
+        for m in self.modes:
+            f = min(self.sr * 0.45, freq * m['freq_mult'])
+            w0 = 2.0 * math.pi * f / self.sr
+            q = m['q']
+            alpha = math.sin(w0) / (2.0 * q)
+
+            b0 = math.sin(w0) / 2.0
+            a0 = 1.0 + alpha
+            a1 = -2.0 * math.cos(w0)
+            a2 = 1.0 - alpha
+
+            m['b0'] = b0 / a0
+            m['a1'] = a1 / a0
+            m['a2'] = a2 / a0
 
     def set_frequency(self, freq: float):
         if freq > 20.0:
             self.target_freq = freq
-            self.lp_filter.set_cutoff(freq * 2.5, self.sr)
 
-    def process(self, breath_pressure: float, noise_gain: float = 0.003, rng: Optional[random.Random] = None) -> float:
+    def process(self, breath_pressure: float, noise_gain: float = 0.0015, rng: Optional[random.Random] = None) -> float:
         if breath_pressure <= 0.0001:
-            self.lp_filter.state *= 0.95
             return 0.0
 
-        # Smooth fundamental frequency slew
-        self.curr_freq += (self.target_freq - self.curr_freq) * 0.02
-        
-        # Calibrated acoustic delay matching
-        d_loop = (self.sr / self.curr_freq) * 0.5956
-        d_bore = max(2.0, d_loop * 0.70)
-        d_jet = max(2.0, d_loop * 0.30)
+        if abs(self.target_freq - self.curr_freq) > 0.1:
+            self.curr_freq += (self.target_freq - self.curr_freq) * 0.03
+            self.update_coefficients(self.curr_freq)
 
-        # 1. Warm, gentle pink breath turbulence
+        # 1. Slow Air Chamber (SAC) compliance smoothing on breath pressure
+        if self.windway_profile == "sac":
+            self.sac_state = self.sac_state * 0.85 + breath_pressure * 0.15
+            eff_breath = self.sac_state
+        else:
+            eff_breath = breath_pressure
+
+        # 2. Pink breath turbulence (enhanced if micro-ribbed)
         raw_n = (rng.random() * 2.0 - 1.0) if rng else 0.0
-        self.noise_state = self.noise_state * 0.92 + raw_n * 0.08
-        p_jet = breath_pressure + self.noise_state * noise_gain * math.sqrt(breath_pressure)
+        pink_pole = 0.88 if self.windway_texture == "ribbed" else 0.92
+        self.noise_state = self.noise_state * pink_pole + raw_n * (1.0 - pink_pole)
+        actual_noise = noise_gain * (1.5 if self.windway_texture == "ribbed" else 1.0)
+        p_jet = eff_breath + self.noise_state * actual_noise * math.sqrt(eff_breath)
 
-        # 2. Read acoustic reflection from open end with fractional interpolation
-        bore_out = self.bore_delay.read_fractional(d_bore)
+        # 3. Sum of acoustic pressure from resonant body modes
+        p_acoustic = sum(m['y1'] * m['gain'] for m in self.modes)
 
-        # Viscous boundary reflection with lowpass damping & open-end phase inversion (-0.97)
-        p_acoustic = -0.97 * self.lp_filter.tick(bore_out)
-
-        # 3. Labium jet displacement
-        jet_disp = p_acoustic * 0.65 + self.noise_state * noise_gain * 0.15
+        # 4. Jet transit delay across fipple window
+        d_jet = max(2.0, (self.sr / self.curr_freq) * 0.25)
+        jet_disp = p_acoustic * 0.65 + self.noise_state * actual_noise * 0.35
         self.jet_delay.write(jet_disp)
         delayed_disp = self.jet_delay.read_fractional(d_jet)
 
-        # 4. Gentle sigmoid vortex injection with smooth asymmetry
-        q_inj = p_jet * math.tanh((delayed_disp + 0.08) * 1.8) - p_jet * math.tanh(0.08 * 1.8)
+        # 5. Non-linear labium vortex excitation
+        jet_gain = 1.6 if self.windway_profile == "arched" else 1.35
+        q_vortex = p_jet * math.tanh(delayed_disp * jet_gain + self.noise_state * actual_noise)
 
-        # 5. Resonator excitation
-        bore_in = p_acoustic + q_inj * 0.52
-        self.bore_delay.write(bore_in)
+        # 6. Excite all resonant pipe modes
+        total_out = 0.0
+        for m in self.modes:
+            y = m['b0'] * (q_vortex - m['x2']) - m['a1'] * m['y1'] - m['a2'] * m['y2']
+            m['x2'] = m['x1']
+            m['x1'] = q_vortex
+            m['y2'] = m['y1']
+            m['y1'] = y
+            total_out += y * m['gain']
 
-        # 6. Radiated acoustic output with DC blocker
-        dc_out = bore_in - self.dc_x + 0.995 * self.dc_y
-        self.dc_x = bore_in
-        self.dc_y = dc_out
-
-        return dc_out * 0.38
+        return total_out * 0.40
 
 
 def create_flute_midi(
@@ -313,15 +353,30 @@ def synthesize_flute_audio(
     reverb_wet: float = 0.32,
     reverb_dry: float = 0.85,
 ) -> Path:
-    """Synthesize authentic, pure acoustic audio preview using calibrated physical waveguide modeling."""
+    """Synthesize authentic, pure acoustic audio preview using physical modeling coupled to CAD shape."""
     seconds_per_beat = 60.0 / bpm
     total_beats = sum(e.duration_beats for e in melody_events)
     total_dur = total_beats * seconds_per_beat + 1.2
     total_samples = int(total_dur * sample_rate)
 
-    melody_pipe = PhysicalWaveguidePipe(sample_rate)
-    drone1_pipe = PhysicalWaveguidePipe(sample_rate)
-    drone2_pipe = PhysicalWaveguidePipe(sample_rate)
+    melody_pipe = PhysicalWaveguidePipe(
+        sample_rate,
+        bore_diameter=dims.bore_melody,
+        windway_profile=dims.windway_profile,
+        windway_texture=dims.windway_texture,
+    )
+    drone1_pipe = PhysicalWaveguidePipe(
+        sample_rate,
+        bore_diameter=dims.bore_drone1,
+        windway_profile=dims.windway_profile,
+        windway_texture=dims.windway_texture,
+    )
+    drone2_pipe = PhysicalWaveguidePipe(
+        sample_rate,
+        bore_diameter=dims.bore_drone2,
+        windway_profile=dims.windway_profile,
+        windway_texture=dims.windway_texture,
+    )
 
     drone1_pipe.set_frequency(dims.drone1_frequency)
     drone2_pipe.set_frequency(dims.drone2_frequency)
@@ -342,7 +397,7 @@ def synthesize_flute_audio(
 
     drone_p1 = (0.55 + 0.15 * dims.drone_air_ratio)
     drone_p2 = (0.50 + 0.15 * dims.drone_air_ratio)
-    noise_drone = 0.005 if dims.windway_texture == "ribbed" else 0.0025
+    noise_drone = 0.003 if dims.windway_texture == "ribbed" else 0.0015
 
     for i in range(total_samples):
         t = float(i) * dt
@@ -372,7 +427,7 @@ def synthesize_flute_audio(
         breath_d1 = drone_p1 * global_env
         breath_d2 = drone_p2 * global_env
 
-        s_m = melody_pipe.process(breath_m, noise_gain=0.003, rng=rng)
+        s_m = melody_pipe.process(breath_m, noise_gain=0.0015, rng=rng)
         s_d1 = drone1_pipe.process(breath_d1, noise_gain=noise_drone, rng=rng)
         s_d2 = drone2_pipe.process(breath_d2, noise_gain=noise_drone, rng=rng)
 
@@ -390,7 +445,6 @@ def synthesize_flute_audio(
             width=0.9,
         )
 
-        # Smooth soft-knee saturation to prevent harsh clipping
         out_l_c = math.tanh(out_l * 0.85)
         out_r_c = math.tanh(out_r * 0.85)
         frames.append(struct.pack('<hh', int(out_l_c * 32767.0), int(out_r_c * 32767.0)))

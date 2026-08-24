@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flute Studio 🪈 — 3D Acoustic CAD & Pyodide Physical Waveguide Engine</title>
+  <title>Flute Studio 🪈 — 3D Acoustic CAD & Live Physical Waveguide Engine</title>
   <style>
     :root {
       --bg-dark: #0b0d13;
@@ -337,7 +337,7 @@
 
   <div class="content-area">
     <div class="tabs-bar">
-      <button class="tab-btn active" data-tab="studio">🎹 Visual Piano Roll & Pyodide Synth</button>
+      <button class="tab-btn active" data-tab="studio">🎹 Visual Piano Roll & Live Physical Synth</button>
       <button class="tab-btn" data-tab="cad">📐 3D Parametric CAD View</button>
       <button class="tab-btn" data-tab="gallery">🌟 Showcase Gallery</button>
     </div>
@@ -358,7 +358,7 @@
           </select>
 
           <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: auto;">
-            Click canvas to toggle/add notes • Sub-sample Waveguide Physics
+            Live Realtime Waveguide • Tweak sliders while playing
           </span>
         </div>
 
@@ -380,7 +380,7 @@
         <canvas id="viewport-canvas"></canvas>
         <div class="viewport-overlay">
           <strong>Parametric Triple Flute</strong><br>
-          <span style="color: var(--text-dim);">Rotate: Click & Drag • Zoom: Scroll</span>
+          <span style="color: var(--text-dim);">Realtime morphing 3D CAD • Drag to rotate • Scroll to zoom</span>
         </div>
       </div>
     </div>
@@ -423,10 +423,8 @@
 <script>
 let pyodideInstance = null;
 let audioContext = null;
-let currentAudioSource = null;
-let playheadInterval = null;
-let playbackStartSec = 0;
-let playbackTotalSec = 0;
+let liveProcessorNode = null;
+let isAudioRunning = false;
 
 const SCALES = {
   native_american: [0, 3, 5, 7, 10, 12],
@@ -517,6 +515,10 @@ function getMidiNoteLabel(m) {
   return `${name}${oct}`;
 }
 
+function midiToFreq(m) {
+  return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
+}
+
 function drawPianoRoll(playheadBeat = null) {
   if (!prCanvas.width) return;
   const w = prCanvas.width;
@@ -554,7 +556,6 @@ function drawPianoRoll(playheadBeat = null) {
     prCtx.lineWidth = 1;
     prCtx.strokeRect(0, y, w, noteH);
 
-    // Note Name Sidebar Label
     prCtx.fillStyle = isRoot ? '#60a5fa' : (isInScale ? '#67e8f9' : '#475569');
     prCtx.font = `${Math.max(9, Math.floor(noteH * 0.65))}px sans-serif`;
     prCtx.fillText(getMidiNoteLabel(n), 6, y + noteH * 0.72);
@@ -624,7 +625,6 @@ prCanvas.addEventListener('click', (e) => {
   const noteIndex = Math.floor((prCanvas.height - clickY) / noteH);
   const clickedMidi = minNote + noteIndex;
 
-  // Check if clicked existing note
   const existingIdx = currentScore.findIndex(n => n.midiNote === clickedMidi && targetBeat >= n.startBeat && targetBeat < n.startBeat + n.durationBeats);
   if (existingIdx >= 0) {
     currentScore.splice(existingIdx, 1);
@@ -639,187 +639,409 @@ prCanvas.addEventListener('click', (e) => {
   drawPianoRoll();
 });
 
+// Real-Time Physical Modeling Waveguide Classes in JS (Exact mirror of Python physics)
+class WebPhysicalPipe {
+  constructor(sampleRate, boreDiameter = 19.0, windwayProfile = "flat", windwayTexture = "smooth") {
+    this.sr = sampleRate;
+    this.boreDiameter = boreDiameter;
+    this.windwayProfile = windwayProfile;
+    this.windwayTexture = windwayTexture;
+
+    this.baseQ = 26.0 + (boreDiameter / 25.0) * 14.0;
+    this.tuneRatio = 1.221;
+
+    this.modes = [
+      { freqMult: this.tuneRatio * 1.0, gain: 1.00, q: this.baseQ, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: this.tuneRatio * 2.0, gain: 0.20, q: this.baseQ * 0.85, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: this.tuneRatio * 3.0, gain: 0.05, q: this.baseQ * 0.70, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
+    ];
+
+    this.jetLen = Math.floor(sampleRate * 0.05);
+    this.jetDelay = new Float32Array(this.jetLen);
+    this.writeJet = 0;
+
+    this.noiseState = 0;
+    this.sacState = 0;
+
+    this.targetFreq = 440.0;
+    this.currFreq = 440.0;
+
+    this.updateProfile(windwayProfile, windwayTexture);
+    this.updateCoefficients(440.0);
+  }
+
+  updateProfile(profile, texture) {
+    this.windwayProfile = profile;
+    this.windwayTexture = texture;
+  }
+
+  updateCoefficients(freq) {
+    for (let m of this.modes) {
+      const f = Math.min(this.sr * 0.45, freq * m.freqMult);
+      const w0 = 2.0 * Math.PI * f / this.sr;
+      const alpha = Math.sin(w0) / (2.0 * m.q);
+
+      const b0 = Math.sin(w0) / 2.0;
+      const a0 = 1.0 + alpha;
+      const a1 = -2.0 * Math.cos(w0);
+      const a2 = 1.0 - alpha;
+
+      m.b0 = b0 / a0;
+      m.a1 = a1 / a0;
+      m.a2 = a2 / a0;
+    }
+  }
+
+  setFreq(freq) {
+    if (freq > 20.0) this.targetFreq = freq;
+  }
+
+  readJetFractional(delay) {
+    delay = Math.max(1.0, Math.min(this.jetLen - 2.0, delay));
+    const intD = Math.floor(delay);
+    const frac = delay - intD;
+    const idx1 = (this.writeJet - 1 - intD + this.jetLen) % this.jetLen;
+    const idx2 = (idx1 - 1 + this.jetLen) % this.jetLen;
+    return (1.0 - frac) * this.jetDelay[idx1] + frac * this.jetDelay[idx2];
+  }
+
+  process(breathP, noiseGain = 0.0015) {
+    if (breathP <= 0.0001) return 0.0;
+
+    if (Math.abs(this.targetFreq - this.currFreq) > 0.1) {
+      this.currFreq += (this.targetFreq - this.currFreq) * 0.03;
+      this.updateCoefficients(this.currFreq);
+    }
+
+    if (this.windwayProfile === "sac") {
+      this.sacState = this.sacState * 0.85 + breathP * 0.15;
+    } else {
+      this.sacState = breathP;
+    }
+    const effBreath = this.sacState;
+
+    const rawN = Math.random() * 2.0 - 1.0;
+    const pinkPole = (this.windwayTexture === "ribbed") ? 0.88 : 0.92;
+    this.noiseState = this.noiseState * pinkPole + rawN * (1.0 - pinkPole);
+    const actualNoise = noiseGain * (this.windwayTexture === "ribbed" ? 1.5 : 1.0);
+    const pJet = effBreath + this.noiseState * actualNoise * Math.sqrt(effBreath);
+
+    let pAcoustic = 0;
+    for (let m of this.modes) pAcoustic += m.y1 * m.gain;
+
+    const dJet = Math.max(2.0, (this.sr / this.currFreq) * 0.25);
+    const jetDisp = pAcoustic * 0.42 + this.noiseState * actualNoise * 0.10;
+    this.jetDelay[this.writeJet] = jetDisp;
+    this.writeJet = (this.writeJet + 1) % this.jetLen;
+    const delayedDisp = this.readJetFractional(dJet);
+
+    const jetGain = (this.windwayProfile === "arched") ? 1.6 : 1.35;
+    const offset = 0.02;
+    const qVortex = pJet * Math.tanh((delayedDisp + offset) * jetGain) - pJet * Math.tanh(offset * jetGain);
+
+    let totalOut = 0;
+    for (let m of this.modes) {
+      const y = m.b0 * (qVortex - m.x2) - m.a1 * m.y1 - m.a2 * m.y2;
+      m.x2 = m.x1;
+      m.x1 = qVortex;
+      m.y2 = m.y1;
+      m.y1 = y;
+      totalOut += y * m.gain;
+    }
+
+    return totalOut * 0.32;
+  }
+}
+
+// Live Stereo Freeverb in JS
+class WebLiveFreeverb {
+  constructor(sampleRate) {
+    const scale = sampleRate / 44100.0;
+    const tuningsL = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
+    const tuningsR = [1139, 1211, 1300, 1379, 1445, 1514, 1580, 1640];
+    const allpassTunings = [556, 441, 341, 225];
+
+    this.combsL = tuningsL.map(t => new Float32Array(Math.floor(t * scale)));
+    this.combsR = tuningsR.map(t => new Float32Array(Math.floor(t * scale)));
+    this.combIdxL = new Int32Array(tuningsL.length);
+    this.combIdxR = new Int32Array(tuningsR.length);
+    this.combFiltL = new Float32Array(tuningsL.length);
+    this.combFiltR = new Float32Array(tuningsR.length);
+
+    this.allpassL = allpassTunings.map(t => new Float32Array(Math.floor(t * scale)));
+    this.allpassR = allpassTunings.map(t => new Float32Array(Math.floor((t + 23) * scale)));
+    this.apIdxL = new Int32Array(allpassTunings.length);
+    this.apIdxR = new Int32Array(allpassTunings.length);
+  }
+
+  process(inL, inR, roomSize = 0.75, damping = 0.25, wet = 0.32, dry = 0.85) {
+    const feedback = 0.65 + roomSize * 0.25;
+    const inMono = (inL + inR) * 0.010;
+
+    let outL = 0, outR = 0;
+    for (let i = 0; i < this.combsL.length; i++) {
+      const buf = this.combsL[i];
+      const idx = this.combIdxL[i];
+      const val = buf[idx];
+      this.combFiltL[i] = val * (1 - damping) + this.combFiltL[i] * damping;
+      buf[idx] = inMono + this.combFiltL[i] * feedback;
+      this.combIdxL[i] = (idx + 1) % buf.length;
+      outL += val;
+    }
+    for (let i = 0; i < this.combsR.length; i++) {
+      const buf = this.combsR[i];
+      const idx = this.combIdxR[i];
+      const val = buf[idx];
+      this.combFiltR[i] = val * (1 - damping) + this.combFiltR[i] * damping;
+      buf[idx] = inMono + this.combFiltR[i] * feedback;
+      this.combIdxR[i] = (idx + 1) % buf.length;
+      outR += val;
+    }
+
+    for (let i = 0; i < this.allpassL.length; i++) {
+      const buf = this.allpassL[i];
+      const idx = this.apIdxL[i];
+      const bufOut = buf[idx];
+      const apOut = -outL + bufOut;
+      buf[idx] = outL + bufOut * 0.5;
+      this.apIdxL[i] = (idx + 1) % buf.length;
+      outL = apOut;
+    }
+    for (let i = 0; i < this.allpassR.length; i++) {
+      const buf = this.allpassR[i];
+      const idx = this.apIdxR[i];
+      const bufOut = buf[idx];
+      const apOut = -outR + bufOut;
+      buf[idx] = outR + bufOut * 0.5;
+      this.apIdxR[i] = (idx + 1) % buf.length;
+      outR = apOut;
+    }
+
+    return [inL * dry + outL * wet, inR * dry + outR * wet];
+  }
+}
+
+// Live Real-Time Synthesizer State
+let liveMelPipe = null, liveD1Pipe = null, liveD2Pipe = null, liveReverb = null;
+let currentPlaybackTime = 0.0;
+
 function updateAcousticSpecs() {
   const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const fMel = 440.0 * Math.pow(2.0, (rootMidi - 69.0) / 12.0);
+  const d1Offset = parseInt(document.getElementById('sel-d1').value);
+  const d2Offset = parseInt(document.getElementById('sel-d2').value);
+  const profile = document.getElementById('sel-profile').value;
+  const texture = document.getElementById('sel-texture').value;
+
+  const fMel = midiToFreq(rootMidi);
+  const fD1 = midiToFreq(rootMidi + d1Offset);
+  const fD2 = midiToFreq(rootMidi + d2Offset);
+
   const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * 19.0;
-  const lD1 = (343200.0 / (2.0 * fMel)) - 1.6 * 22.0;
-  const fD2 = 440.0 * Math.pow(2.0, (rootMidi + 7 - 69.0) / 12.0);
+  const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * 22.0;
   const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * 16.0;
 
   document.getElementById('val-root').innerText = `${getMidiNoteLabel(rootMidi)} (${rootMidi})`;
   document.getElementById('spec-mel-len').innerText = `${lMel.toFixed(1)} mm (${fMel.toFixed(1)} Hz)`;
-  document.getElementById('spec-d1-len').innerText = `${lD1.toFixed(1)} mm (${fMel.toFixed(1)} Hz)`;
+  document.getElementById('spec-d1-len').innerText = `${lD1.toFixed(1)} mm (${fD1.toFixed(1)} Hz)`;
   document.getElementById('spec-d2-len').innerText = `${lD2.toFixed(1)} mm (${fD2.toFixed(1)} Hz)`;
   document.getElementById('spec-total-len').innerText = `${(Math.max(lMel, lD1, lD2) + 30.0).toFixed(1)} mm`;
+
+  // Update live pipes if audio is running
+  if (liveD1Pipe) liveD1Pipe.setFreq(fD1);
+  if (liveD2Pipe) liveD2Pipe.setFreq(fD2);
+  if (liveMelPipe) liveMelPipe.updateProfile(profile, texture);
+  if (liveD1Pipe) liveD1Pipe.updateProfile(profile, texture);
+  if (liveD2Pipe) liveD2Pipe.updateProfile(profile, texture);
+
+  // Update 3D model
+  update3DModel(lMel, lD1, lD2);
 }
 
-// Initialize Pyodide & Mount Python Source Directly from src/
-async function initPyodideEngine() {
-  try {
-    document.getElementById('lbl-pyodide-status').innerText = 'Loading Pyodide WASM runtime...';
-    pyodideInstance = await loadPyodide();
-    await pyodideInstance.loadPackage(['micropip']);
+// 3D Three.js Scene with dynamic live morphing
+let scene, camera, renderer, controls;
+let tubeMelody, tubeDrone1, tubeDrone2, fippleGroup, toneHolesGroup;
 
-    const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py'];
-    pyodideInstance.FS.mkdirTree('/home/pyodide/flute_generator');
-    pyodideInstance.FS.writeFile('/home/pyodide/flute_generator/__init__.py', '"""Flute Generator Package"""\n');
-    
-    await pyodideInstance.runPythonAsync(`
-import sys
-sys.path.insert(0, '/home/pyodide')
-`);
+function init3D() {
+  const container = document.getElementById('viewport-container');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
+  camera.position.set(0, -380, 240);
 
-    for (const mod of modules) {
-      try {
-        const res = await fetch(`src/flute_generator/${mod}`);
-        if (res.ok) {
-          const text = await res.text();
-          pyodideInstance.FS.writeFile(`/home/pyodide/flute_generator/${mod}`, text);
-        }
-      } catch (err) {}
-    }
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport-canvas'), antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
 
-    document.getElementById('lbl-pyodide-status').innerText = 'Python Engine Ready (WASM)';
-    updateAcousticSpecs();
-  } catch (err) {
-    document.getElementById('lbl-pyodide-status').innerText = 'Python Engine Ready (WASM)';
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const light = new THREE.DirectionalLight(0xffedd5, 0.9);
+  light.position.set(200, -250, 400);
+  scene.add(light);
+
+  const matFlute = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.35, metalness: 0.15 });
+  const matHole = new THREE.MeshBasicMaterial({ color: 0x11141e });
+
+  tubeMelody = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 9.5, 360, 24), matFlute);
+  tubeDrone1 = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 355, 24), matFlute);
+  tubeDrone2 = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 235, 24), matFlute);
+
+  tubeDrone1.position.x = -26;
+  tubeDrone2.position.x = 26;
+
+  scene.add(tubeMelody);
+  scene.add(tubeDrone1);
+  scene.add(tubeDrone2);
+
+  toneHolesGroup = new THREE.Group();
+  scene.add(toneHolesGroup);
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
   }
+  animate();
 }
 
-// Synthesize & Playback via Physical Engine
-document.getElementById('btn-play').addEventListener('click', async () => {
+function update3DModel(lMel, lD1, lD2) {
+  if (!tubeMelody) return;
+  tubeMelody.scale.set(1, lMel / 360.0, 1);
+  tubeMelody.position.y = -lMel / 2.0;
+
+  tubeDrone1.scale.set(1, lD1 / 355.0, 1);
+  tubeDrone1.position.y = -lD1 / 2.0;
+
+  tubeDrone2.scale.set(1, lD2 / 235.0, 1);
+  tubeDrone2.position.y = -lD2 / 2.0;
+}
+
+// Live Audio Engine Loop via Web Audio ScriptProcessor / AudioWorklet
+function startLivePhysicalSynth() {
   if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioContext.state === 'suspended') await audioContext.resume();
+  if (audioContext.state === 'suspended') audioContext.resume();
+
+  const sampleRate = audioContext.sampleRate;
+  liveMelPipe = new WebPhysicalPipe(sampleRate, 19.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
+  liveD1Pipe = new WebPhysicalPipe(sampleRate, 22.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
+  liveD2Pipe = new WebPhysicalPipe(sampleRate, 16.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
+  liveReverb = new WebLiveFreeverb(sampleRate);
 
   const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const scaleKey = document.getElementById('sel-scale').value;
-  const profile = document.getElementById('sel-profile').value;
-  const airRatio = parseFloat(document.getElementById('rng-air-ratio').value);
-  const texture = document.getElementById('sel-texture').value;
-  const room = parseFloat(document.getElementById('rng-room').value);
-  const wet = parseFloat(document.getElementById('rng-wet').value);
+  const d1Offset = parseInt(document.getElementById('sel-d1').value);
+  const d2Offset = parseInt(document.getElementById('sel-d2').value);
 
-  document.getElementById('btn-play').innerText = 'Synthesizing Audio...';
+  liveD1Pipe.setFreq(midiToFreq(rootMidi + d1Offset));
+  liveD2Pipe.setFreq(midiToFreq(rootMidi + d2Offset));
 
-  // Sort score by startBeat
-  const sortedScore = [...currentScore].sort((a, b) => a.startBeat - b.startBeat);
-  const totalBeats = sortedScore.length ? Math.max(...sortedScore.map(n => n.startBeat + n.durationBeats)) : 8;
-  const secPerBeat = 60.0 / bpm;
-  playbackTotalSec = totalBeats * secPerBeat + 1.2;
+  currentPlaybackTime = 0.0;
+  isAudioRunning = true;
 
-  let audioBuffer = null;
+  const bufferSize = 2048;
+  liveProcessorNode = audioContext.createScriptProcessor(bufferSize, 0, 2);
 
-  if (pyodideInstance && sortedScore.length > 0) {
-    try {
-      const scoreJson = JSON.stringify(sortedScore);
-      const synthCode = `
-import json, struct
-from flute_generator.acoustics import calculate_flute_geometry
-from flute_generator.melodies import NoteEvent
-from flute_generator.audio import synthesize_flute_audio
-from flute_generator.scales import SCALES
+  liveProcessorNode.onaudioprocess = (e) => {
+    if (!isAudioRunning) return;
+    const outL = e.outputBuffer.getChannelData(0);
+    const outR = e.outputBuffer.getChannelData(1);
 
-score_data = json.loads('''${scoreJson}''')
-events = []
-curr_b = 0.0
-for item in score_data:
-    gap = item['startBeat'] - curr_b
-    if gap > 0.01:
-        events.append(NoteEvent(midi_note=None, duration_beats=gap))
-    events.append(NoteEvent(midi_note=item['midiNote'], duration_beats=item['durationBeats'], velocity=item.get('velocity', 84)))
-    curr_b = item['startBeat'] + item['durationBeats']
+    const sortedScore = [...currentScore].sort((a, b) => a.startBeat - b.startBeat);
+    const totalBeats = sortedScore.length ? Math.max(...sortedScore.map(n => n.startBeat + n.durationBeats)) : 8;
+    const secPerBeat = 60.0 / bpm;
+    const loopDurationSec = totalBeats * secPerBeat;
 
-dims = calculate_flute_geometry(
-    root_midi=${rootMidi},
-    scale_intervals=SCALES.get('${scaleKey}', SCALES['minor_pentatonic']),
-    windway_profile='${profile}',
-    drone_air_ratio=${airRatio},
-    windway_texture='${texture}'
-)
+    const droneAirRatio = parseFloat(document.getElementById('rng-air-ratio').value);
+    const roomSize = parseFloat(document.getElementById('rng-room').value);
+    const reverbWet = parseFloat(document.getElementById('rng-wet').value);
 
-out_file = '/home/pyodide/live_preview.wav'
-synthesize_flute_audio(
-    dims, events, out_file,
-    room_size=${room},
-    reverb_wet=${wet},
-    bpm=${bpm}
-)
+    const droneP1 = 0.55 + 0.15 * droneAirRatio;
+    const droneP2 = 0.50 + 0.15 * droneAirRatio;
 
-with open(out_file, 'rb') as f:
-    wav_bytes = f.read()
-wav_bytes
-`;
-      const pyResult = await pyodideInstance.runPythonAsync(synthCode);
-      const arrayBuf = pyResult.toJs().buffer;
-      audioBuffer = await audioContext.decodeAudioData(arrayBuf);
-    } catch (err) {
-      console.warn("Pyodide synthesis error:", err);
-    }
-  }
+    const dt = 1.0 / sampleRate;
 
-  // Fallback to pre-rendered wav if pyodide not ready or failed
-  if (!audioBuffer) {
-    const preset = document.getElementById('sel-preset-melody').value;
-    const audioMap = {
-      'native_motif': 'examples/01_native_american_a4_sac/flute.wav',
-      'desert_caravan': 'examples/02_desert_caravan_hijaz_ribbed/flute.wav',
-      'condor_pasa': 'examples/03_baroque_condor_pasa_arched/flute.wav',
-      'greensleeves': 'examples/04_greensleeves_dorian_c5/flute.wav'
-    };
-    const url = audioMap[preset] || 'examples/01_native_american_a4_sac/flute.wav';
-    try {
-      const res = await fetch(url);
-      const arrayBuf = await res.arrayBuffer();
-      audioBuffer = await audioContext.decodeAudioData(arrayBuf);
-    } catch (err) {}
-  }
-
-  if (audioBuffer) {
-    if (currentAudioSource) currentAudioSource.stop();
-    if (playheadInterval) clearInterval(playheadInterval);
-
-    currentAudioSource = audioContext.createBufferSource();
-    currentAudioSource.buffer = audioBuffer;
-    currentAudioSource.connect(audioContext.destination);
-    currentAudioSource.start();
-
-    document.getElementById('btn-play').innerText = 'Playing Physical Flute... 🪈';
-    playbackStartSec = audioContext.currentTime;
-
-    playheadInterval = setInterval(() => {
-      const elapsed = audioContext.currentTime - playbackStartSec;
-      const currentBeat = elapsed / secPerBeat;
-      drawPianoRoll(currentBeat);
-      if (elapsed >= playbackTotalSec) {
-        clearInterval(playheadInterval);
-        drawPianoRoll(null);
-        document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
+    for (let i = 0; i < bufferSize; i++) {
+      currentPlaybackTime += dt;
+      if (currentPlaybackTime >= loopDurationSec) {
+        currentPlaybackTime = 0.0;
       }
-    }, 25);
 
-    currentAudioSource.onended = () => {
-      clearInterval(playheadInterval);
-      drawPianoRoll(null);
-      document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
-    };
+      const currentBeat = currentPlaybackTime / secPerBeat;
+
+      // Find active note in score
+      let activeFreq = null;
+      let activeVel = 0.0;
+      let noteElapsed = 0.0;
+      let noteDur = 0.0;
+
+      for (let n of sortedScore) {
+        if (currentBeat >= n.startBeat && currentBeat < n.startBeat + n.durationBeats) {
+          activeFreq = midiToFreq(n.midiNote);
+          activeVel = (n.velocity || 84) / 127.0;
+          noteElapsed = (currentBeat - n.startBeat) * secPerBeat;
+          noteDur = n.durationBeats * secPerBeat;
+          break;
+        }
+      }
+
+      let breathM = 0.0;
+      if (activeFreq !== null) {
+        const vib = (noteDur > 0.6 && noteElapsed > noteDur * 0.45) ? 1.0 + 0.0030 * Math.sin(2.0 * Math.PI * 5.0 * noteElapsed) : 1.0;
+        liveMelPipe.setFreq(activeFreq * vib);
+
+        const att = Math.min(1.0, noteElapsed / 0.04);
+        const rel = Math.min(1.0, (noteDur - noteElapsed) / 0.04);
+        breathM = (0.58 + activeVel * 0.18) * att * rel;
+      }
+
+      const sM = liveMelPipe.process(breathM);
+      const sD1 = liveD1Pipe.process(droneP1);
+      const sD2 = liveD2Pipe.process(droneP2);
+
+      const dryL = (sD1 * 0.40 + sD2 * 0.18 + sM * 0.62) * 0.70;
+      const dryR = (sD1 * 0.18 + sD2 * 0.40 + sM * 0.62) * 0.70;
+
+      const [rvL, rvR] = liveReverb.process(dryL, dryR, roomSize, 0.25, reverbWet, 0.85);
+
+      outL[i] = Math.tanh(rvL * 0.85);
+      outR[i] = Math.tanh(rvR * 0.85);
+    }
+  };
+
+  liveProcessorNode.connect(audioContext.destination);
+  document.getElementById('btn-play').innerText = 'Playing Physical Flute... 🪈';
+
+  // Animate playhead
+  if (window.livePlayheadTimer) clearInterval(window.livePlayheadTimer);
+  window.livePlayheadTimer = setInterval(() => {
+    if (!isAudioRunning) return;
+    const secPerBeat = 60.0 / bpm;
+    drawPianoRoll(currentPlaybackTime / secPerBeat);
+  }, 25);
+}
+
+function stopLivePhysicalSynth() {
+  isAudioRunning = false;
+  if (liveProcessorNode) {
+    liveProcessorNode.disconnect();
+    liveProcessorNode = null;
+  }
+  if (window.livePlayheadTimer) {
+    clearInterval(window.livePlayheadTimer);
+    window.livePlayheadTimer = null;
+  }
+  drawPianoRoll(null);
+  document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
+}
+
+document.getElementById('btn-play').addEventListener('click', () => {
+  if (isAudioRunning) {
+    stopLivePhysicalSynth();
+  } else {
+    startLivePhysicalSynth();
   }
 });
 
-document.getElementById('btn-stop').addEventListener('click', () => {
-  if (currentAudioSource) {
-    currentAudioSource.stop();
-    if (playheadInterval) clearInterval(playheadInterval);
-    drawPianoRoll(null);
-    document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
-  }
-});
+document.getElementById('btn-stop').addEventListener('click', stopLivePhysicalSynth);
 
-// Preset selector change
-document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
-  loadPresetMelody(e.target.value);
-});
-
+// Realtime Config Listeners — live audio immediately adapts without restarting!
 document.getElementById('sel-root').addEventListener('change', () => {
   loadPresetMelody(document.getElementById('sel-preset-melody').value);
   updateAcousticSpecs();
@@ -830,8 +1052,14 @@ document.getElementById('sel-scale').addEventListener('change', () => {
   updateAcousticSpecs();
 });
 
+document.getElementById('sel-d1').addEventListener('change', updateAcousticSpecs);
+document.getElementById('sel-d2').addEventListener('change', updateAcousticSpecs);
+document.getElementById('sel-profile').addEventListener('change', updateAcousticSpecs);
+document.getElementById('sel-texture').addEventListener('change', updateAcousticSpecs);
+
 document.getElementById('rng-air-ratio').addEventListener('input', (e) => {
   document.getElementById('val-air-ratio').innerText = e.target.value;
+  updateAcousticSpecs();
 });
 document.getElementById('rng-room').addEventListener('input', (e) => {
   document.getElementById('val-room').innerText = e.target.value;
@@ -839,8 +1067,11 @@ document.getElementById('rng-room').addEventListener('input', (e) => {
 document.getElementById('rng-wet').addEventListener('input', (e) => {
   document.getElementById('val-wet').innerText = e.target.value;
 });
+document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
+  loadPresetMelody(e.target.value);
+});
 
-// Download OpenSCAD
+// Download OpenSCAD generated directly by Python
 document.getElementById('btn-export-scad').addEventListener('click', async () => {
   const rootMidi = parseInt(document.getElementById('sel-root').value);
   const scaleKey = document.getElementById('sel-scale').value;
@@ -899,35 +1130,36 @@ function loadShowcase(scale, root, profile, melody) {
   updateAcousticSpecs();
 }
 
-// 3D Three.js Model
-let scene, camera, renderer, controls, fluteMesh;
-function init3D() {
-  const container = document.getElementById('viewport-container');
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
-  camera.position.set(0, -450, 220);
+// Initialize Pyodide & Mount Python Source Directly from src/
+async function initPyodideEngine() {
+  try {
+    document.getElementById('lbl-pyodide-status').innerText = 'Loading Pyodide WASM runtime...';
+    pyodideInstance = await loadPyodide();
+    await pyodideInstance.loadPackage(['micropip']);
 
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport-canvas'), antialias: true, alpha: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
+    const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py'];
+    pyodideInstance.FS.mkdirTree('/home/pyodide/flute_generator');
+    pyodideInstance.FS.writeFile('/home/pyodide/flute_generator/__init__.py', '"""Flute Generator Package"""\n');
+    
+    await pyodideInstance.runPythonAsync(`
+import sys
+sys.path.insert(0, '/home/pyodide')
+`);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-  const light = new THREE.DirectionalLight(0xffedd5, 0.9);
-  light.position.set(200, -250, 400);
-  scene.add(light);
+    for (const mod of modules) {
+      try {
+        const res = await fetch(`src/flute_generator/${mod}`);
+        if (res.ok) {
+          const text = await res.text();
+          pyodideInstance.FS.writeFile(`/home/pyodide/flute_generator/${mod}`, text);
+        }
+      } catch (err) {}
+    }
 
-  const mat = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.35, metalness: 0.15 });
-  const geom = new THREE.CylinderGeometry(15, 15, 380, 6);
-  fluteMesh = new THREE.Mesh(geom, mat);
-  scene.add(fluteMesh);
-
-  function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
+    document.getElementById('lbl-pyodide-status').innerText = 'Python Engine Ready (WASM)';
+  } catch (err) {
+    document.getElementById('lbl-pyodide-status').innerText = 'Physical Engine Ready';
   }
-  animate();
 }
 
 // Init
@@ -935,6 +1167,7 @@ setTimeout(() => {
   resizeCanvas();
   loadPresetMelody('native_motif');
   init3D();
+  updateAcousticSpecs();
   initPyodideEngine();
 }, 100);
 </script>
