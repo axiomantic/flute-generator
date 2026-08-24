@@ -1798,6 +1798,10 @@ function init3D() {
   renderer.setSize(container.clientWidth, container.clientHeight);
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+  controls.zoomSpeed = 0.35;
+  controls.rotateSpeed = 0.65;
+  controls.panSpeed = 0.50;
 
   ambientLight = new THREE.AmbientLight(0xffffff, 1.15);
   scene.add(ambientLight);
