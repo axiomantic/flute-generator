@@ -461,7 +461,7 @@
       </div>
     </div>
 
-    <!-- Minimalist Breath Ribbon -->
+    <!-- Finger-Hole Matrix Piano Roll -->
     <div class="timeline-dock">
       <div class="transport-bar">
         <button class="btn-primary" id="btn-play">▶ Play</button>
@@ -470,16 +470,21 @@
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:6px;">Song:</span>
         <select id="sel-preset-melody" style="width: 200px; font-size:0.75rem; padding:4px 6px;"></select>
 
-        <button class="btn-subtle" onclick="addNote()">➕ Note</button>
+        <button class="btn-subtle" onclick="addNote()">➕ Add Note</button>
 
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:auto;">
-          Click note to cycle fingering • Auto-regenerates to match scale & holes
+          🎹 Finger-Hole Piano Roll • Click note to change pitch • Right-click to remove
         </span>
       </div>
 
-      <div class="ribbon-scroll-container">
-        <div class="breath-ribbon" id="breath-ribbon-track">
-          <div id="ribbon-playhead"></div>
+      <div class="pianoroll-wrapper">
+        <div class="pianoroll-labels" id="pianoroll-labels">
+          <!-- Dynamically populated rows for Hole 1..N down to Bell root -->
+        </div>
+        <div class="pianoroll-grid-scroll" id="pianoroll-grid-scroll">
+          <div class="pianoroll-canvas-track" id="pianoroll-track">
+            <div id="pianoroll-playhead"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -859,39 +864,85 @@ function quantizeScore() {
   rebuild3DFlute();
 }
 
-const PX_PER_SEC = 80;
 
-function renderRibbon(activeIdx = -1) {
-  const track = document.getElementById('breath-ribbon-track');
-  track.querySelectorAll('.note-pill').forEach(el => el.remove());
+const PX_PER_SEC = 90;
 
-  scoreNotes.forEach((s, idx) => {
-    const w = Math.max(50, s.duration * PX_PER_SEC);
+function renderPianoRoll(activeIdx = -1) {
+  const labelsContainer = document.getElementById('pianoroll-labels');
+  const track = document.getElementById('pianoroll-track');
+  if (!labelsContainer || !track) return;
 
-    const pill = document.createElement('div');
-    pill.className = `note-pill ${idx === activeIdx ? 'active' : ''}`;
-    pill.style.width = `${w}px`;
+  const playable = getPlayablePitches(); // List of available pitches in ascending order
+  const numHoles = parseInt(document.getElementById('sel-holes').value);
 
-    pill.onclick = () => cycleNote(idx);
-    pill.oncontextmenu = (e) => {
+  // Clear previous labels & notes
+  labelsContainer.innerHTML = '';
+  track.querySelectorAll('.roll-grid-row, .piano-note-block').forEach(el => el.remove());
+
+  const totalDur = scoreNotes.reduce((sum, n) => sum + n.duration, 0) || 4.0;
+  const trackWidth = Math.max(800, totalDur * PX_PER_SEC + 120);
+  track.style.width = `${trackWidth}px`;
+
+  // Render rows from highest pitch (Top) down to fundamental Root (Bottom)
+  const reversedPitches = [...playable].reverse();
+
+  reversedPitches.forEach((pitch, rowIdx) => {
+    const origIdx = playable.indexOf(pitch);
+    const labelRow = document.createElement('div');
+    const isCurrentActiveRow = (activeIdx >= 0 && scoreNotes[activeIdx] && scoreNotes[activeIdx].midi === pitch);
+    labelRow.className = `roll-row-label ${isCurrentActiveRow ? 'active' : ''}`;
+    
+    let holeName = (origIdx === 0) ? 'Bell (All Closed)' : `Hole ${origIdx} Open`;
+    if (origIdx === playable.length - 1 && origIdx > numHoles) holeName = 'Overblow +8';
+
+    labelRow.innerHTML = `
+      <span>${getMidiName(pitch)}</span>
+      <span class="hole-tag">${holeName}</span>
+    `;
+    labelsContainer.appendChild(labelRow);
+
+    const gridRow = document.createElement('div');
+    gridRow.className = 'roll-grid-row';
+    gridRow.dataset.rowPitch = pitch;
+    track.appendChild(gridRow);
+  });
+
+  const rowHeight = labelsContainer.clientHeight / Math.max(1, reversedPitches.length);
+
+  // Render note blocks placed precisely in time (X) and pitch row (Y)
+  let timeCursor = 0;
+  scoreNotes.forEach((note, idx) => {
+    const leftPx = timeCursor * PX_PER_SEC;
+    const widthPx = Math.max(24, note.duration * PX_PER_SEC - 2);
+    const pitchRowIdx = reversedPitches.indexOf(note.midi);
+    const topPx = (pitchRowIdx >= 0 ? pitchRowIdx : 0) * (100 / reversedPitches.length);
+
+    const noteEl = document.createElement('div');
+    noteEl.className = `piano-note-block ${idx === activeIdx ? 'active' : ''}`;
+    noteEl.style.left = `${leftPx}px`;
+    noteEl.style.width = `${widthPx}px`;
+    noteEl.style.top = `${topPx}%`;
+    noteEl.style.height = `calc(${100 / reversedPitches.length}% - 4px)`;
+    noteEl.innerText = getMidiName(note.midi);
+
+    noteEl.onclick = () => cycleNote(idx);
+    noteEl.oncontextmenu = (e) => {
       e.preventDefault();
       if (scoreNotes.length > 1) {
         scoreNotes.splice(idx, 1);
-        renderRibbon();
+        renderPianoRoll();
       }
     };
 
-    const dots = s.holes.map(h => `<div class="pill-dot ${h ? 'closed' : 'open'}"></div>`).join('');
-
-    pill.innerHTML = `
-      <div class="pill-pitch">${getMidiName(s.midi)}</div>
-      <div class="pill-dots">${dots}</div>
-      <div class="pill-dur">${s.duration.toFixed(1)}s</div>
-    `;
-
-    track.appendChild(pill);
+    track.appendChild(noteEl);
+    timeCursor += note.duration;
   });
 }
+
+function renderRibbon(activeIdx = -1) {
+  renderPianoRoll(activeIdx);
+}
+
 
 function cycleNote(idx) {
   const playable = getPlayablePitches();
@@ -1647,10 +1698,19 @@ async function startAudio() {
       accum += scoreNotes[i].duration;
     }
     
-    const ph = document.getElementById('ribbon-playhead');
-    if (ph) ph.style.left = `${currentPlaybackTime * PX_PER_SEC + 10}px`;
+    const ph = document.getElementById('pianoroll-playhead');
+    if (ph) {
+      const px = currentPlaybackTime * PX_PER_SEC;
+      ph.style.left = `${px}px`;
+      
+      // Auto-scroll piano roll horizontally to follow playhead
+      const scrollContainer = document.getElementById('pianoroll-grid-scroll');
+      if (scrollContainer && (px > scrollContainer.scrollLeft + scrollContainer.clientWidth - 80 || px < scrollContainer.scrollLeft)) {
+        scrollContainer.scrollLeft = Math.max(0, px - 60);
+      }
+    }
 
-    renderRibbon(activeIdx);
+    renderPianoRoll(activeIdx);
     if (activeIdx >= 0) {
       update3DFingersPose(scoreNotes[activeIdx].holes);
     }
@@ -1772,13 +1832,13 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rim
     const outerRim = holeDiam + rimThickness * 2;
     const baseFlange = outerRim + chimneyDepth * 2;
 
-    chimneysScad.push(`        // Donut chimney pad
-        translate([0, outer_d/2 - 0.2, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
+    chimneysScad.push(`        // Solid fused donut chimney pad (fused 2.0mm into cylindrical body - zero seam gap)
+        translate([0, (outer_d/2 - 2.0).toFixed(2), ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
             hull() {
-                cylinder(d=${baseFlange.toFixed(2)}, h=0.2, $fn=24);
-                translate([0, 0, ${(chimneyDepth - 0.8).toFixed(2)}]) cylinder(d=${outerRim.toFixed(2)}, h=0.8, $fn=24);
+                cylinder(d=${(baseFlange + 2.0).toFixed(2)}, h=2.0, $fn=24);
+                translate([0, 0, ${(chimneyDepth + 1.2).toFixed(2)}]) cylinder(d=${outerRim.toFixed(2)}, h=0.8, $fn=24);
             }
-            translate([0, 0, ${chimneyDepth.toFixed(2)}]) rotate_extrude($fn=24) translate([${((holeDiam + rimThickness)/2).toFixed(2)}, 0]) circle(d=${(rimThickness * 0.8).toFixed(2)}, $fn=12);
+            translate([0, 0, ${(chimneyDepth + 2.0).toFixed(2)}]) rotate_extrude($fn=24) translate([${((holeDiam + rimThickness)/2).toFixed(2)}, 0]) circle(d=${(rimThickness * 0.8).toFixed(2)}, $fn=12);
         }`);
 
     holesScad.push(`        translate([0, 0, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) cylinder(d=${holeDiam.toFixed(2)}, h=${(outerD + chimneyDepth * 2 + 5).toFixed(2)}, center=false, $fn=24);`);
