@@ -130,5 +130,5 @@ class TestSoundFontResolution:
 
     def test_soundfont_missing_instructions_contain_download_link(self):
         msg = get_soundfont_instructions()
-        assert "https://www.zanderjaz.com/downloads/soundfonts/flutes/" in msg
-        assert "Mell Flutes" in msg
+        assert "https://www.polyphone.io/en/soundfonts/flutes/214-ixox-flute-full-v0-2" in msg
+        assert "ixox_flute" in msg

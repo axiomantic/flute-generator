@@ -15,8 +15,11 @@ from mido import Message, MetaMessage, MidiFile, MidiTrack
 from .acoustics import FluteDimensions, midi_to_freq
 from .melodies import NoteEvent
 
-SOUNDFONT_DOWNLOAD_URL = "https://www.zanderjaz.com/downloads/soundfonts/flutes/"
+SOUNDFONT_DOWNLOAD_URL = "https://www.polyphone.io/en/soundfonts/flutes/214-ixox-flute-full-v0-2"
 DEFAULT_SF2_CANDIDATES = [
+    "ixox_flute.sf2",
+    "ixox-flute.sf2",
+    "Ixox Flute.sf2",
     "Mell Flutes.sf2",
     "mell_flutes.sf2",
     "GeneralUser GS.sf2",
@@ -48,13 +51,13 @@ def find_soundfont(custom_path: Optional[Union[str, Path]] = None) -> Optional[P
 
 
 def get_soundfont_instructions() -> str:
-    """Return instructions on where to obtain a flute SoundFont."""
+    """Return instructions on where to obtain the ixox_flute SoundFont."""
     return (
         f"SoundFont not found!\n"
         f"To enable high-quality SoundFont rendering:\n"
-        f"  1. Download the 'Mell Flutes' soundfont from:\n"
+        f"  1. Download the public domain 'ixox_flute.sf2' (Ixox Flute Full v0.2) from:\n"
         f"     {SOUNDFONT_DOWNLOAD_URL}\n"
-        f"  2. Place 'Mell Flutes.sf2' in the current working directory, or pass `--soundfont <path>`."
+        f"  2. Place 'ixox_flute.sf2' in your project root, or pass `--soundfont <path>`."
     )
 
 

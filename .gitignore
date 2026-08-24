@@ -1,8 +1,3 @@
-# Soundfonts
-*.sf2
-*.SF2
-Mell Flutes.sf2
-
 # Generated outputs
 *.wav
 *.mid
