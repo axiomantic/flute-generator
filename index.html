@@ -2216,12 +2216,13 @@ function rebuild3DFlute() {
       
       
       
+      
       // Build Multi-Color Articulated Door-Hinge Keywork directly on fluteMesh (in OpenSCAD Model Space)
       if (keyworkMode !== 'none') {
         const clusterTopZ = fippleZ - 65.0;
         const keyPitch = 22.0;
         const frontY = outerD * 0.433;
-        const deckY = frontY + 2.8;
+        const deckY = frontY + 3.8;
 
         // Functional Component Materials
         const matAxlePin      = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.95, roughness: 0.15 }); // Silver Chrome Axle
@@ -2233,7 +2234,7 @@ function rebuild3DFlute() {
         const matPadGasket    = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.7, roughness: 0.40, metalness: 0.10 }); // Luminous Soft Cyan TPU Gasket
         const matChimneyRim   = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.50, roughness: 0.35 }); // Dark Chimney Seat
 
-        // 1. Add Donut Rim Rings on Tone Holes (directly on front face Y = frontY)
+        // 1. Add Donut Rim Rings on Tone Holes (Flat on front face Y = frontY + chimneyDepth)
         for (let hIdx = 0; hIdx < numHoles; hIdx++) {
           const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
           const hFreq = midiToFreq(rootMidi + targetInterval);
@@ -2244,7 +2245,7 @@ function rebuild3DFlute() {
             new THREE.TorusGeometry((holeDiam + rimThickness)/2, 0.9, 16, 24),
             matChimneyRim
           );
-          chimRing.rotation.x = Math.PI / 2; // Flat on front face
+          chimRing.rotation.x = Math.PI / 2; // Lie flat on front face
           chimRing.position.set(0, frontY + chimneyDepth + 0.5, absZ);
           fluteMesh.add(chimRing);
         }
@@ -2268,48 +2269,55 @@ function rebuild3DFlute() {
             const stanchGroup = new THREE.Group();
             stanchGroup.position.set(sideX, deckY, padZ);
 
+            // Upper & Lower Clevis Knuckles (Cylinders oriented along Z)
             const topKnuckle = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 2.8, 16), matHingeStanch);
+            topKnuckle.rotation.x = Math.PI / 2;
             topKnuckle.position.set(0, 0, 4.2);
             stanchGroup.add(topKnuckle);
 
             const botKnuckle = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 2.8, 16), matHingeStanch);
+            botKnuckle.rotation.x = Math.PI / 2;
             botKnuckle.position.set(0, 0, -4.2);
             stanchGroup.add(botKnuckle);
 
-            // Vertical Chrome Door Hinge Pin (Running along Z-axis!)
+            // Vertical Chrome Door Hinge Pin (Along Z-axis)
             const verticalPin = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 12.0, 16), matAxlePin);
+            verticalPin.rotation.x = Math.PI / 2;
             stanchGroup.add(verticalPin);
 
             fluteMesh.add(stanchGroup);
 
-            // B. Articulated Door-Hinge Key Assembly (Pivoting around Z-axis like a door leaf!)
+            // B. Articulated Door-Hinge Key Assembly (Pivots around Z-axis)
             const keyDoorGroup = new THREE.Group();
             keyDoorGroup.position.set(sideX, deckY, padZ);
 
             // 1. Rotating Hinge Barrel Sleeve
             const barrelMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 5.0, 16), matHingeBoss);
+            barrelMesh.rotation.x = Math.PI / 2;
             keyDoorGroup.add(barrelMesh);
 
-            // 2. Touchpad Lever Arm (Extending laterally from the vertical hinge barrel)
+            // 2. Touchpad Lever Arm (Extending laterally + outward from the vertical hinge barrel)
             const touchLeverGroup = new THREE.Group();
             const touchOffsetDir = isLeftHand ? -6.0 : 6.0;
             touchLeverGroup.position.set(touchOffsetDir, 2.5, 0);
 
             const touchBezel = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 1.2, 24), matConnectRod);
-            touchBezel.position.set(0, 0, 0);
+            touchBezel.rotation.x = Math.PI / 2;
             touchLeverGroup.add(touchBezel);
 
             const touchPearl = new THREE.Mesh(new THREE.CylinderGeometry(6.6, 6.6, 1.5, 24), matTouchPad);
-            touchPearl.position.set(0, 0.4, 0);
+            touchPearl.rotation.x = Math.PI / 2;
+            touchPearl.position.set(0, 0, 0.4);
             touchLeverGroup.add(touchPearl);
 
             keyDoorGroup.add(touchLeverGroup);
 
-            // 3. Vertical Longitudinal Torque Tube / Side Rod
+            // 3. Longitudinal Side Torque Rod (Along Z-axis)
             const deltaZ = absZ - padZ;
             const rodLen = Math.abs(deltaZ);
             if (rodLen > 1.0) {
               const verticalRod = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, rodLen, 16), matConnectRod);
+              verticalRod.rotation.x = Math.PI / 2;
               verticalRod.position.set(0, 0, deltaZ / 2);
               keyDoorGroup.add(verticalRod);
 
@@ -2324,6 +2332,7 @@ function rebuild3DFlute() {
                       new THREE.CylinderGeometry(2.5, 2.5, 6.0, 16),
                       matAxlePin
                     );
+                    socketCollar.rotation.x = Math.PI / 2;
                     socketCollar.position.set(0, 0, localCutZ);
                     keyDoorGroup.add(socketCollar);
                   }
@@ -2338,19 +2347,21 @@ function rebuild3DFlute() {
             // Horizontal Swing Arm from vertical spine over to center hole (-sideX)
             const armSpan = Math.abs(sideX);
             const deltaY = cupY - deckY;
-            const swingArm = new THREE.Mesh(new THREE.BoxGeometry(armSpan, 2.8, 2.0), matConnectRod);
+            const swingArm = new THREE.Mesh(new THREE.BoxGeometry(armSpan, deltaY + 1.0, 2.2), matConnectRod);
             swingArm.position.set(-sideX / 2, deltaY * 0.5, 0);
             doorGateGroup.add(swingArm);
 
-            // 5. Amber Brass Flap Cup + Luminous Cyan Soft TPU Gasket (Centered over Chimney)
+            // 5. Amber Brass Flap Cup + Luminous Cyan Soft TPU Gasket (Flat on Front Face over Chimney)
             const cupGroup = new THREE.Group();
             cupGroup.position.set(-sideX, deltaY, 0);
 
             const cupMesh = new THREE.Mesh(new THREE.CylinderGeometry(cupD/2, cupD/2, 2.6, 24), matKeyCup);
+            cupMesh.rotation.x = Math.PI / 2;
             cupGroup.add(cupMesh);
 
             const gasketMesh = new THREE.Mesh(new THREE.CylinderGeometry((cupD - 1.2)/2, (cupD - 1.2)/2, 1.2, 24), matPadGasket);
-            gasketMesh.position.set(0, -1.1, 0); // Faces into chimney
+            gasketMesh.rotation.x = Math.PI / 2;
+            gasketMesh.position.set(0, 0, -1.0); // Faces directly down into chimney
             cupGroup.add(gasketMesh);
 
             doorGateGroup.add(cupGroup);
@@ -2359,12 +2370,12 @@ function rebuild3DFlute() {
             // Door-Hinge Rotation (Pivots around Z-axis like a door on the flute body!)
             const swingSign = isLeftHand ? 1.0 : -1.0;
             keyDoorGroup.userData = {
-              openAngle: 0.22 * swingSign,  // Swung open away from hole
+              openAngle: 0.24 * swingSign,  // Swung open away from hole
               closedAngle: 0.0,             // Flush sealed over hole
-              currAngle: 0.22 * swingSign,
-              targetAngle: 0.22 * swingSign
+              currAngle: 0.24 * swingSign,
+              targetAngle: 0.24 * swingSign
             };
-            keyDoorGroup.rotation.z = 0.22 * swingSign;
+            keyDoorGroup.rotation.z = 0.24 * swingSign;
 
             fluteMesh.add(keyDoorGroup);
             keyLeverMeshes.push(keyDoorGroup);
