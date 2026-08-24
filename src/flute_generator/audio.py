@@ -11,7 +11,6 @@ import wave
 
 import mido
 from mido import Message, MetaMessage, MidiFile, MidiTrack
-from midi2audio import FluidSynth
 
 from .acoustics import FluteDimensions, midi_to_freq
 from .melodies import NoteEvent
@@ -66,7 +65,7 @@ def create_flute_midi(
     bpm: int = 96,
     drone_velocity: int = 68,
 ) -> Path:
-    """Create a natural, expressive multi-channel MIDI sequence with CC11 breath swells, delayed vibrato, and stereo panning."""
+    """Create a natural, expressive multi-channel MIDI sequence with phrase-level dynamics and stereo panning."""
     mid = MidiFile(type=1)  # Synchronous multitrack MIDI
     ticks_per_beat = mid.ticks_per_beat  # 480
     tempo_us = mido.bpm2tempo(bpm)
@@ -89,8 +88,8 @@ def create_flute_midi(
     chan_m = 0
     melody_track.append(Message('program_change', channel=chan_m, program=0, time=0))
     melody_track.append(Message('control_change', channel=chan_m, control=10, value=64, time=0))  # Center Pan
-    melody_track.append(Message('control_change', channel=chan_m, control=91, value=70, time=0))  # Natural Reverb
-    melody_track.append(Message('control_change', channel=chan_m, control=11, value=85, time=0))  # Expression
+    melody_track.append(Message('control_change', channel=chan_m, control=91, value=65, time=0))  # Natural Reverb
+    melody_track.append(Message('control_change', channel=chan_m, control=11, value=90, time=0))  # Steady Expression
     melody_track.append(Message('control_change', channel=chan_m, control=1, value=0, time=0))    # Vibrato 0
 
     pending_delta = 0
@@ -109,15 +108,15 @@ def create_flute_midi(
         # Subtle grace note on designated ornaments (gentle flick, not a scratch)
         if event.ornament == "grace_dip" and note > 2:
             grace_note = note - 2
-            grace_dur = min(35, duration_ticks // 5)
-            melody_track.append(Message('note_on', channel=chan_m, note=grace_note, velocity=max(45, vel - 18), time=pending_delta))
+            grace_dur = min(30, duration_ticks // 5)
+            melody_track.append(Message('note_on', channel=chan_m, note=grace_note, velocity=max(45, vel - 12), time=pending_delta))
             melody_track.append(Message('note_off', channel=chan_m, note=grace_note, velocity=vel, time=grace_dur))
             duration_ticks = max(10, duration_ticks - grace_dur)
             pending_delta = 0
         elif event.ornament == "grace_lift" and note < 125:
             grace_note = note + 2
-            grace_dur = min(35, duration_ticks // 5)
-            melody_track.append(Message('note_on', channel=chan_m, note=grace_note, velocity=max(45, vel - 18), time=pending_delta))
+            grace_dur = min(30, duration_ticks // 5)
+            melody_track.append(Message('note_on', channel=chan_m, note=grace_note, velocity=max(45, vel - 12), time=pending_delta))
             melody_track.append(Message('note_off', channel=chan_m, note=grace_note, velocity=vel, time=grace_dur))
             duration_ticks = max(10, duration_ticks - grace_dur)
             pending_delta = 0
@@ -126,22 +125,14 @@ def create_flute_midi(
         melody_track.append(Message('note_on', channel=chan_m, note=note, velocity=vel, time=pending_delta))
         pending_delta = 0
 
-        # If sustained note (> 1 beat), introduce gentle organic breath swell and subtle delayed vibrato
-        if duration_ticks >= ticks_per_beat:
-            t_swell = duration_ticks // 3
-            t_vib = duration_ticks // 3
-            t_release = duration_ticks - (t_swell + t_vib)
+        # Sustained notes (held longer than 1.5 beats) receive subtle delayed vibrato without volume cuts
+        if duration_ticks >= int(1.5 * ticks_per_beat) and event.vibrato_depth > 0:
+            t_hold = duration_ticks // 2
+            t_vib = duration_ticks - t_hold
+            vib_val = int(event.vibrato_depth * 35)
 
-            # Breath dynamic swell
-            melody_track.append(Message('control_change', channel=chan_m, control=11, value=min(110, int(vel * 1.10)), time=t_swell))
-
-            # Natural delayed vibrato (tasteful depth ~35-45)
-            vib_val = int(event.vibrato_depth * 45)
-            melody_track.append(Message('control_change', channel=chan_m, control=1, value=vib_val, time=t_vib))
-
-            # Soft release
-            melody_track.append(Message('control_change', channel=chan_m, control=11, value=max(55, int(vel * 0.80)), time=t_release))
-            melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=0))
+            melody_track.append(Message('control_change', channel=chan_m, control=1, value=vib_val, time=t_hold))
+            melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=t_vib))
             melody_track.append(Message('control_change', channel=chan_m, control=1, value=0, time=0))
         else:
             melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=duration_ticks))
@@ -157,25 +148,13 @@ def create_flute_midi(
     drone1_track.append(Message('program_change', channel=chan_d1, program=0, time=0))
     drone1_track.append(Message('control_change', channel=chan_d1, control=10, value=38, time=0))  # Left pan
     drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=80, time=0))  # Reverb
-    drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=70, time=0))
+    drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=65, time=0))
 
     drone1_midi = int(round(dims.root_midi + dims.scale_intervals[0]))
     total_piece_ticks = sum(int(round(e.duration_beats * ticks_per_beat)) for e in melody_events)
 
     drone1_track.append(Message('note_on', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=0))
-
-    # Slow, calming breath swell on drone
-    num_cycles = max(1, int(total_piece_ticks / (ticks_per_beat * 3)))
-    cycle_ticks = total_piece_ticks // (num_cycles * 2) if num_cycles > 0 else total_piece_ticks
-    curr_drone1_ticks = 0
-    for _ in range(num_cycles):
-        if curr_drone1_ticks + cycle_ticks * 2 <= total_piece_ticks:
-            drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=76, time=cycle_ticks))
-            drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=65, time=cycle_ticks))
-            curr_drone1_ticks += cycle_ticks * 2
-
-    remaining_d1 = max(0, total_piece_ticks - curr_drone1_ticks)
-    drone1_track.append(Message('note_off', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=remaining_d1))
+    drone1_track.append(Message('note_off', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=total_piece_ticks))
 
     # -------------------------------------------------------------
     # Track 3: Drone 2 - Fifth / Harmonic Resonator (Channel 2)
@@ -188,20 +167,11 @@ def create_flute_midi(
     drone2_track.append(Message('program_change', channel=chan_d2, program=0, time=0))
     drone2_track.append(Message('control_change', channel=chan_d2, control=10, value=90, time=0))  # Right pan
     drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=80, time=0))  # Reverb
-    drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=60, time=0))
+    drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=58, time=0))
 
     drone2_midi = int(round(69 + 12 * math.log2(dims.drone2_frequency / 440.0)))
     drone2_track.append(Message('note_on', channel=chan_d2, note=drone2_midi, velocity=max(40, drone_velocity - 8), time=0))
-
-    curr_drone2_ticks = 0
-    for _ in range(num_cycles):
-        if curr_drone2_ticks + cycle_ticks * 2 <= total_piece_ticks:
-            drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=58, time=cycle_ticks))
-            drone2_track.append(Message('control_change', channel=chan_d2, control=68, time=cycle_ticks))
-            curr_drone2_ticks += cycle_ticks * 2
-
-    remaining_d2 = max(0, total_piece_ticks - curr_drone2_ticks)
-    drone2_track.append(Message('note_off', channel=chan_d2, note=drone2_midi, velocity=drone_velocity, time=remaining_d2))
+    drone2_track.append(Message('note_off', channel=chan_d2, note=drone2_midi, velocity=drone_velocity, time=total_piece_ticks))
 
     out_file = Path(output_path)
     out_file.parent.mkdir(parents=True, exist_ok=True)
@@ -228,7 +198,7 @@ def render_soundfont_wav(
         fluidsynth_bin,
         "-ni",                  # Non-interactive, no shell
         "-q",                   # Quiet mode
-        "-g", "1.2",            # Gain
+        "-g", "1.1",            # Gain
         "-r", str(sample_rate), # Sample rate
         "-F", str(out_file),    # Output audio file (must be before positional args)
         str(sf2_path),          # Soundfont file (.sf2)
@@ -249,10 +219,10 @@ def synthesize_fallback_wav(
     sample_rate: int = 44100,
     bpm: int = 96,
 ) -> Path:
-    """Natural, smooth stereo harmonic synthesizer with phase-continuous oscillator, subtle air texture, and warm resonance."""
+    """Natural, smooth stereo harmonic synthesizer with phrase-level dynamics and smooth note transitions."""
     seconds_per_beat = 60.0 / bpm
     total_beats = sum(e.duration_beats for e in melody_events)
-    total_duration = total_beats * seconds_per_beat + 1.2
+    total_duration = total_beats * seconds_per_beat + 0.8
     total_samples = int(total_duration * sample_rate)
 
     drone1_f = dims.drone1_frequency
@@ -270,7 +240,7 @@ def synthesize_fallback_wav(
     rng = random.Random(42)
     frames = []
 
-    # Continuous phase state variables (prevents any phase acceleration / turntable artifacts)
+    # Continuous phase state variables
     drone1_phase = 0.0
     drone2_phase = 0.0
     melody_phase = 0.0
@@ -281,55 +251,52 @@ def synthesize_fallback_wav(
     for i in range(total_samples):
         t = float(i) * dt
 
-        # 1. Drones Synthesis (Phase continuous, gentle breathing dynamics)
+        # 1. Continuous slow phrase breath swell (over 6 seconds, not per note)
+        phrase_breath = 0.85 + 0.15 * math.sin(two_pi * 0.16 * t)
+        global_env = min(1.0, t * 2.5, max(0.0, (total_duration - t) * 2.0))
+
+        # 2. Drones Synthesis
         drone1_phase += two_pi * drone1_f * dt
         drone2_phase += two_pi * drone2_f * dt
 
-        drone_swell1 = 0.5 + 0.10 * math.sin(two_pi * 0.20 * t)
-        drone_swell2 = 0.5 + 0.10 * math.sin(two_pi * 0.20 * t + 1.5)
-        drone_global_env = min(1.0, t * 3.0, max(0.0, (total_duration - t) * 2.0))
-
         d1 = (
             math.sin(drone1_phase)
-            + 0.20 * math.sin(2.0 * drone1_phase)
-            + 0.06 * math.sin(3.0 * drone1_phase)
-        ) * 0.18 * drone_swell1 * drone_global_env
+            + 0.18 * math.sin(2.0 * drone1_phase)
+            + 0.05 * math.sin(3.0 * drone1_phase)
+        ) * 0.16 * phrase_breath * global_env
 
         d2 = (
             math.sin(drone2_phase)
-            + 0.16 * math.sin(2.0 * drone2_phase)
-            + 0.05 * math.sin(3.0 * drone2_phase)
-        ) * 0.15 * drone_swell2 * drone_global_env
+            + 0.14 * math.sin(2.0 * drone2_phase)
+            + 0.04 * math.sin(3.0 * drone2_phase)
+        ) * 0.13 * phrase_breath * global_env
 
-        # 2. Solo Flute Melody (True phase accumulation with subtle ~5 cents delayed vibrato)
+        # 3. Solo Flute Melody
         melody_sample = 0.0
         for start_t, end_t, note_f, vel, ornament in note_intervals:
             if start_t <= t < end_t and note_f is not None:
                 elapsed = t - start_t
                 note_dur = end_t - start_t
 
-                # Subtle, delicate vibrato (only develops after 0.35s, max ~4 cents)
-                vib_amount = min(1.0, max(0.0, (elapsed - 0.35) / 0.45)) * 0.003
-                target_f = note_f * (1.0 + vib_amount * math.sin(two_pi * 5.2 * elapsed))
+                # Subtle vibrato on held notes only (> 0.6s)
+                vib_amount = min(1.0, max(0.0, (elapsed - 0.60) / 0.50)) * 0.0025
+                target_f = note_f * (1.0 + vib_amount * math.sin(two_pi * 5.0 * elapsed))
 
-                # Phase accumulation
                 melody_phase += two_pi * target_f * dt
 
-                # Smooth natural ADSR envelope
-                attack = min(1.0, elapsed / 0.04)
-                release = min(1.0, (note_dur - elapsed) / 0.035)
-                swell = 1.0 + 0.10 * math.sin(math.pi * (elapsed / max(0.01, note_dur)))
-                env = attack * release * swell * vel
+                # Smooth legato crossfade envelopes at note boundaries (8ms)
+                attack = min(1.0, elapsed / 0.008)
+                release = min(1.0, (note_dur - elapsed) / 0.008)
+                env = attack * release * vel * phrase_breath
 
-                # Acoustic harmonics
                 harmonic_1 = math.sin(melody_phase)
-                harmonic_2 = 0.24 * math.sin(2.0 * melody_phase)
-                harmonic_3 = 0.07 * math.sin(3.0 * melody_phase)
+                harmonic_2 = 0.22 * math.sin(2.0 * melody_phase)
+                harmonic_3 = 0.06 * math.sin(3.0 * melody_phase)
 
-                # Delicate fipple air breath chuff (only on initial attack)
-                air_chuff = (rng.random() * 2.0 - 1.0) * 0.02 * math.exp(-elapsed * 18.0)
+                # Soft initial fipple breath texture
+                air_chuff = (rng.random() * 2.0 - 1.0) * 0.015 * math.exp(-elapsed * 25.0)
 
-                melody_sample = (harmonic_1 + harmonic_2 + harmonic_3 + air_chuff) * 0.42 * env
+                melody_sample = (harmonic_1 + harmonic_2 + harmonic_3 + air_chuff) * 0.40 * env
                 break
 
         # Stereo mixing (16-bit stereo PCM)
