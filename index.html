@@ -458,6 +458,40 @@
       </div>
     </div>
 
+        <div>
+      <div class="section-label">3D Print Slicing & Socket Joints</div>
+      <div class="field-group">
+        <label>Printable Segments</label>
+        <select id="sel-print-segments">
+          <option value="1" selected>1 Piece (Full Monolithic Body)</option>
+          <option value="2">2 Segments (Mouthpiece / Body Foot)</option>
+          <option value="3">3 Segments (Head / Mid Tone-Holes / Foot)</option>
+          <option value="4">4 Segments (Compact 3D Bed Slices)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Segment View / Export Part</label>
+        <select id="sel-print-part">
+          <option value="assembled" selected>Full Assembled Preview</option>
+          <option value="part_1">Segment 1 (Mouthpiece / Head)</option>
+          <option value="part_2">Segment 2 (Upper Mid)</option>
+          <option value="part_3">Segment 3 (Lower Tone Holes)</option>
+          <option value="part_4">Segment 4 (Foot Bell Base)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Socket Joint Tolerance <span class="val" id="val-joint-tol">0.18 mm</span></label>
+        <input type="range" id="rng-joint-tol" min="0.05" max="0.45" step="0.01" value="0.18">
+      </div>
+
+      <div class="field-group">
+        <label>Tenon / Socket Length <span class="val" id="val-joint-len">14.0 mm</span></label>
+        <input type="range" id="rng-joint-len" min="8.0" max="24.0" step="1.0" value="14.0">
+      </div>
+    </div>
+
     <div>
       <div class="section-label">3D Printable Donut Chimneys</div>
       <div class="field-group">
@@ -1826,6 +1860,10 @@ function persistCurrentStudioState() {
       env: document.getElementById('sel-environment') ? document.getElementById('sel-environment').value : 'canyon',
       indicator: document.getElementById('sel-indicator-style') ? document.getElementById('sel-indicator-style').value : 'minimal_gem',
       song: currentSongKey || 'desert_caravan',
+      segments: document.getElementById('sel-print-segments') ? document.getElementById('sel-print-segments').value : '1',
+      printPart: document.getElementById('sel-print-part') ? document.getElementById('sel-print-part').value : 'assembled',
+      jointTol: document.getElementById('rng-joint-tol') ? document.getElementById('rng-joint-tol').value : '0.18',
+      jointLen: document.getElementById('rng-joint-len') ? document.getElementById('rng-joint-len').value : '14.0',
       breathCurve: breathCurvePoints
     };
     localStorage.setItem('flute_studio_active_state_v1', JSON.stringify(state));
@@ -1864,6 +1902,16 @@ function restoreStudioState() {
         applyEnvironment(state.env);
       }
       if (state.indicator && document.getElementById('sel-indicator-style')) document.getElementById('sel-indicator-style').value = state.indicator;
+      if (state.segments && document.getElementById('sel-print-segments')) document.getElementById('sel-print-segments').value = state.segments;
+      if (state.printPart && document.getElementById('sel-print-part')) document.getElementById('sel-print-part').value = state.printPart;
+      if (state.jointTol && document.getElementById('rng-joint-tol')) {
+        document.getElementById('rng-joint-tol').value = state.jointTol;
+        document.getElementById('val-joint-tol').innerText = `${parseFloat(state.jointTol).toFixed(2)} mm`;
+      }
+      if (state.jointLen && document.getElementById('rng-joint-len')) {
+        document.getElementById('rng-joint-len').value = state.jointLen;
+        document.getElementById('val-joint-len').innerText = `${parseFloat(state.jointLen).toFixed(1)} mm`;
+      }
       if (state.song) {
         currentSongKey = state.song;
         if (document.getElementById('sel-preset-melody')) document.getElementById('sel-preset-melody').value = state.song;
@@ -1903,8 +1951,12 @@ function rebuild3DFlute() {
   const profile       = document.getElementById('sel-profile').value;
   const chimneyDepth  = parseFloat(document.getElementById('rng-chim-depth').value);
   const rimThickness  = parseFloat(document.getElementById('rng-chim-rim').value);
+  const numSegments   = parseInt(document.getElementById('sel-print-segments') ? document.getElementById('sel-print-segments').value : '1');
+  const printPart     = document.getElementById('sel-print-part') ? document.getElementById('sel-print-part').value : 'assembled';
+  const jointTol      = parseFloat(document.getElementById('rng-joint-tol') ? document.getElementById('rng-joint-tol').value : '0.18');
+  const jointLen      = parseFloat(document.getElementById('rng-joint-len') ? document.getElementById('rng-joint-len').value : '14.0');
 
-  const scadStr = generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness);
+  const scadStr = generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, printPart, jointTol, jointLen);
   document.getElementById('lbl-status').innerText = 'Compiling OpenSCAD WASM...';
 
   getOpenSCAD()
@@ -2432,6 +2484,26 @@ document.getElementById('sel-flute-preset').addEventListener('change', (e) => {
   applyFlutePreset(e.target.value);
 });
 
+
+document.getElementById('sel-print-segments').addEventListener('change', () => {
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+document.getElementById('sel-print-part').addEventListener('change', () => {
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+document.getElementById('rng-joint-tol').addEventListener('input', (e) => {
+  document.getElementById('val-joint-tol').innerText = `${parseFloat(e.target.value).toFixed(2)} mm`;
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+document.getElementById('rng-joint-len').addEventListener('input', (e) => {
+  document.getElementById('val-joint-len').innerText = `${parseFloat(e.target.value).toFixed(1)} mm`;
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+
 document.getElementById('rng-chim-depth').addEventListener('input', (e) => {
   document.getElementById('val-chim-depth').innerText = `${parseFloat(e.target.value).toFixed(1)} mm`;
   persistCurrentStudioState();
@@ -2464,7 +2536,7 @@ document.getElementById('rng-chim-rim').addEventListener('input', (e) => {
 });
 
 // Complete Standalone OpenSCAD Generator in JS (matches cad.py 100%)
-function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness) {
+function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.8, rimThickness = 3.2, numSegments = 1, printPart = 'assembled', jointTol = 0.18, jointLen = 14.0) {
   let boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0;
   if (rootMidi >= 74) { boreM = 12.0; boreD1 = 14.0; boreD2 = 10.0; }
   else if (rootMidi >= 67) { boreM = 16.0; boreD1 = 18.0; boreD2 = 14.0; }
@@ -2634,7 +2706,86 @@ ${holesStr}
     }
 }
 
-complete_flute();
+// ====================================================================
+// Self-Aligning Tenon & Mortise Socket Joint Slicing
+// ====================================================================
+num_segments = ${numSegments};
+print_part = "${printPart}";
+joint_tol = ${jointTol.toFixed(2)};
+joint_len = ${jointLen.toFixed(1)};
+
+// Compute slice cut heights along the flute Z-axis
+z_cut1 = (num_segments >= 2) ? total_L * (1.0 / num_segments) : total_L;
+z_cut2 = (num_segments >= 3) ? total_L * (2.0 / num_segments) : total_L;
+z_cut3 = (num_segments >= 4) ? total_L * (3.0 / num_segments) : total_L;
+
+module male_tenon(z_pos) {
+    // Stepped male tenon with exact tolerance offset ($fn=6 matching hexagonal profile)
+    translate([0, 0, z_pos - 0.1])
+        linear_extrude(height = joint_len + 0.1)
+            offset(r = -(wall/2 + joint_tol/2))
+                hex_profile_2d();
+}
+
+module female_mortise(z_pos) {
+    // Stepped female socket opening
+    translate([0, 0, z_pos - 0.1])
+        linear_extrude(height = joint_len + 0.2)
+            offset(r = -(wall/2 - joint_tol/2))
+                hex_profile_2d();
+}
+
+module slice_part(z_bottom, z_top, has_male_bottom, has_female_top) {
+    difference() {
+        union() {
+            intersection() {
+                complete_flute();
+                translate([0, 0, (z_bottom + z_top) / 2])
+                    cube([outer_d * 6, outer_d * 6, z_top - z_bottom], center=true);
+            }
+            if (has_male_bottom) {
+                difference() {
+                    male_tenon(z_bottom);
+                    // Clear internal resonator bores through joint
+                    translate([0, 0, z_bottom - 1]) cylinder(d=bore_melody, h=joint_len + 2, $fn=24);
+                    translate([-spacing, 0, z_bottom - 1]) cylinder(d=bore_drone1, h=joint_len + 2, $fn=24);
+                    translate([spacing, 0, z_bottom - 1]) cylinder(d=bore_drone2, h=joint_len + 2, $fn=24);
+                }
+            }
+        }
+        if (has_female_top) {
+            female_mortise(z_top - joint_len);
+        }
+    }
+}
+
+if (num_segments == 1 || print_part == "assembled") {
+    complete_flute();
+} else if (num_segments == 2) {
+    if (print_part == "part_1" || print_part == "head") {
+        slice_part(z_cut1, total_L, true, false);
+    } else {
+        slice_part(0, z_cut1, false, true);
+    }
+} else if (num_segments == 3) {
+    if (print_part == "part_1" || print_part == "head") {
+        slice_part(z_cut2, total_L, true, false);
+    } else if (print_part == "part_2" || print_part == "mid") {
+        slice_part(z_cut1, z_cut2, true, true);
+    } else {
+        slice_part(0, z_cut1, false, true);
+    }
+} else if (num_segments == 4) {
+    if (print_part == "part_1") {
+        slice_part(z_cut3, total_L, true, false);
+    } else if (print_part == "part_2") {
+        slice_part(z_cut2, z_cut3, true, true);
+    } else if (print_part == "part_3") {
+        slice_part(z_cut1, z_cut2, true, true);
+    } else {
+        slice_part(0, z_cut1, false, true);
+    }
+}
 `;
 }
 
@@ -2646,6 +2797,10 @@ document.getElementById('btn-export-scad').addEventListener('click', async () =>
   const profile = document.getElementById('sel-profile').value;
   const chimneyDepth = parseFloat(document.getElementById('rng-chim-depth').value);
   const rimThickness = parseFloat(document.getElementById('rng-chim-rim').value);
+  const numSegments = parseInt(document.getElementById('sel-print-segments') ? document.getElementById('sel-print-segments').value : '1');
+  const printPart = document.getElementById('sel-print-part') ? document.getElementById('sel-print-part').value : 'assembled';
+  const jointTol = parseFloat(document.getElementById('rng-joint-tol') ? document.getElementById('rng-joint-tol').value : '0.18');
+  const jointLen = parseFloat(document.getElementById('rng-joint-len') ? document.getElementById('rng-joint-len').value : '14.0');
 
   let scadContent = '';
   if (pyodideInstance) {
@@ -2663,7 +2818,7 @@ generate_scad_content(dims)
   }
 
   if (!scadContent || scadContent.length < 50) {
-    scadContent = generateScadJs(root, scaleKey, numHoles, profile, chimneyDepth, rimThickness);
+    scadContent = generateScadJs(root, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, printPart, jointTol, jointLen);
   }
 
   const blob = new Blob([scadContent], { type: 'text/plain' });
