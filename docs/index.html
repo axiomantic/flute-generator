@@ -536,11 +536,21 @@
         <select id="sel-preset-melody" style="width: 200px; font-size:0.75rem; padding:4px 6px;"></select>
 
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:4px;">Grid:</span>
-        <select id="sel-roll-bars" style="width: 100px; font-size:0.75rem; padding:4px 6px;">
+        <select id="sel-roll-bars" style="width: 95px; font-size:0.75rem; padding:4px 6px;">
           <option value="fit" selected>Fit Window</option>
           <option value="1">1 Bar (4s)</option>
           <option value="2">2 Bars (8s)</option>
           <option value="4">4 Bars (16s)</option>
+        </select>
+
+        <span style="font-size:0.72rem; color:var(--text-muted); margin-left:4px;">Snap:</span>
+        <select id="sel-roll-snap" style="width: 105px; font-size:0.75rem; padding:4px 6px;">
+          <option value="none">Off (Free)</option>
+          <option value="0.0625">1/16 Note</option>
+          <option value="0.125" selected>1/8 Note</option>
+          <option value="0.25">1/4 Note</option>
+          <option value="0.5">1/2 Note</option>
+          <option value="1.0">1 Bar</option>
         </select>
 
         <button class="btn-subtle" id="btn-add-note">➕ Add Note</button>
@@ -760,14 +770,24 @@ function getBreathPressureAtTime(tNorm) {
   return breathCurvePoints[breathCurvePoints.length - 1].v;
 }
 
-let lastSelectedDuration = 0.5; // Memory for last selected/created duration
+let lastSelectedDuration = 0.5;
 let draggedNoteIdx = -1;
 let isResizingRight = false;
 let isDraggingNote = false;
 let dragStartX = 0;
 let dragStartY = 0;
 let dragOrigDur = 0.5;
+let dragOrigStart = 0.0;
 let rollZoomMode = 'fit';
+let rollSnap = 0.125; // Default 1/8 note snap resolution
+
+function snapTime(val) {
+  const selSnap = document.getElementById('sel-roll-snap');
+  const snapVal = selSnap ? selSnap.value : '0.125';
+  if (snapVal === 'none') return parseFloat(val.toFixed(3));
+  const step = parseFloat(snapVal);
+  return parseFloat((Math.round(val / step) * step).toFixed(3));
+}
 
 // Physical 1:1 Pitches: 1 Bell fundamental + N physical tone holes + 1 overblow octave
 function getPlayablePitches() {
@@ -1210,13 +1230,15 @@ function renderPianoRoll(activeIdx = -1) {
       <div class="resize-handle" style="position:absolute; right:0; top:0; bottom:0; width:6px; cursor:ew-resize;"></div>
     `;
 
-    // Mouse drag handling (Vertical Pitch Drag & Horizontal Resize)
+    // Full 2D Drag Handling (Move Time X, Move Pitch Y, and Horizontal Duration Resize)
     noteEl.onmousedown = (e) => {
       e.stopPropagation();
+      e.preventDefault();
       draggedNoteIdx = idx;
       dragStartX = e.clientX;
       dragStartY = e.clientY;
       dragOrigDur = note.duration;
+      dragOrigStart = (note.startTime !== undefined) ? note.startTime : 0.0;
       lastSelectedDuration = note.duration;
 
       if (e.target.classList.contains('resize-handle')) {
@@ -1254,20 +1276,38 @@ function onNoteMouseMove(e) {
 
   if (isResizingRight) {
     const deltaX = e.clientX - dragStartX;
-    const newDur = Math.max(0.08, dragOrigDur + (deltaX / pxPerSec));
-    note.duration = parseFloat(newDur.toFixed(2));
-    lastSelectedDuration = note.duration;
-    renderPianoRoll();
+    const rawDur = Math.max(0.05, dragOrigDur + (deltaX / pxPerSec));
+    const snappedDur = Math.max(0.05, snapTime(rawDur));
+    if (snappedDur !== note.duration) {
+      note.duration = snappedDur;
+      lastSelectedDuration = note.duration;
+      renderPianoRoll();
+    }
   } else if (isDraggingNote) {
+    // 1. Horizontal Time Dragging with Grid Snap
+    const deltaX = e.clientX - dragStartX;
+    const rawStart = Math.max(0, dragOrigStart + (deltaX / pxPerSec));
+    const snappedStart = snapTime(rawStart);
+
+    // 2. Vertical Tone Hole Pitch Snapping
     const trackRect = track.getBoundingClientRect();
     const relativeY = e.clientY - trackRect.top;
     const rowHeight = trackRect.height / reversedPitches.length;
     const targetRowIdx = Math.max(0, Math.min(reversedPitches.length - 1, Math.floor(relativeY / rowHeight)));
     const targetPitch = reversedPitches[targetRowIdx];
 
+    let changed = false;
+    if (snappedStart !== note.startTime) {
+      note.startTime = snappedStart;
+      changed = true;
+    }
     if (targetPitch && targetPitch !== note.midi) {
       note.midi = targetPitch;
       note.holes = midiToHoles(targetPitch);
+      changed = true;
+    }
+
+    if (changed) {
       lastSelectedDuration = note.duration;
       renderPianoRoll();
     }
@@ -1275,6 +1315,11 @@ function onNoteMouseMove(e) {
 }
 
 function onNoteMouseUp() {
+  if (draggedNoteIdx >= 0) {
+    // Re-sort notes chronologically on mouse release
+    scoreNotes.sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
+    renderPianoRoll();
+  }
   draggedNoteIdx = -1;
   isDraggingNote = false;
   isResizingRight = false;
@@ -1285,12 +1330,13 @@ function onNoteMouseUp() {
 function insertNoteAtPitch(pitch) {
   const noteDur = lastSelectedDuration || 0.5;
   const lastNote = scoreNotes[scoreNotes.length - 1];
-  const startTime = lastNote ? ((lastNote.startTime || 0) + lastNote.duration) : 0;
+  const rawStart = lastNote ? ((lastNote.startTime || 0) + lastNote.duration) : 0;
+  const startTime = snapTime(rawStart);
   scoreNotes.push({
     startTime: parseFloat(startTime.toFixed(3)),
     midi: pitch,
     holes: midiToHoles(pitch),
-    duration: noteDur
+    duration: parseFloat(noteDur.toFixed(3))
   });
   renderPianoRoll();
 }
@@ -2122,6 +2168,7 @@ window.addEventListener('keydown', (e) => {
 
 document.getElementById('btn-add-note').addEventListener('click', addNote);
 document.getElementById('sel-roll-bars').addEventListener('change', () => { renderPianoRoll(); });
+document.getElementById('sel-roll-snap').addEventListener('change', () => { renderPianoRoll(); });
 window.addEventListener('resize', () => { if (document.getElementById('pianoroll-track')) renderPianoRoll(); if (window.renderBreathShaper) initBreathShaperCanvas(); });
 
 // Scale, Hole Count, Root Pitch & Chimney Listeners
