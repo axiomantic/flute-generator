@@ -83,6 +83,16 @@ class TestScalesConsistency:
         for an, dn in zip(a_pent, d_pent):
             assert an - dn == 7
 
+    def test_hijaz_and_native_american_scales(self):
+        """Verify Hijaz (Phrygian Dominant) and Native American flute scale intervals."""
+        # Hijaz on A4: A4(69), Bb4(70), C#5(73), D5(74), E5(76), F5(77), G5(79), A5(81)
+        a_hijaz = get_scale_notes(69, "hijaz")
+        assert a_hijaz == [69, 70, 73, 74, 76, 77, 79, 81]
+
+        # Native American Flute scale on A4: A4(69), C5(72), D5(74), E5(76), G5(79), A5(81)
+        a_naf = get_scale_notes(69, "native_american")
+        assert a_naf == [69, 72, 74, 76, 79, 81]
+
     def test_unknown_scale_raises_value_error(self):
         with pytest.raises(ValueError, match="Unknown scale"):
             get_scale_notes(60, "super_locrian_flat_5")

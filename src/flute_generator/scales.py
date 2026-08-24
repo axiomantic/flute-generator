@@ -16,8 +16,12 @@ NOTE_ALIASES = {
 }
 
 SCALES: Dict[str, List[int]] = {
+    "native_american": [0, 3, 5, 7, 10, 12],          # Traditional 5-hole NAF Minor Pentatonic
+    "native_american_extended": [0, 3, 5, 7, 8, 10, 12], # 6-hole NAF Extended Mode
     "minor_pentatonic": [0, 3, 5, 7, 10, 12],
     "major_pentatonic": [0, 2, 4, 7, 9, 12],
+    "hijaz": [0, 1, 4, 5, 7, 8, 10, 12],             # Maqam Hijaz / Phrygian Dominant
+    "hijaz_kar": [0, 1, 4, 5, 7, 8, 11, 12],         # Double Harmonic Major / Hijaz Kar
     "major": [0, 2, 4, 5, 7, 9, 11, 12],
     "natural_minor": [0, 2, 3, 5, 7, 8, 10, 12],
     "dorian": [0, 2, 3, 5, 7, 9, 10, 12],

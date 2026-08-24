@@ -51,7 +51,7 @@ class TestInteractiveWizardSimulation:
             params = interactive_wizard()
 
         assert params["root_midi"] == 69  # A4
-        assert params["scale"] == "minor_pentatonic"
+        assert params["scale"] == "native_american"
         assert params["melody"] == "condor_pasa"
         assert params["drone1_offset"] == 0
         assert params["drone2_offset"] == 7
@@ -61,10 +61,10 @@ class TestInteractiveWizardSimulation:
     def test_interactive_wizard_with_custom_answers_and_advanced_geometry(self):
         """Simulate user providing specific custom inputs including advanced physical bore options."""
         inputs = [
-            "C5",       # Root note
-            "2",        # Scale 2 = major_pentatonic
-            "4",        # Melody 4 = greensleeves
-            "-12",      # Drone 1
+            "C5",               # Root note
+            "major_pentatonic", # Scale
+            "greensleeves",     # Melody
+            "-12",              # Drone 1
             "7",        # Drone 2
             "y",        # Advanced geometry?
             "20.0",     # bore_melody

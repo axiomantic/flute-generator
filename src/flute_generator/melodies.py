@@ -17,11 +17,6 @@ class NoteEvent:
 
 # Common flute melodies defined as:
 # (interval_from_root, duration_in_beats, ornament_type_or_None)
-# Ornaments include:
-#   "scoop"     : gentle pitch scoop into the note
-#   "grace_dip" : quick grace note from lower scale neighbor
-#   "grace_lift": quick grace note from upper scale neighbor
-#   "mordent"   : fast upper-neighbor flick on attack
 MELODY_PRESETS: Dict[str, List[Tuple[Optional[int], float, Optional[str]]]] = {
     # El Cóndor Pasa (Iconic Andean flute melody with soulful ornamentation)
     "condor_pasa": [
@@ -35,7 +30,7 @@ MELODY_PRESETS: Dict[str, List[Tuple[Optional[int], float, Optional[str]]]] = {
         (10, 2.0, "mordent"), (12, 1.0, None), (10, 0.5, None), (7, 0.5, None),
         (7, 3.5, "scoop"),
     ],
-    # Traditional Native American Flute spirit theme / motif with expressive breath bends
+    # Canyon Echoes / Native Spirit (Traditional Native American Flute love theme & spirit call)
     "native_motif": [
         (0, 1.5, "scoop"), (3, 0.5, "grace_dip"), (5, 1.0, None), (7, 2.0, "mordent"),
         (10, 1.0, "grace_lift"), (7, 1.0, None), (5, 1.0, "grace_dip"), (3, 1.0, None),
@@ -44,6 +39,18 @@ MELODY_PRESETS: Dict[str, List[Tuple[Optional[int], float, Optional[str]]]] = {
         (10, 0.75, None), (12, 0.25, None), (10, 1.0, None), (7, 1.0, "grace_dip"),
         (5, 1.5, "scoop"), (7, 0.5, None), (5, 1.0, None), (3, 1.0, None),
         (0, 3.5, "scoop"),
+    ],
+    # Desert Caravan / Maqam Hijaz (Exotic Middle Eastern Ney / Hijaz scale taqsim)
+    "desert_caravan": [
+        (0, 1.0, "scoop"), (1, 0.5, "grace_dip"), (4, 1.5, "mordent"),
+        (5, 1.0, None), (4, 0.5, None), (1, 0.5, "grace_dip"), (0, 2.0, "scoop"),
+        (None, 0.5, None),
+        (4, 1.0, "scoop"), (5, 0.5, None), (7, 1.5, "mordent"),
+        (8, 1.0, "grace_lift"), (7, 0.5, None), (5, 0.5, None), (4, 2.0, "scoop"),
+        (None, 0.5, None),
+        (7, 1.0, "scoop"), (8, 0.5, "grace_lift"), (10, 1.0, None), (12, 2.0, "mordent"),
+        (10, 0.5, None), (8, 0.5, None), (7, 1.0, None), (5, 0.5, None), (4, 1.0, "grace_dip"),
+        (1, 1.5, "scoop"), (0, 3.0, "scoop"),
     ],
     # Morning Mood - Edvard Grieg (Peer Gynt flute solo)
     "morning_mood": [
@@ -115,8 +122,6 @@ def build_quantized_melody(
     available_notes = get_available_flute_notes(root_midi, scale_intervals, octaves=octaves)
 
     events: List[NoteEvent] = []
-    total_notes = len([p for p in raw_melody if p[0] is not None])
-    note_counter = 0
 
     for item in raw_melody:
         interval = item[0]
@@ -131,7 +136,6 @@ def build_quantized_melody(
             quantized_midi = quantize_note_to_scale(target_midi, available_notes)
 
             # Dynamic velocity shaping based on duration, pitch height, and phrasing
-            # Higher notes and longer notes have more expressive breath pressure
             pitch_boost = int((quantized_midi - root_midi) * 0.8)
             duration_boost = 6 if duration >= 1.5 else (0 if duration >= 0.5 else -4)
             vel = max(60, min(112, base_velocity + pitch_boost + duration_boost))
@@ -146,6 +150,5 @@ def build_quantized_melody(
                     swell_intensity=0.6 if duration >= 1.5 else 0.3,
                 )
             )
-            note_counter += 1
 
     return events
