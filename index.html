@@ -1595,7 +1595,7 @@ function renderRibbon(activeIdx = -1) {
 // 3D Engine: Exact 1:1 OpenSCAD Solid Model & Self-Supporting Donut Chimneys
 let scene, camera, renderer, controls;
 let fluteRootGroup = null;
-let toneHoleMeshes = [], fingerMeshes = [];
+let toneHoleMeshes = [], fingerMeshes = [], keyLeverMeshes = [];
 
 
 
@@ -2117,6 +2117,7 @@ function rebuild3DFlute() {
         fluteRootGroup.remove(fluteRootGroup.children[0]);
       toneHoleMeshes = [];
       fingerMeshes   = [];
+      keyLeverMeshes = [];
 
       const geom = stlStringToGeometry(stl);
       const finishKey = document.getElementById('sel-wood-finish') ? document.getElementById('sel-wood-finish').value : 'cedar';
@@ -2145,6 +2146,103 @@ function rebuild3DFlute() {
       const cy  = (box.min.y + box.max.y) / 2;
       fluteMesh.position.set(-cx, 0, cy);
       fluteRootGroup.add(fluteMesh);
+
+      // Build Dynamic Animated Articulated Keywork in Three.js
+      if (keyworkMode !== 'none') {
+        const keyMat = new THREE.MeshStandardMaterial({
+          color: 0xd4af37, // Polished Brass / Gold Lacquer Saxophone Keywork
+          metalness: 0.85,
+          roughness: 0.22
+        });
+        const padGasketMat = new THREE.MeshStandardMaterial({
+          color: (padMaterial === 'tpu') ? 0x06b6d4 : 0x7c2d12, // Vibrant soft TPU pad
+          roughness: 0.4,
+          metalness: 0.1
+        });
+
+        for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+          const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
+          const hFreq = midiToFreq(rootMidi + targetInterval);
+          const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
+          const absZ = fippleZ - hDist;
+          const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
+
+          if (isKeyed) {
+            const clusterTopZ = fippleZ - 65.0;
+            const keyPitch = 22.0;
+            const padZ = clusterTopZ - hIdx * keyPitch;
+            const sideOffset = (hIdx % 2 === 0) ? -12.0 : 12.0;
+            const cupD = holeDiam + rimThickness * 2 + 2.0;
+            const frontY = outerD * 0.433;
+            const deckY = frontY + 3.6;
+            const cupY = frontY + chimneyDepth + 1.2;
+
+            // Create Hinge Pivot Root Group at the Axle Position
+            const keyRockerGroup = new THREE.Group();
+            // In Three.js: flute is upright along Y, front face is +Z (pointing to camera)
+            // Three.js coords: X = sideOffset - cx, Y = padZ, Z = deckY + cy
+            const pivotX = sideOffset - cx;
+            const pivotY = padZ;
+            const pivotZ = deckY + cy;
+
+            keyRockerGroup.position.set(pivotX, pivotY, pivotZ);
+
+            // A. Touchpad (attached to rocker group)
+            const touchMesh = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 2.5, 24), keyMat);
+            touchMesh.rotation.x = Math.PI / 2;
+            touchMesh.position.set(0, 0, 3.5);
+            keyRockerGroup.add(touchMesh);
+
+            // B. Hinge Rocker Boss Sleeve
+            const bossMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 4.5, 16), keyMat);
+            bossMesh.rotation.z = Math.PI / 2;
+            keyRockerGroup.add(bossMesh);
+
+            // C. Longitudinal Linkage Rod leading from Pivot to Cup
+            const deltaY = absZ - padZ; // Distance along flute axis
+            const deltaX = -sideOffset; // Distance to center tube
+            const deltaZ = (cupY - deckY);
+
+            const rodLen = Math.sqrt(deltaY * deltaY + deltaX * deltaX + deltaZ * deltaZ);
+            const rodGeom = new THREE.CylinderGeometry(1.8, 1.8, rodLen, 12);
+            const rodMesh = new THREE.Mesh(rodGeom, keyMat);
+            rodMesh.position.set(deltaX / 2, deltaY / 2, deltaZ / 2);
+            // Point cylinder along vector
+            const vSource = new THREE.Vector3(0, 1, 0);
+            const vTarget = new THREE.Vector3(deltaX, deltaY, deltaZ).normalize();
+            const q = new THREE.Quaternion().setFromUnitVectors(vSource, vTarget);
+            rodMesh.setRotationFromQuaternion(q);
+            keyRockerGroup.add(rodMesh);
+
+            // D. Key Cup (sits directly over the chimney hole)
+            const cupGroup = new THREE.Group();
+            cupGroup.position.set(deltaX, deltaY, deltaZ);
+            
+            const cupMesh = new THREE.Mesh(new THREE.CylinderGeometry(cupD/2, cupD/2, 2.8, 24), keyMat);
+            cupMesh.rotation.x = Math.PI / 2;
+            cupGroup.add(cupMesh);
+
+            const gasketMesh = new THREE.Mesh(new THREE.CylinderGeometry((cupD - 1.2)/2, (cupD - 1.2)/2, 1.2, 24), padGasketMat);
+            gasketMesh.rotation.x = Math.PI / 2;
+            gasketMesh.position.set(0, 0, -1.2);
+            cupGroup.add(gasketMesh);
+
+            keyRockerGroup.add(cupGroup);
+
+            // Set up animated rotation states (Pivoting around local X-axis)
+            keyRockerGroup.userData = {
+              openAngle: -0.16,  // ~9 degrees elevated open
+              closedAngle: 0.0,  // Flat 0 degrees sealed on chimney
+              currAngle: -0.16
+            };
+            keyRockerGroup.rotation.x = -0.16;
+
+            fluteRootGroup.add(keyRockerGroup);
+            keyLeverMeshes.push(keyRockerGroup);
+          }
+        }
+      }
+
 
       // Automatically frame camera so entire flute height fits in viewport
       fitCameraToFlute(fluteRootGroup);
@@ -2285,12 +2383,24 @@ function rebuild3DFlute() {
 
 
 function update3DFingersPose(activeHoles) {
-  if (!fingerMeshes || fingerMeshes.length === 0) return;
-  fingerMeshes.forEach((fGroup, idx) => {
-    const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
-    const targetZ = isCovered ? (fGroup.userData.closedZ || 20) : (fGroup.userData.openZ || 30);
-    fGroup.position.z += (targetZ - fGroup.position.z) * 0.35;
-  });
+  // Animate Fingertip indicators
+  if (fingerMeshes && fingerMeshes.length > 0) {
+    fingerMeshes.forEach((fGroup, idx) => {
+      const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
+      const targetZ = isCovered ? (fGroup.userData.closedZ || 20) : (fGroup.userData.openZ || 30);
+      fGroup.position.z += (targetZ - fGroup.position.z) * 0.35;
+    });
+  }
+
+  // Animate Articulated Mechanical Key Rocker Levers
+  if (keyLeverMeshes && keyLeverMeshes.length > 0) {
+    keyLeverMeshes.forEach((kGroup, idx) => {
+      const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
+      const targetAngle = isCovered ? (kGroup.userData.closedAngle || 0.0) : (kGroup.userData.openAngle || -0.16);
+      kGroup.userData.currAngle += (targetAngle - kGroup.userData.currAngle) * 0.40;
+      kGroup.rotation.x = kGroup.userData.currAngle;
+    });
+  }
 }
 
 // Physically-Modeled Air-Jet Labium Waveguide (Verge / Fletcher Aeroacoustic Model)
