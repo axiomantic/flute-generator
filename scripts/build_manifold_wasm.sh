@@ -1,42 +1,56 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# build_manifold_wasm.sh - Build OpenSCAD with Fast Manifold Engine for WASM
+# build_manifold_wasm.sh - Self-Contained Manifold WASM Builder for OpenSCAD
 # ==============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+VENDOR_DIR="${ROOT_DIR}/vendor"
+EMSDK_DIR="${VENDOR_DIR}/emsdk"
+OPENSCAD_SRC="${VENDOR_DIR}/openscad"
 BUILD_DIR="${ROOT_DIR}/build_wasm"
 DIST_DIR="${ROOT_DIR}"
 
 echo "======================================================================"
-echo "🏗️  Building OpenSCAD WebAssembly Binary with Manifold CSG Engine"
+echo "🏗️  Self-Contained OpenSCAD WASM Builder (with Manifold CSG Engine)"
 echo "======================================================================"
 
-# 1. Verify Emscripten SDK
-if ! command -v emcmake &> /dev/null; then
-    echo "❌ Error: Emscripten SDK (emcmake) is not in PATH."
-    echo "👉 Please install/activate emsdk:"
-    echo "   git clone https://github.com/emscripten-core/emsdk.git"
-    echo "   cd emsdk && ./emsdk install latest && ./emsdk activate latest"
-    echo "   source ./emsdk_env.sh"
-    exit 1
+# 1. Initialize git submodules if not present
+if [ ! -f "${EMSDK_DIR}/emsdk.py" ] || [ ! -f "${OPENSCAD_SRC}/CMakeLists.txt" ]; then
+    echo "📦 Initializing and updating git submodules in vendor/..."
+    cd "${ROOT_DIR}"
+    git submodule update --init --recursive
 fi
 
-# 2. Check for OpenSCAD submodule / clone
-OPENSCAD_SRC="${ROOT_DIR}/vendor/openscad"
-if [ ! -d "${OPENSCAD_SRC}/.git" ] && [ ! -f "${OPENSCAD_SRC}/CMakeLists.txt" ]; then
-    echo "📦 Cloning upstream OpenSCAD source with Manifold into vendor/openscad..."
-    mkdir -p "${ROOT_DIR}/vendor"
-    git clone --depth 1 --recurse-submodules -b master https://github.com/openscad/openscad.git "${OPENSCAD_SRC}"
+# 2. Setup & Activate Emscripten SDK from submodule
+echo "⚙️  Setting up Emscripten SDK in ${EMSDK_DIR}..."
+cd "${EMSDK_DIR}"
+
+if [ ! -d "${EMSDK_DIR}/upstream/emscripten" ]; then
+    echo "⬇️  Installing latest Emscripten toolchain..."
+    ./emsdk install latest
+    ./emsdk activate latest
 fi
+
+# Source Emscripten environment into the current shell
+echo "🔌 Activating Emscripten environment..."
+# shellcheck source=/dev/null
+source "${EMSDK_DIR}/emsdk_env.sh"
+
+# Verify emcmake is available
+if ! command -v emcmake &> /dev/null; then
+    echo "❌ Error: emcmake could not be found after activating emsdk_env.sh"
+    exit 1
+fi
+echo "✅ Emscripten toolchain ready: $(emcc -v 2>&1 | head -n 1)"
 
 # 3. Create build directory
 mkdir -p "${BUILD_DIR}"
 cd "${BUILD_DIR}"
 
-# 4. Configure with CMake via Emscripten
-echo "⚙️  Configuring CMake with ENABLE_MANIFOLD=ON..."
+# 4. Configure OpenSCAD with CMake & Emscripten
+echo "⚙️  Configuring CMake for OpenSCAD with ENABLE_MANIFOLD=ON..."
 emcmake cmake "${OPENSCAD_SRC}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DHEADLESS=ON \
@@ -50,15 +64,15 @@ emcmake cmake "${OPENSCAD_SRC}" \
 
 # 5. Compile OpenSCAD WASM
 NCPU=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
-echo "🔨 Compiling with ${NCPU} threads..."
+echo "🔨 Compiling OpenSCAD WASM with ${NCPU} threads..."
 emmake make -j"${NCPU}" openscad
 
-# 6. Copy output binaries to project root
-echo "📦 Copying generated WASM artifacts to project root..."
+# 6. Copy output artifacts to project root
+echo "📦 Copying generated WASM artifacts to ${DIST_DIR}..."
 if [ -f "${BUILD_DIR}/openscad.js" ]; then
     cp "${BUILD_DIR}/openscad.js" "${DIST_DIR}/openscad.js"
     [ -f "${BUILD_DIR}/openscad.wasm" ] && cp "${BUILD_DIR}/openscad.wasm" "${DIST_DIR}/openscad.wasm"
-    echo "✅ Success! Generated ${DIST_DIR}/openscad.js and openscad.wasm"
+    echo "🎉 Build Success! Deployed openscad.js & openscad.wasm"
 else
     echo "❌ Build completed but openscad.js was not found in ${BUILD_DIR}"
     exit 1

@@ -169,16 +169,10 @@ The web interface compiles parametric CAD models client-side into 3D polygon mes
 
 ### Building OpenSCAD WASM with the Fast Manifold Engine
 
-To build a custom build of OpenSCAD targeting WebAssembly with the 50× faster **Manifold CSG backend** (`-DENABLE_MANIFOLD=ON`), run:
+The project includes git submodules for `emsdk` and `openscad` under `vendor/`. The build script handles toolchain installation, environment activation, CMake configuration, and compilation automatically:
 
 ```bash
-# 1. Install & activate Emscripten SDK
-git clone https://github.com/emscripten-core/emsdk.git
-cd emsdk && ./emsdk install latest && ./emsdk activate latest
-source ./emsdk_env.sh
-cd ..
-
-# 2. Run the automated Manifold WASM build script
+# Run the self-contained Manifold WASM build script
 ./scripts/build_manifold_wasm.sh
 ```
 
