@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flute Studio 🪈 — 1:1 Physical CAD Flute & Full Anatomical Player Simulation</title>
+  <title>Flute Studio 🪈 — 1:1 Parametric CAD Flute & Self-Supporting Donut Chimneys</title>
   <style>
     :root {
       --bg-dark: #06080d;
@@ -42,7 +42,7 @@
 
     .workspace {
       display: grid;
-      grid-template-columns: 270px 1fr;
+      grid-template-columns: 280px 1fr;
       flex: 1;
       height: calc(100vh - 45px);
       overflow: hidden;
@@ -75,6 +75,7 @@
       color: var(--text-muted);
       margin-bottom: 3px;
     }
+    .field-group label span.val { color: var(--text); font-weight: 600; font-family: monospace; }
     
     select, input[type="range"] {
       width: 100%;
@@ -261,7 +262,7 @@
 <body>
 
 <header>
-  <h1>🪈 Flute Studio <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">1:1 Physical CAD & Anatomical Player</span></h1>
+  <h1>🪈 Flute Studio <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">1:1 Physical CAD & 3D Printable Geometry</span></h1>
   <div class="status-pill"><span class="status-dot"></span> <span id="lbl-status">Engine Ready</span></div>
 </header>
 
@@ -302,6 +303,18 @@
           <option value="major">Major Scale</option>
           <option value="natural_minor">Natural Minor</option>
         </select>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">3D Printable Donut Chimneys</div>
+      <div class="field-group">
+        <label>Chimney Depth (Protrusion) <span class="val" id="val-chim-depth">2.8 mm</span></label>
+        <input type="range" id="rng-chim-depth" min="1.0" max="5.0" step="0.2" value="2.8">
+      </div>
+      <div class="field-group">
+        <label>Donut Rim Thickness <span class="val" id="val-chim-rim">3.2 mm</span></label>
+        <input type="range" id="rng-chim-rim" min="1.5" max="6.0" step="0.2" value="3.2">
       </div>
     </div>
 
@@ -347,12 +360,12 @@
   </div>
 
   <div class="stage">
-    <!-- 3D GPU Viewport: 1:1 Complete OpenSCAD Flute + Anatomical Player (Lungs, Trachea, Tongue, Hands) -->
+    <!-- 3D GPU Viewport: Exact 1:1 Solid CAD Model with Printable Rounded Donut Chimneys & Hands -->
     <div id="viewport-container">
       <canvas id="viewport-canvas"></canvas>
       <div class="viewport-overlay">
-        <strong id="lbl-viewport-title">1:1 Physical CAD Flute & Anatomical Player</strong>
-        <span style="color:var(--text-muted);" id="lbl-viewport-sub">Simulating: Bellows Lungs, Articulated Tongue, Converged Beak & 3D Hands</span>
+        <strong id="lbl-viewport-title">1:1 Solid OpenSCAD Triple Flute Model</strong>
+        <span style="color:var(--text-muted);" id="lbl-viewport-sub">Self-supporting 45° printable donut chimney pads & moving hands</span>
       </div>
     </div>
 
@@ -481,7 +494,7 @@ function loadPreset(name) {
     });
   });
   renderRibbon();
-  rebuild3DFluteAndAnatomy();
+  rebuild3DFlute();
 }
 
 function quantizeScore() {
@@ -490,7 +503,7 @@ function quantizeScore() {
     s.holes = midiToHoles(s.midi);
   });
   renderRibbon();
-  rebuild3DFluteAndAnatomy();
+  rebuild3DFlute();
 }
 
 const PX_PER_SEC = 80;
@@ -548,11 +561,10 @@ function addNote() {
   renderRibbon();
 }
 
-// 3D Engine: 1:1 Complete OpenSCAD Solid Flute & Anatomical Player
+// 3D Engine: Exact 1:1 OpenSCAD Solid Model & Self-Supporting Donut Chimneys
 let scene, camera, renderer, controls;
 let fluteRootGroup = null;
 let toneHoleMeshes = [], fingerMeshes = [];
-let lungsBellowsMesh = null, tracheaAirway = null, tongueArticulator = null, mouthChamber = null;
 
 function init3D() {
   const container = document.getElementById('viewport-container');
@@ -577,7 +589,7 @@ function init3D() {
   fluteRootGroup = new THREE.Group();
   scene.add(fluteRootGroup);
 
-  rebuild3DFluteAndAnatomy();
+  rebuild3DFlute();
 
   function animate() {
     requestAnimationFrame(animate);
@@ -587,8 +599,8 @@ function init3D() {
   animate();
 }
 
-// Rebuild 1:1 Solid SCAD Geometry & Anatomical Player
-function rebuild3DFluteAndAnatomy() {
+// Rebuild 1:1 Solid SCAD Geometry with Printable Donut Chimneys
+function rebuild3DFlute() {
   if (!fluteRootGroup) return;
 
   while (fluteRootGroup.children.length > 0) {
@@ -601,6 +613,8 @@ function rebuild3DFluteAndAnatomy() {
   const numHoles = parseInt(document.getElementById('sel-holes').value);
   const scaleKey = document.getElementById('sel-scale').value;
   const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  const chimneyDepth = parseFloat(document.getElementById('rng-chim-depth').value);
+  const rimThickness = parseFloat(document.getElementById('rng-chim-rim').value);
 
   const fMel = midiToFreq(rootMidi);
   const fD1 = midiToFreq(rootMidi);
@@ -617,21 +631,19 @@ function rebuild3DFluteAndAnatomy() {
 
   const totalBodyLen = Math.max(lMel, lD1, lD2);
   const headLen = 42.0;
-  const totalCadLen = totalBodyLen + headLen;
   const outerD = Math.max(boreM, boreD1, boreD2) + 8.0;
   const spacing = outerD * 0.95;
+  const holeDiam = Math.max(5.0, Math.min(9.5, boreM * 0.38));
 
   const matWood = new THREE.MeshStandardMaterial({ color: 0xc49a6c, roughness: 0.35, metalness: 0.12 });
   const matHead = new THREE.MeshStandardMaterial({ color: 0x8a633f, roughness: 0.4 });
-  const matChimney = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.3 });
-  const matAnatomy = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7, roughness: 0.2 });
+  const matChimney = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.25 });
 
-  // Center coordinate: Fipple sound windows at Z = 0
   const bodyGroup = new THREE.Group();
   bodyGroup.position.set(0, totalBodyLen / 2, 0);
   fluteRootGroup.add(bodyGroup);
 
-  // 1. Solid Triple Flute Enclosure (Unified Hexagonal Cross-Section)
+  // 1. Solid Hexagonal Triple Enclosure matching SCAD linear_extrude(hex_profile_2d())
   const geomMel = new THREE.CylinderGeometry(outerD/2, outerD/2, lMel, 6);
   const meshMel = new THREE.Mesh(geomMel, matWood);
   meshMel.position.set(0, -lMel/2, 0);
@@ -647,7 +659,7 @@ function rebuild3DFluteAndAnatomy() {
   meshD2.position.set(spacing, -lD2/2, 0);
   bodyGroup.add(meshD2);
 
-  // Web/Connector bridging the pipes into a single solid body
+  // Web connector bridging tubes
   const geomWeb = new THREE.BoxGeometry(spacing * 2, outerD * 0.866, totalBodyLen);
   const meshWeb = new THREE.Mesh(geomWeb, matWood);
   meshWeb.position.set(0, -totalBodyLen/2, 0);
@@ -668,9 +680,12 @@ function rebuild3DFluteAndAnatomy() {
     bodyGroup.add(winMesh);
   });
 
-  // 4. Exact Acoustic Tone Holes & Raised Hexagonal Chimney Pads
+  // 4. Self-Supporting Printable Rounded Donut Chimneys & Hands
   const matHand = new THREE.MeshStandardMaterial({ color: 0xe2a77f, roughness: 0.5 });
   const fingerGeom = new THREE.CylinderGeometry(4.5, 4.5, 16, 16);
+
+  const outerRimD = holeDiam + rimThickness * 2;
+  const baseFlangeD = outerRimD + chimneyDepth * 2; // 45-degree self-supporting printable base
 
   for (let hIdx = 0; hIdx < numHoles; hIdx++) {
     const targetInterval = scaleIntervals[hIdx + 1] || (12 * (hIdx + 1) / (numHoles + 1));
@@ -678,83 +693,45 @@ function rebuild3DFluteAndAnatomy() {
     const hDist = Math.max(25, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
     const holeY = -hDist;
 
-    // Raised Chimney Pad
-    const geomChimney = new THREE.CylinderGeometry(5.5, 6.5, 3.0, 6);
-    const chimneyMesh = new THREE.Mesh(geomChimney, matChimney);
-    chimneyMesh.rotation.x = Math.PI / 2;
-    chimneyMesh.position.set(0, holeY, outerD/2);
-    bodyGroup.add(chimneyMesh);
+    // A. 45-degree Conical Self-Supporting Printable Base (Flange)
+    const geomBase = new THREE.CylinderGeometry(outerRimD/2, baseFlangeD/2, chimneyDepth, 32);
+    const baseMesh = new THREE.Mesh(geomBase, matChimney);
+    baseMesh.rotation.x = Math.PI / 2;
+    baseMesh.position.set(0, holeY, outerD/2 + chimneyDepth/2);
+    bodyGroup.add(baseMesh);
 
-    // Tone Hole Sound Core (Radiant Cyan when open)
+    // B. Smooth Toroidal Rounded Donut Crown Rim for airtight finger pad seal
+    const geomTorus = new THREE.TorusGeometry((holeDiam + rimThickness)/2, rimThickness * 0.35, 16, 32);
+    const torusMesh = new THREE.Mesh(geomTorus, matChimney);
+    torusMesh.position.set(0, holeY, outerD/2 + chimneyDepth);
+    bodyGroup.add(torusMesh);
+
+    // C. Open Borehole Core (Radiant Cyan when open)
     const matHole = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.0 });
-    const geomHole = new THREE.CylinderGeometry(3.2, 3.2, 3.2, 16);
+    const geomHole = new THREE.CylinderGeometry(holeDiam/2, holeDiam/2, chimneyDepth + 2.0, 32);
     const holeMesh = new THREE.Mesh(geomHole, matHole);
     holeMesh.rotation.x = Math.PI / 2;
-    holeMesh.position.set(0, holeY, outerD/2 + 1.0);
+    holeMesh.position.set(0, holeY, outerD/2 + chimneyDepth/2);
     bodyGroup.add(holeMesh);
     toneHoleMeshes.push(holeMesh);
 
-    // Articulated 3D Finger Mesh
+    // D. Articulated 3D Finger Mesh Hovering Over Chimney Pad
     const fMesh = new THREE.Mesh(fingerGeom, matHand);
     fMesh.rotation.x = Math.PI / 3;
-    fMesh.position.set((hIdx < Math.ceil(numHoles/2) ? -10 : 10), holeY, outerD/2 + 14);
+    fMesh.position.set((hIdx < Math.ceil(numHoles/2) ? -10 : 10), holeY, outerD/2 + chimneyDepth + 12);
     bodyGroup.add(fMesh);
     fingerMeshes.push(fMesh);
   }
 
-  // 5. Complete 1:1 Anatomical Player (Bellows Lungs, Trachea, Mouth & Tongue)
-  const anatomyGroup = new THREE.Group();
-  anatomyGroup.position.set(0, headLen + 15, -10);
-  bodyGroup.add(anatomyGroup);
-
-  // Bilateral Lungs Bellows
-  const lungLeft = new THREE.Mesh(new THREE.SphereGeometry(18, 16, 16), matAnatomy);
-  lungLeft.position.set(-16, 45, 0);
-  lungLeft.scale.set(0.9, 1.4, 0.7);
-  
-  const lungRight = new THREE.Mesh(new THREE.SphereGeometry(18, 16, 16), matAnatomy);
-  lungRight.position.set(16, 45, 0);
-  lungRight.scale.set(0.9, 1.4, 0.7);
-
-  lungsBellowsMesh = new THREE.Group();
-  lungsBellowsMesh.add(lungLeft);
-  lungsBellowsMesh.add(lungRight);
-  anatomyGroup.add(lungsBellowsMesh);
-
-  // Trachea Airway
-  tracheaAirway = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 30, 16), matAnatomy);
-  tracheaAirway.position.set(0, 22, 0);
-  anatomyGroup.add(tracheaAirway);
-
-  // Oral Cavity Mouth & Tongue Articulator
-  mouthChamber = new THREE.Mesh(new THREE.SphereGeometry(12, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.55 }));
-  mouthChamber.position.set(0, 0, 8);
-  anatomyGroup.add(mouthChamber);
-
-  tongueArticulator = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 3.5), new THREE.MeshStandardMaterial({ color: 0xbe123c }));
-  tongueArticulator.position.set(0, -2, 7);
-  anatomyGroup.add(tongueArticulator);
-
-  document.getElementById('lbl-viewport-title').innerText = `Parametric ${numHoles}-Hole Triple Flute & Anatomical Player`;
-  document.getElementById('lbl-viewport-sub').innerText = `1:1 Solid CAD Model • Total Length: ${(totalBodyLen + headLen).toFixed(1)} mm • Melody Bore: ${boreM.toFixed(1)} mm`;
+  document.getElementById('lbl-viewport-title').innerText = `Parametric ${numHoles}-Hole Triple Flute (Exact OpenSCAD Model)`;
+  document.getElementById('lbl-viewport-sub').innerText = `Printable Donut Chimneys (Depth: ${chimneyDepth}mm, Rim: ${rimThickness}mm) • Height: ${(totalBodyLen + headLen).toFixed(1)}mm`;
 }
 
-function update3DFingersAndAnatomyPose(activeHoles, breathIntensity, tonguePos) {
-  // Lungs Bellows Breathing Expansion
-  if (lungsBellowsMesh) {
-    const scale = 1.0 + (breathIntensity || 0.6) * 0.35;
-    lungsBellowsMesh.scale.set(scale, scale, scale);
-  }
-
-  // Tongue Lingual Articulation Movement
-  if (tongueArticulator) {
-    tongueArticulator.position.z = 7.0 + (tonguePos || 0.0) * 3.0;
-  }
-
-  // Moving 3D Fingers on Tone Holes
+function update3DFingersPose(activeHoles) {
+  const chimneyDepth = parseFloat(document.getElementById('rng-chim-depth').value);
   fingerMeshes.forEach((fMesh, idx) => {
     const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
-    const targetZ = isCovered ? 6.0 : 16.0;
+    const targetZ = isCovered ? (chimneyDepth + 5.0) : (chimneyDepth + 14.0);
     fMesh.position.z += (targetZ - fMesh.position.z) * 0.35;
 
     if (toneHoleMeshes[idx]) {
@@ -919,7 +896,7 @@ async function startAudio() {
 
     renderRibbon(activeIdx);
     if (activeIdx >= 0) {
-      update3DFingersAndAnatomyPose(scoreNotes[activeIdx].holes, 0.75, 0.5);
+      update3DFingersPose(scoreNotes[activeIdx].holes);
     }
   }, 30);
 }
@@ -930,7 +907,7 @@ function stopAudio() {
   if (liveProcessorNode) liveProcessorNode.disconnect();
   if (window.playheadTimer) clearInterval(window.playheadTimer);
   renderRibbon(-1);
-  update3DFingersAndAnatomyPose([], 0.0, 0.0);
+  update3DFingersPose([]);
   document.getElementById('btn-play').innerText = '▶ Play Physical Engine';
 }
 
@@ -940,7 +917,7 @@ document.getElementById('btn-play').addEventListener('click', async () => {
 });
 document.getElementById('btn-stop').addEventListener('click', stopAudio);
 
-// Scale, Hole Count & Root Listeners with Auto-Quantization
+// Scale, Hole Count & Chimney Listeners
 document.getElementById('sel-holes').addEventListener('change', quantizeScore);
 document.getElementById('sel-scale').addEventListener('change', quantizeScore);
 document.getElementById('sel-root').addEventListener('change', quantizeScore);
@@ -948,8 +925,17 @@ document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
   loadPreset(e.target.value);
 });
 
+document.getElementById('rng-chim-depth').addEventListener('input', (e) => {
+  document.getElementById('val-chim-depth').innerText = `${parseFloat(e.target.value).toFixed(1)} mm`;
+  rebuild3DFlute();
+});
+document.getElementById('rng-chim-rim').addEventListener('input', (e) => {
+  document.getElementById('val-chim-rim').innerText = `${parseFloat(e.target.value).toFixed(1)} mm`;
+  rebuild3DFlute();
+});
+
 // Complete Standalone OpenSCAD Generator in JS (matches cad.py 100%)
-function generateScadJs(rootMidi, scaleKey, numHoles, profile) {
+function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness) {
   const fMel = midiToFreq(rootMidi);
   const fD1 = midiToFreq(rootMidi);
   const fD2 = midiToFreq(rootMidi + 7);
@@ -983,12 +969,23 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile) {
     const hDist = Math.max(25, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
     const absZ = fippleZ - hDist;
 
-    chimneysScad.push(`        translate([0, outer_d/2 - 0.5, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) cylinder(d1=${(holeDiam + 6).toFixed(2)}, d2=${(holeDiam + 2.5).toFixed(2)}, h=3.0, $fn=6);`);
-    holesScad.push(`        translate([0, 0, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) cylinder(d=${holeDiam.toFixed(2)}, h=${(outerD + 5).toFixed(2)}, center=false);`);
+    const outerRim = holeDiam + rimThickness * 2;
+    const baseFlange = outerRim + chimneyDepth * 2;
+
+    chimneysScad.push(`        // Self-supporting rounded donut chimney (hole d=${holeDiam.toFixed(2)})
+        translate([0, outer_d/2 - 0.2, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
+            hull() {
+                cylinder(d=${baseFlange.toFixed(2)}, h=0.2, $fn=36);
+                translate([0, 0, ${(chimneyDepth - 0.8).toFixed(2)}]) cylinder(d=${outerRim.toFixed(2)}, h=0.8, $fn=36);
+            }
+            translate([0, 0, ${chimneyDepth.toFixed(2)}]) rotate_extrude($fn=36) translate([${((holeDiam + rimThickness)/2).toFixed(2)}, 0]) circle(d=${(rimThickness * 0.8).toFixed(2)}, $fn=16);
+        }`);
+
+    holesScad.push(`        translate([0, 0, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) cylinder(d=${holeDiam.toFixed(2)}, h=${(outerD + chimneyDepth * 2 + 5).toFixed(2)}, center=false, $fn=36);`);
   }
 
   return `// ====================================================================
-// Parametric Triple Drone Flute (Uniform Hexagonal Body & Tapered Mouthpiece)
+// Parametric Triple Drone Flute (Printable Donut Chimneys & Tapered Mouthpiece)
 // Generated by Flute Studio
 // Root Note MIDI: ${rootMidi} (${getMidiName(rootMidi)})
 // Scale: ${scaleKey} (${numHoles} Tone Holes)
@@ -996,6 +993,7 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile) {
 // Melody Bore: ${boreM.toFixed(2)} mm, Acoustic Length: ${lMel.toFixed(2)} mm
 // Drone 1 Bore: ${boreD1.toFixed(2)} mm, Acoustic Length: ${lD1.toFixed(2)} mm
 // Drone 2 Bore: ${boreD2.toFixed(2)} mm, Acoustic Length: ${lD2.toFixed(2)} mm
+// Chimney Depth: ${chimneyDepth.toFixed(2)} mm, Donut Rim Thickness: ${rimThickness.toFixed(2)} mm
 // ====================================================================
 
 $fn = 60;
@@ -1026,6 +1024,10 @@ module flute_body() {
             translate([0, 0, 0]) cylinder(d=outer_d, h=fipple_z, $fn=6);
             translate([-spacing, 0, 0]) cylinder(d=outer_d, h=fipple_z, $fn=6);
             translate([spacing, 0, 0]) cylinder(d=outer_d, h=fipple_z, $fn=6);
+            
+            // Bridge web
+            translate([0, 0, fipple_z/2]) cube([spacing * 2, outer_d * 0.866, fipple_z], center=true);
+
             mouthpiece_beak();
 
 ${chimneysScad.join('\n')}
@@ -1053,6 +1055,8 @@ document.getElementById('btn-export-scad').addEventListener('click', async () =>
   const scaleKey = document.getElementById('sel-scale').value;
   const numHoles = parseInt(document.getElementById('sel-holes').value);
   const profile = document.getElementById('sel-profile').value;
+  const chimneyDepth = parseFloat(document.getElementById('rng-chim-depth').value);
+  const rimThickness = parseFloat(document.getElementById('rng-chim-rim').value);
 
   let scadContent = '';
   if (pyodideInstance) {
@@ -1063,14 +1067,14 @@ from flute_generator.cad import generate_scad_content
 from flute_generator.scales import SCALES
 
 scale_ints = SCALES.get('${scaleKey}', SCALES['minor_pentatonic'])[:${numHoles} + 1]
-dims = calculate_flute_geometry(root_midi=${root}, scale_intervals=scale_ints, windway_profile='${profile}')
+dims = calculate_flute_geometry(root_midi=${root}, scale_intervals=scale_ints, windway_profile='${profile}', chimney_depth=${chimneyDepth}, chimney_rim_thickness=${rimThickness})
 generate_scad_content(dims)
 `);
     } catch(e){}
   }
 
   if (!scadContent || scadContent.length < 50) {
-    scadContent = generateScadJs(root, scaleKey, numHoles, profile);
+    scadContent = generateScadJs(root, scaleKey, numHoles, profile, chimneyDepth, rimThickness);
   }
 
   const blob = new Blob([scadContent], { type: 'text/plain' });

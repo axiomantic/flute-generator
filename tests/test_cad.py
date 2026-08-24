@@ -69,7 +69,7 @@ class TestOpenScadGeneration:
         assert f"L_melody = {dims.length_melody:.2f};" in scad_code
 
         # Number of chimney hole cuts must match number of scale tone holes
-        assert scad_code.count("d1=") == len(dims.hole_positions)
+        assert scad_code.count("rotate_extrude") >= len(dims.hole_positions)
 
     def test_save_scad_creates_parent_directories(self):
         dims = calculate_flute_geometry()

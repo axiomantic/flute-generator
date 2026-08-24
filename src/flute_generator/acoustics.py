@@ -30,6 +30,8 @@ class FluteDimensions:
     tolerance: float
     flute_size: str = "tenor"  # piccolo, soprano, tenor, bass, contrabass
     mouthpiece_taper: bool = True
+    chimney_depth: float = 2.8           # Protrusion depth of self-supporting chimney pad (mm)
+    chimney_rim_thickness: float = 3.2   # Donut rim padding around hole for finger seal (mm)
     windway_profile: str = "flat"
     drone_air_ratio: float = 0.78
     windway_texture: str = "smooth"
@@ -101,6 +103,8 @@ def calculate_flute_geometry(
     windway_profile: str = "flat",
     drone_air_ratio: float = 0.78,
     windway_texture: str = "smooth",
+    chimney_depth: float = 2.8,
+    chimney_rim_thickness: float = 3.2,
     max_hand_span_mm: float = 36.0,
 ) -> FluteDimensions:
     """Calculate all acoustic, physical, and ergonomic dimensions across any flute size."""
@@ -179,6 +183,8 @@ def calculate_flute_geometry(
         tolerance=tolerance,
         flute_size=size_cat,
         mouthpiece_taper=True,
+        chimney_depth=chimney_depth,
+        chimney_rim_thickness=chimney_rim_thickness,
         windway_profile=windway_profile,
         drone_air_ratio=drone_air_ratio,
         windway_texture=windway_texture,

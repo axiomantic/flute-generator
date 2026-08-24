@@ -27,14 +27,26 @@ def generate_scad_content(dims: FluteDimensions) -> str:
     chimneys_scad = []
     holes_scad = []
 
+    chimney_depth = getattr(dims, 'chimney_depth', 2.8)
+    rim_thickness = getattr(dims, 'chimney_rim_thickness', 3.2)
+
     hole_diams = getattr(dims, 'hole_diameters', [dims.hole_diameter] * len(dims.hole_positions))
     for pos, d in zip(dims.hole_positions, hole_diams):
         # Tone hole Z = fipple splitting edge - acoustic hole distance
         abs_z = fipple_z - pos
-        # Ergonomic raised faceted chimney pad on the front (+Y) face
+        outer_rim = d + rim_thickness * 2
+        base_flange = outer_rim + chimney_depth * 2  # 45-degree self-supporting angle
+
+        # Self-supporting rounded donut chimney pad (prints standing upright with no supports)
         c_code = (
-            f"        translate([0, outer_d/2 - 0.5, {abs_z:.2f}]) rotate([-90, 0, 0]) "
-            f"cylinder(d1={d + 6:.2f}, d2={d + 2.5:.2f}, h={3.0:.2f}, $fn=6);"
+            f"        // Self-supporting rounded donut chimney (hole d={d:.2f})\n"
+            f"        translate([0, outer_d/2 - 0.2, {abs_z:.2f}]) rotate([-90, 0, 0]) {{\n"
+            f"            hull() {{\n"
+            f"                cylinder(d={base_flange:.2f}, h=0.2, $fn=36);\n"
+            f"                translate([0, 0, {chimney_depth - 0.8:.2f}]) cylinder(d={outer_rim:.2f}, h=0.8, $fn=36);\n"
+            f"            }}\n"
+            f"            translate([0, 0, {chimney_depth:.2f}]) rotate_extrude($fn=36) translate([{(d + rim_thickness)/2:.2f}, 0]) circle(d={rim_thickness * 0.8:.2f}, $fn=16);\n"
+            f"        }}"
         )
         chimneys_scad.append(c_code)
 
@@ -42,7 +54,7 @@ def generate_scad_content(dims: FluteDimensions) -> str:
         # center=false so it NEVER penetrates the back wall!
         h_code = (
             f"        translate([0, 0, {abs_z:.2f}]) rotate([-90, 0, 0]) "
-            f"cylinder(d={d:.2f}, h={outer_d + 5:.2f}, center=false);"
+            f"cylinder(d={d:.2f}, h={outer_d + chimney_depth * 2 + 5:.2f}, center=false, $fn=36);"
         )
         holes_scad.append(h_code)
 
