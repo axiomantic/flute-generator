@@ -1,10 +1,11 @@
-"""Digital waveguide physical modeling acoustic synthesizer and multitrack MIDI generator."""
+"""Digital waveguide physical modeling acoustic synthesizer and bio-acoustic vocal tract simulator."""
 
+from dataclasses import dataclass
 import math
 from pathlib import Path
 import random
 import struct
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 import wave
 
 import mido
@@ -12,6 +13,138 @@ from mido import Message, MetaMessage, MidiFile, MidiTrack
 
 from .acoustics import FluteDimensions, midi_to_freq
 from .melodies import NoteEvent
+
+
+@dataclass
+class BreathFrame:
+    """Instantaneous state of the player's respiratory system, vocal tract, and fingers."""
+    time_sec: float
+    lung_pressure: float  # [0.0 to 1.0] Lung/diaphragm blowing pressure
+    tongue_articulation: str  # 'none', 't_attack', 'd_soft', 'k_double', 'flutter'
+    vowel_throat: str  # 'tu', 'ooh', 'ta', 'kee'
+    lip_aperture: float  # [0.5 to 1.5] Lip opening constriction
+    hole_coverages: List[float]  # [0.0 = fully open, 1.0 = fully covered] for each tone hole
+
+
+class HumanVocalTract:
+    """Biophysical model of human lungs, diaphragm, throat formants, sinus cavities, and tongue."""
+    def __init__(self, sample_rate: int = 44100):
+        self.sr = sample_rate
+        
+        # Diaphragm & Lung dynamics
+        self.lung_state = 0.0
+        self.diaphragm_tremor_phase = 0.0
+        self.heartbeat_phase = 0.0
+        
+        # Lingual flutter-tongue oscillator
+        self.flutter_phase = 0.0
+        
+        # Vocal Tract Formant Biquads (Throat & Sinus Cavity Resonance)
+        self.f1_y1 = 0.0
+        self.f1_y2 = 0.0
+        self.f2_y1 = 0.0
+        self.f2_y2 = 0.0
+        self.sinus_y1 = 0.0
+        self.sinus_y2 = 0.0
+        
+        # Vowel formant centers (F1, F2 in Hz)
+        self.vowel_presets = {
+            'tu': (450.0, 1750.0),
+            'ooh': (320.0, 850.0),
+            'ta': (750.0, 1300.0),
+            'kee': (350.0, 2200.0),
+        }
+        
+        self.curr_f1 = 450.0
+        self.curr_f2 = 1750.0
+        self.update_formant_filters()
+
+    def update_formant_filters(self):
+        # F1 Throat Formant Biquad
+        w1 = 2.0 * math.pi * min(self.sr * 0.45, self.curr_f1) / self.sr
+        q1 = 5.0
+        alpha1 = math.sin(w1) / (2.0 * q1)
+        self.f1_b0 = (math.sin(w1) / 2.0) / (1.0 + alpha1)
+        self.f1_a1 = (-2.0 * math.cos(w1)) / (1.0 + alpha1)
+        self.f1_a2 = (1.0 - alpha1) / (1.0 + alpha1)
+
+        # F2 Oral Formant Biquad
+        w2 = 2.0 * math.pi * min(self.sr * 0.45, self.curr_f2) / self.sr
+        q2 = 6.0
+        alpha2 = math.sin(w2) / (2.0 * q2)
+        self.f2_b0 = (math.sin(w2) / 2.0) / (1.0 + alpha2)
+        self.f2_a1 = (-2.0 * math.cos(w2)) / (1.0 + alpha2)
+        self.f2_a2 = (1.0 - alpha2) / (1.0 + alpha2)
+
+        # Sinus Nasal Cavity (Fixed at ~1400 Hz)
+        ws = 2.0 * math.pi * 1400.0 / self.sr
+        qs = 3.5
+        alphas = math.sin(ws) / (2.0 * qs)
+        self.sinus_b0 = (math.sin(ws) / 2.0) / (1.0 + alphas)
+        self.sinus_a1 = (-2.0 * math.cos(ws)) / (1.0 + alphas)
+        self.sinus_a2 = (1.0 - alphas) / (1.0 + alphas)
+
+    def process(
+        self,
+        target_lung_p: float,
+        vowel: str = 'tu',
+        articulation: str = 'none',
+        lip_aperture: float = 1.0,
+        rng: Optional[random.Random] = None,
+    ) -> Tuple[float, float]:
+        """Returns (effective_jet_pressure, mouth_vocal_acoustic_modulation)."""
+        # 1. Diaphragm compliance & respiratory micro-fluctuations
+        dt = 1.0 / self.sr
+        self.diaphragm_tremor_phase += 2.0 * math.pi * 5.2 * dt
+        self.heartbeat_phase += 2.0 * math.pi * 1.1 * dt
+        
+        tremor = 0.008 * math.sin(self.diaphragm_tremor_phase)
+        heart_pulse = 0.003 * math.sin(self.heartbeat_phase)
+        
+        # Smooth respiratory lung expansion
+        self.lung_state += (target_lung_p - self.lung_state) * 0.03
+        base_p = max(0.0, self.lung_state + tremor + heart_pulse)
+
+        # 2. Tongue Articulation Valve (T, D, K, Flutter)
+        tongue_mod = 1.0
+        if articulation == 'flutter':
+            self.flutter_phase += 2.0 * math.pi * 24.0 * dt
+            tongue_mod = 0.35 + 0.65 * max(0.0, math.sin(self.flutter_phase))
+        elif articulation == 't_attack':
+            tongue_mod = 1.45  # Explosive pressure burst
+        elif articulation == 'd_soft':
+            tongue_mod = 1.15
+        elif articulation == 'k_double':
+            tongue_mod = 1.35
+
+        # 3. Teeth & Lip Constriction
+        jet_velocity_factor = 1.0 / math.sqrt(max(0.2, lip_aperture))
+        p_jet = base_p * tongue_mod * jet_velocity_factor
+
+        # 4. Vocal Tract / Throat Formant Filtering on acoustic feedback
+        target_f1, target_f2 = self.vowel_presets.get(vowel, (450.0, 1750.0))
+        if abs(target_f1 - self.curr_f1) > 1.0:
+            self.curr_f1 += (target_f1 - self.curr_f1) * 0.01
+            self.curr_f2 += (target_f2 - self.curr_f2) * 0.01
+            self.update_formant_filters()
+
+        # Acoustic noise with vocal tract coloring
+        raw_noise = (rng.random() * 2.0 - 1.0) if rng else 0.0
+        
+        f1_out = self.f1_b0 * raw_noise - self.f1_a1 * self.f1_y1 - self.f1_a2 * self.f1_y2
+        self.f1_y2 = self.f1_y1
+        self.f1_y1 = f1_out
+
+        f2_out = self.f2_b0 * raw_noise - self.f2_a1 * self.f2_y1 - self.f2_a2 * self.f2_y2
+        self.f2_y2 = self.f2_y1
+        self.f2_y1 = f2_out
+
+        sinus_out = self.sinus_b0 * raw_noise - self.sinus_a1 * self.sinus_y1 - self.sinus_a2 * self.sinus_y2
+        self.sinus_y2 = self.sinus_y1
+        self.sinus_y1 = sinus_out
+
+        throat_color = (f1_out * 0.6 + f2_out * 0.3 + sinus_out * 0.2) * 0.003
+        return p_jet, throat_color
 
 
 class DelayLine:
@@ -34,24 +167,6 @@ class DelayLine:
         idx1 = (self.write_ptr - 1 - int_delay + self.max_length) % self.max_length
         idx2 = (idx1 - 1 + self.max_length) % self.max_length
         return (1.0 - frac) * self.buffer[idx1] + frac * self.buffer[idx2]
-
-
-class OnePoleLowpass:
-    """1-pole lowpass filter for mode locking and viscous reflection loss."""
-    __slots__ = ('alpha', 'state')
-
-    def __init__(self, cutoff_freq: float = 1200.0, sample_rate: int = 44100):
-        costh = 2.0 - math.cos(2.0 * math.pi * min(sample_rate * 0.45, cutoff_freq) / sample_rate)
-        self.alpha = costh - math.sqrt(max(0.0, costh * costh - 1.0))
-        self.state = 0.0
-
-    def set_cutoff(self, cutoff_freq: float, sample_rate: int = 44100):
-        costh = 2.0 - math.cos(2.0 * math.pi * min(sample_rate * 0.45, cutoff_freq) / sample_rate)
-        self.alpha = costh - math.sqrt(max(0.0, costh * costh - 1.0))
-
-    def tick(self, x: float) -> float:
-        self.state = (1.0 - self.alpha) * x + self.alpha * self.state
-        return self.state
 
 
 class CombFilter:
@@ -130,7 +245,7 @@ class StereoFreeverb:
 
 
 class PhysicalWaveguidePipe:
-    """Multi-mode physical woodwind resonator driven by non-linear labium vortex jet and CAD shape."""
+    """Physical modal woodwind resonator with tone hole chimney impedance & bio-acoustic excitation."""
     def __init__(
         self,
         sample_rate: int = 44100,
@@ -143,25 +258,21 @@ class PhysicalWaveguidePipe:
         self.windway_profile = windway_profile
         self.windway_texture = windway_texture
 
-        # Quality factor Q derived from CAD bore diameter (wider bore = higher Q resonance)
         self.base_q = 26.0 + (bore_diameter / 25.0) * 14.0
-        self.tune_ratio = 1.221
+        self.tune_ratio = 1.0
 
-        # Resonant standing wave acoustic modes (Fundamental, 2nd overtone, 3rd overtone)
         self.modes = [
-            {'freq_mult': self.tune_ratio * 1.0, 'gain': 1.00, 'q': self.base_q, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
-            {'freq_mult': self.tune_ratio * 2.0, 'gain': 0.20, 'q': self.base_q * 0.85, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
-            {'freq_mult': self.tune_ratio * 3.0, 'gain': 0.05, 'q': self.base_q * 0.70, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
+            {'freq_mult': 1.0, 'gain': 1.00, 'q': self.base_q, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
+            {'freq_mult': 2.0, 'gain': 0.20, 'q': self.base_q * 0.85, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
+            {'freq_mult': 3.0, 'gain': 0.05, 'q': self.base_q * 0.70, 'y1': 0.0, 'y2': 0.0, 'x1': 0.0, 'x2': 0.0, 'b0': 0.0, 'a1': 0.0, 'a2': 0.0},
         ]
 
-        # Jet delay line for fipple window transit time
         self.jet_delay = DelayLine(int(sample_rate * 0.05))
         self.noise_state = 0.0
         self.sac_state = 0.0
 
         self.target_freq = 440.0
         self.curr_freq = 440.0
-
         self.update_coefficients(440.0)
 
     def update_coefficients(self, freq: float):
@@ -184,7 +295,49 @@ class PhysicalWaveguidePipe:
         if freq > 20.0:
             self.target_freq = freq
 
-    def process(self, breath_pressure: float, noise_gain: float = 0.0015, rng: Optional[random.Random] = None) -> float:
+    def calculate_effective_frequency(self, dims: FluteDimensions, coverages: List[float]) -> float:
+        """Calculate the continuous acoustic frequency from physical tone hole open/closed states."""
+        # Speed of sound in mm/s
+        c = 343200.0
+        
+        # Start from base fundamental tube length
+        l_base = dims.length_melody
+        r_bore = dims.bore_melody / 2.0
+        r_hole = dims.hole_diameter / 2.0
+        t_wall = dims.wall
+
+        # Tone holes from closest to fipple (highest pitch) to furthest (lowest pitch)
+        # coverages[0] corresponds to top hole (highest pitch when open)
+        # Find the first partially or fully open hole
+        l_effective = l_base
+        
+        for idx, (hole_pos, cov) in enumerate(zip(dims.hole_positions, coverages)):
+            # Open hole radiation length correction: delta_L = r_bore * (r_bore / r_hole)^2 * (t_wall + 0.8 * r_hole) / 2
+            delta_open = (r_bore ** 2 / r_hole ** 2) * (t_wall + 0.8 * r_hole) * 0.5
+            l_hole_open = hole_pos + delta_open
+            
+            # Interpolate effective length based on hole opening (1.0 = closed, 0.0 = open)
+            openness = 1.0 - max(0.0, min(1.0, cov))
+            if openness > 0.05:
+                # Acoustic cutoff radiates from this open hole
+                l_effective = l_hole_open * openness + l_effective * (1.0 - openness)
+                break
+            else:
+                # Closed hole adds a small shunt acoustic compliance (lowers pitch slightly)
+                l_effective += 0.4 * (r_hole / r_bore) ** 2 * t_wall
+
+        # f = c / (2 * (L + end_correction))
+        end_corr = 1.6 * dims.bore_melody
+        freq = c / (2.0 * (l_effective + end_corr))
+        return freq
+
+    def process(
+        self,
+        breath_pressure: float,
+        throat_modulation: float = 0.0,
+        noise_gain: float = 0.0015,
+        rng: Optional[random.Random] = None
+    ) -> float:
         if breath_pressure <= 0.0001:
             return 0.0
 
@@ -199,12 +352,12 @@ class PhysicalWaveguidePipe:
         else:
             eff_breath = breath_pressure
 
-        # 2. Pink breath turbulence (enhanced if micro-ribbed)
+        # 2. Pink breath turbulence (enhanced if micro-ribbed) + throat formant modulation
         raw_n = (rng.random() * 2.0 - 1.0) if rng else 0.0
         pink_pole = 0.88 if self.windway_texture == "ribbed" else 0.92
         self.noise_state = self.noise_state * pink_pole + raw_n * (1.0 - pink_pole)
         actual_noise = noise_gain * (1.5 if self.windway_texture == "ribbed" else 1.0)
-        p_jet = eff_breath + self.noise_state * actual_noise * math.sqrt(eff_breath)
+        p_jet = eff_breath + (self.noise_state + throat_modulation) * actual_noise * math.sqrt(eff_breath)
 
         # 3. Sum of acoustic pressure from resonant body modes
         p_acoustic = sum(m['y1'] * m['gain'] for m in self.modes)
@@ -215,7 +368,7 @@ class PhysicalWaveguidePipe:
         self.jet_delay.write(jet_disp)
         delayed_disp = self.jet_delay.read_fractional(d_jet)
 
-        # 5. Non-linear labium vortex excitation
+        # 5. Non-linear labium vortex excitation (Overblowing naturally triggers higher harmonics at high P)
         jet_gain = 1.6 if self.windway_profile == "arched" else 1.35
         q_vortex = p_jet * math.tanh(delayed_disp * jet_gain + self.noise_state * actual_noise)
 
@@ -353,7 +506,7 @@ def synthesize_flute_audio(
     reverb_wet: float = 0.32,
     reverb_dry: float = 0.85,
 ) -> Path:
-    """Synthesize authentic, pure acoustic audio preview using physical modeling coupled to CAD shape."""
+    """Synthesize authentic acoustic audio preview using biophysical vocal tract & tone hole modeling."""
     seconds_per_beat = 60.0 / bpm
     total_beats = sum(e.duration_beats for e in melody_events)
     total_dur = total_beats * seconds_per_beat + 1.2
@@ -381,6 +534,7 @@ def synthesize_flute_audio(
     drone1_pipe.set_frequency(dims.drone1_frequency)
     drone2_pipe.set_frequency(dims.drone2_frequency)
 
+    vocal_tract = HumanVocalTract(sample_rate)
     reverb = StereoFreeverb(sample_rate)
     rng = random.Random(42)
 
@@ -389,7 +543,7 @@ def synthesize_flute_audio(
     for e in melody_events:
         dur = e.duration_beats * seconds_per_beat
         f = midi_to_freq(e.midi_note) if e.midi_note is not None else None
-        note_intervals.append((curr_t, curr_t + dur, f, e.velocity / 127.0, e.vibrato_depth))
+        note_intervals.append((curr_t, curr_t + dur, f, e.velocity / 127.0, e.vibrato_depth, e.ornament))
         curr_t += dur
 
     frames = []
@@ -403,31 +557,45 @@ def synthesize_flute_audio(
         t = float(i) * dt
         active_f = None
         vel = 0.0
-        for st, et, nf, v, vd in note_intervals:
+        ornament = None
+        for st, et, nf, v, vd, orn in note_intervals:
             if st <= t < et:
                 active_f = nf
                 vel = v
+                ornament = orn
                 elapsed = t - st
                 dur = et - st
                 break
 
         if active_f is not None:
+            # Diaphragm vibrato & breath dynamics
             if dur > 0.6 and elapsed > dur * 0.45:
-                vib = 1.0 + 0.0030 * math.sin(2.0 * math.pi * 5.0 * elapsed)
+                vib = 1.0 + 0.0030 * math.sin(2.0 * math.pi * 5.2 * elapsed)
             else:
                 vib = 1.0
             melody_pipe.set_frequency(active_f * vib)
             att = min(1.0, elapsed / 0.04)
             rel = min(1.0, (dur - elapsed) / 0.04)
-            breath_m = (0.58 + vel * 0.18) * att * rel
+            target_lung = (0.58 + vel * 0.18) * att * rel
+            
+            articulation = 't_attack' if (elapsed < 0.02 and ornament == 'grace_dip') else 'none'
         else:
-            breath_m = 0.0
+            target_lung = 0.0
+            articulation = 'none'
+
+        p_jet_bio, throat_mod = vocal_tract.process(
+            target_lung,
+            vowel='tu',
+            articulation=articulation,
+            lip_aperture=1.0,
+            rng=rng
+        )
 
         global_env = min(1.0, t * 2.0, max(0.0, (total_dur - t) * 1.5))
         breath_d1 = drone_p1 * global_env
         breath_d2 = drone_p2 * global_env
 
-        s_m = melody_pipe.process(breath_m, noise_gain=0.0015, rng=rng)
+        s_m = melody_pipe.process(p_jet_bio, throat_modulation=throat_mod, noise_gain=0.0015, rng=rng)
         s_d1 = drone1_pipe.process(breath_d1, noise_gain=noise_drone, rng=rng)
         s_d2 = drone2_pipe.process(breath_d2, noise_gain=noise_drone, rng=rng)
 

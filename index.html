@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flute Studio 🪈 — 3D Acoustic CAD & Live Physical Waveguide Engine</title>
+  <title>Flute Studio 🪈 — Bio-Acoustic Vocal Tract & Tone Hole Fingering Engine</title>
   <style>
     :root {
       --bg-dark: #0b0d13;
@@ -173,7 +173,7 @@
       font-size: 0.78rem;
     }
 
-    .pianoroll-card {
+    .sequencer-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -183,15 +183,15 @@
       gap: 12px;
     }
     .transport-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .pianoroll-wrapper {
+    .sequencer-wrapper {
       position: relative;
-      height: 320px;
+      height: 340px;
       border: 1px solid var(--border);
       border-radius: 6px;
       overflow: hidden;
       background: #080a0f;
     }
-    #pianoroll-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+    #sequencer-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 
     .specs-grid {
       display: grid;
@@ -231,13 +231,41 @@
 <body>
 
 <header>
-  <h1>🪈 Flute Studio <span class="badge-wasm">Pyodide WASM Engine</span></h1>
+  <h1>🪈 Flute Studio <span class="badge-wasm">Bio-Acoustic Vocal Tract & Finger Model</span></h1>
   <div class="badge-status"><span class="status-dot"></span> <span id="lbl-pyodide-status">Loading Pyodide WASM...</span></div>
 </header>
 
 <div class="main-grid">
   <!-- Left Sidebar Controls -->
   <div class="sidebar">
+    <div>
+      <div class="section-title">🫁 Human Player Bio-Acoustics</div>
+      <div class="control-group">
+        <label>Throat Formant / Vowel</label>
+        <select id="sel-vowel">
+          <option value="tu" selected>Tu (Native American Resonant)</option>
+          <option value="ooh">Ooh (Deep Throat Shakuhachi)</option>
+          <option value="ta">Ta (Open Throat Baroque)</option>
+          <option value="kee">Kee (Bright Overblowing Focus)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Tongue Articulation</label>
+        <select id="sel-articulation">
+          <option value="none" selected>Continuous Legato Breath Stream</option>
+          <option value="t_attack">T-Tonguing (Explosive Vortex)</option>
+          <option value="d_soft">D-Tonguing (Soft Legato Attack)</option>
+          <option value="flutter">Flutter-Tongue (24 Hz Lingual Rasp)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Lip & Teeth Constriction <span class="val" id="val-lip">1.00</span></label>
+        <input type="range" id="rng-lip" min="0.6" max="1.5" step="0.02" value="1.0">
+      </div>
+    </div>
+
     <div>
       <div class="section-title">🎵 Acoustic Physics & Tuning</div>
       <div class="control-group">
@@ -256,7 +284,7 @@
       </div>
 
       <div class="control-group">
-        <label>Musical Scale</label>
+        <label>Musical Scale & Fingerings</label>
         <select id="sel-scale">
           <option value="native_american" selected>Native American (Minor Pentatonic)</option>
           <option value="hijaz">Hijaz (Middle Eastern)</option>
@@ -337,19 +365,19 @@
 
   <div class="content-area">
     <div class="tabs-bar">
-      <button class="tab-btn active" data-tab="studio">🎹 Visual Piano Roll & Live Physical Synth</button>
-      <button class="tab-btn" data-tab="cad">📐 3D Parametric CAD View</button>
+      <button class="tab-btn active" data-tab="studio">🖐️ Breath & Finger Timeline</button>
+      <button class="tab-btn" data-tab="cad">📐 3D Flute View & Finger Glow</button>
       <button class="tab-btn" data-tab="gallery">🌟 Showcase Gallery</button>
     </div>
 
     <div class="tab-pane active" id="tab-studio">
-      <div class="pianoroll-card">
+      <div class="sequencer-card">
         <div class="transport-bar">
-          <button class="btn btn-emerald" id="btn-play">▶ Play Waveguide Engine</button>
+          <button class="btn btn-emerald" id="btn-play">▶ Play Bio-Acoustic Engine</button>
           <button class="btn btn-secondary" id="btn-stop">⏹ Stop</button>
           
           <select id="sel-preset-melody" style="width: 210px;">
-            <option value="native_motif" selected>Preset: Native Spirit Motif</option>
+            <option value="native_motif" selected>Preset: Native Spirit Breath</option>
             <option value="condor_pasa">Preset: El Cóndor Pasa</option>
             <option value="desert_caravan">Preset: Desert Caravan</option>
             <option value="greensleeves">Preset: Greensleeves</option>
@@ -358,12 +386,12 @@
           </select>
 
           <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: auto;">
-            Live Realtime Waveguide • Tweak sliders while playing
+            🌬️ 100% Breath & Finger Acoustic Physics
           </span>
         </div>
 
-        <div class="pianoroll-wrapper">
-          <canvas id="pianoroll-canvas"></canvas>
+        <div class="sequencer-wrapper">
+          <canvas id="sequencer-canvas"></canvas>
         </div>
       </div>
 
@@ -379,8 +407,8 @@
       <div id="viewport-container">
         <canvas id="viewport-canvas"></canvas>
         <div class="viewport-overlay">
-          <strong>Parametric Triple Flute</strong><br>
-          <span style="color: var(--text-dim);">Realtime morphing 3D CAD • Drag to rotate • Scroll to zoom</span>
+          <strong>Parametric Triple Flute & Live Finger Highlights</strong><br>
+          <span style="color: var(--text-dim);">Cyan glow = Radiating Open Tone Hole • Dark = Finger Covered Hole</span>
         </div>
       </div>
     </div>
@@ -425,6 +453,9 @@ let pyodideInstance = null;
 let audioContext = null;
 let liveProcessorNode = null;
 let isAudioRunning = false;
+let dummyOsc = null;
+let dummyGain = null;
+let masterGainNode = null;
 
 const SCALES = {
   native_american: [0, 3, 5, 7, 10, 12],
@@ -495,17 +526,16 @@ function loadPresetMelody(presetName) {
     }
     beat += item.d;
   });
-  drawPianoRoll();
+  drawSequencer();
 }
 
-// Visual Piano Roll & Sequencer
-const prCanvas = document.getElementById('pianoroll-canvas');
-const prCtx = prCanvas.getContext('2d');
+const seqCanvas = document.getElementById('sequencer-canvas');
+const seqCtx = seqCanvas.getContext('2d');
 
 function resizeCanvas() {
-  prCanvas.width = prCanvas.parentElement.clientWidth * window.devicePixelRatio;
-  prCanvas.height = prCanvas.parentElement.clientHeight * window.devicePixelRatio;
-  drawPianoRoll();
+  seqCanvas.width = seqCanvas.parentElement.clientWidth * window.devicePixelRatio;
+  seqCanvas.height = seqCanvas.parentElement.clientHeight * window.devicePixelRatio;
+  drawSequencer();
 }
 window.addEventListener('resize', resizeCanvas);
 
@@ -519,11 +549,11 @@ function midiToFreq(m) {
   return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
 }
 
-function drawPianoRoll(playheadBeat = null) {
-  if (!prCanvas.width) return;
-  const w = prCanvas.width;
-  const h = prCanvas.height;
-  prCtx.clearRect(0, 0, w, h);
+function drawSequencer(playheadBeat = null) {
+  if (!seqCanvas.width) return;
+  const w = seqCanvas.width;
+  const h = seqCanvas.height;
+  seqCtx.clearRect(0, 0, w, h);
 
   const rootMidi = parseInt(document.getElementById('sel-root').value);
   const d1Offset = parseInt(document.getElementById('sel-d1').value);
@@ -550,33 +580,33 @@ function drawPianoRoll(playheadBeat = null) {
     const isDrone = (n === d1Midi || n === d2Midi);
 
     if (isDrone) {
-      prCtx.fillStyle = 'rgba(100, 116, 139, 0.18)';
+      seqCtx.fillStyle = 'rgba(100, 116, 139, 0.18)';
     } else if (isRoot) {
-      prCtx.fillStyle = 'rgba(59, 130, 246, 0.22)';
+      seqCtx.fillStyle = 'rgba(59, 130, 246, 0.22)';
     } else if (isInScale) {
-      prCtx.fillStyle = 'rgba(6, 182, 212, 0.08)';
+      seqCtx.fillStyle = 'rgba(6, 182, 212, 0.08)';
     } else {
-      prCtx.fillStyle = '#0a0d14';
+      seqCtx.fillStyle = '#0a0d14';
     }
-    prCtx.fillRect(0, y, w, noteH);
+    seqCtx.fillRect(0, y, w, noteH);
 
-    prCtx.strokeStyle = '#181d2a';
-    prCtx.lineWidth = 1;
-    prCtx.strokeRect(0, y, w, noteH);
+    seqCtx.strokeStyle = '#181d2a';
+    seqCtx.lineWidth = 1;
+    seqCtx.strokeRect(0, y, w, noteH);
 
-    prCtx.fillStyle = isDrone ? '#94a3b8' : (isRoot ? '#60a5fa' : (isInScale ? '#67e8f9' : '#475569'));
-    prCtx.font = `${Math.max(9, Math.floor(noteH * 0.65))}px sans-serif`;
-    prCtx.fillText(getMidiNoteLabel(n), 6, y + noteH * 0.72);
+    seqCtx.fillStyle = isDrone ? '#94a3b8' : (isRoot ? '#60a5fa' : (isInScale ? '#67e8f9' : '#475569'));
+    seqCtx.font = `${Math.max(9, Math.floor(noteH * 0.65))}px sans-serif`;
+    seqCtx.fillText(getMidiNoteLabel(n), 6, y + noteH * 0.72);
   }
 
   // Beat vertical lines
   for (let b = 0; b <= totalBeats; b++) {
-    prCtx.strokeStyle = (b % 4 === 0) ? '#2e384e' : '#141924';
-    prCtx.lineWidth = (b % 4 === 0) ? 1.5 : 1;
-    prCtx.beginPath();
-    prCtx.moveTo(b * beatW, 0);
-    prCtx.lineTo(b * beatW, h);
-    prCtx.stroke();
+    seqCtx.strokeStyle = (b % 4 === 0) ? '#2e384e' : '#141924';
+    seqCtx.lineWidth = (b % 4 === 0) ? 1.5 : 1;
+    seqCtx.beginPath();
+    seqCtx.moveTo(b * beatW, 0);
+    seqCtx.lineTo(b * beatW, h);
+    seqCtx.stroke();
   }
 
   // 1. Render Greyed-Out Un-editable Continuous Drone Tracks
@@ -590,58 +620,58 @@ function drawPianoRoll(playheadBeat = null) {
     const nw = totalBeats * beatW - 2;
     const nh = noteH - 2;
 
-    prCtx.fillStyle = 'rgba(71, 85, 105, 0.35)';
-    prCtx.fillRect(1, y + 1, nw, nh);
+    seqCtx.fillStyle = 'rgba(71, 85, 105, 0.35)';
+    seqCtx.fillRect(1, y + 1, nw, nh);
 
-    prCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
-    prCtx.setLineDash([4, 4]);
-    prCtx.strokeRect(1, y + 1, nw, nh);
-    prCtx.setLineDash([]);
+    seqCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+    seqCtx.setLineDash([4, 4]);
+    seqCtx.strokeRect(1, y + 1, nw, nh);
+    seqCtx.setLineDash([]);
 
-    prCtx.fillStyle = '#cbd5e1';
-    prCtx.font = `italic 600 ${Math.max(8, Math.floor(nh * 0.58))}px sans-serif`;
-    prCtx.fillText(d.label, 40, y + nh * 0.72);
+    seqCtx.fillStyle = '#cbd5e1';
+    seqCtx.font = `italic 600 ${Math.max(8, Math.floor(nh * 0.58))}px sans-serif`;
+    seqCtx.fillText(d.label, 40, y + nh * 0.72);
   });
 
-  // 2. Render Interactive Melody Notes
+  // 2. Render Interactive Melody Notes (Finger Positions)
   currentScore.forEach(n => {
     const x = n.startBeat * beatW;
     const y = h - (n.midiNote - minNote + 1) * noteH;
     const nw = Math.max(4, n.durationBeats * beatW - 2);
     const nh = noteH - 2;
 
-    prCtx.fillStyle = '#3b82f6';
-    prCtx.shadowColor = 'rgba(59, 130, 246, 0.6)';
-    prCtx.shadowBlur = 8;
-    prCtx.fillRect(x + 1, y + 1, nw, nh);
-    prCtx.shadowBlur = 0;
+    seqCtx.fillStyle = '#3b82f6';
+    seqCtx.shadowColor = 'rgba(59, 130, 246, 0.6)';
+    seqCtx.shadowBlur = 8;
+    seqCtx.fillRect(x + 1, y + 1, nw, nh);
+    seqCtx.shadowBlur = 0;
 
-    prCtx.strokeStyle = '#93c5fd';
-    prCtx.lineWidth = 1;
-    prCtx.strokeRect(x + 1, y + 1, nw, nh);
+    seqCtx.strokeStyle = '#93c5fd';
+    seqCtx.lineWidth = 1;
+    seqCtx.strokeRect(x + 1, y + 1, nw, nh);
 
-    prCtx.fillStyle = '#ffffff';
-    prCtx.font = `bold ${Math.max(8, Math.floor(nh * 0.6))}px sans-serif`;
-    prCtx.fillText(getMidiNoteLabel(n.midiNote), x + 5, y + nh * 0.72);
+    seqCtx.fillStyle = '#ffffff';
+    seqCtx.font = `bold ${Math.max(8, Math.floor(nh * 0.6))}px sans-serif`;
+    seqCtx.fillText(getMidiNoteLabel(n.midiNote), x + 5, y + nh * 0.72);
   });
 
   // Playhead
   if (playheadBeat !== null) {
     const px = playheadBeat * beatW;
-    prCtx.strokeStyle = '#ef4444';
-    prCtx.lineWidth = 2.5;
-    prCtx.beginPath();
-    prCtx.moveTo(px, 0);
-    prCtx.lineTo(px, h);
-    prCtx.stroke();
+    seqCtx.strokeStyle = '#ef4444';
+    seqCtx.lineWidth = 2.5;
+    seqCtx.beginPath();
+    seqCtx.moveTo(px, 0);
+    seqCtx.lineTo(px, h);
+    seqCtx.stroke();
   }
 }
 
 // Click to toggle/add notes
-prCanvas.addEventListener('click', (e) => {
-  const rect = prCanvas.getBoundingClientRect();
-  const scaleX = prCanvas.width / rect.width;
-  const scaleY = prCanvas.height / rect.height;
+seqCanvas.addEventListener('click', (e) => {
+  const rect = seqCanvas.getBoundingClientRect();
+  const scaleX = seqCanvas.width / rect.width;
+  const scaleY = seqCanvas.height / rect.height;
   const clickX = (e.clientX - rect.left) * scaleX;
   const clickY = (e.clientY - rect.top) * scaleY;
 
@@ -654,18 +684,15 @@ prCanvas.addEventListener('click', (e) => {
   const minNote = Math.min(rootMidi - 2, d1Midi - 1, d2Midi - 1);
   const maxNote = Math.max(rootMidi + 16, d1Midi + 1, d2Midi + 1);
   const totalNotes = maxNote - minNote + 1;
-  const noteH = prCanvas.height / totalNotes;
+  const noteH = seqCanvas.height / totalNotes;
   const totalBeats = Math.max(16, Math.ceil((currentScore.length ? Math.max(...currentScore.map(n => n.startBeat + n.durationBeats)) : 16) / 4) * 4);
-  const beatW = prCanvas.width / totalBeats;
+  const beatW = seqCanvas.width / totalBeats;
 
   const targetBeat = Math.floor(clickX / beatW);
-  const noteIndex = Math.floor((prCanvas.height - clickY) / noteH);
+  const noteIndex = Math.floor((seqCanvas.height - clickY) / noteH);
   const clickedMidi = minNote + noteIndex;
 
-  // Drones are immutable in piano roll (locked to physical drone tubes)
-  if (clickedMidi === d1Midi || clickedMidi === d2Midi) {
-    return;
-  }
+  if (clickedMidi === d1Midi || clickedMidi === d2Midi) return;
 
   const existingIdx = currentScore.findIndex(n => n.midiNote === clickedMidi && targetBeat >= n.startBeat && targetBeat < n.startBeat + n.durationBeats);
   if (existingIdx >= 0) {
@@ -678,10 +705,101 @@ prCanvas.addEventListener('click', (e) => {
       velocity: 84
     });
   }
-  drawPianoRoll();
+  drawSequencer();
 });
 
-// Real-Time Physical Modeling Waveguide Classes in JS (Exact mirror of Python physics)
+// Human Vocal Tract Bio-Acoustic Model in JS
+class WebHumanVocalTract {
+  constructor(sampleRate) {
+    this.sr = sampleRate;
+    this.lungState = 0;
+    this.diaphragmPhase = 0;
+    this.heartbeatPhase = 0;
+    this.flutterPhase = 0;
+
+    this.f1_y1 = 0; this.f1_y2 = 0;
+    this.f2_y1 = 0; this.f2_y2 = 0;
+    this.sinus_y1 = 0; this.sinus_y2 = 0;
+
+    this.vowels = {
+      tu: [450.0, 1750.0],
+      ooh: [320.0, 850.0],
+      ta: [750.0, 1300.0],
+      kee: [350.0, 2200.0]
+    };
+
+    this.currF1 = 450.0;
+    this.currF2 = 1750.0;
+    this.updateFormantFilters();
+  }
+
+  updateFormantFilters() {
+    const w1 = 2.0 * Math.PI * Math.min(this.sr * 0.45, this.currF1) / this.sr;
+    const alpha1 = Math.sin(w1) / 10.0;
+    this.f1_b0 = (Math.sin(w1) / 2.0) / (1.0 + alpha1);
+    this.f1_a1 = (-2.0 * Math.cos(w1)) / (1.0 + alpha1);
+    this.f1_a2 = (1.0 - alpha1) / (1.0 + alpha1);
+
+    const w2 = 2.0 * Math.PI * Math.min(this.sr * 0.45, this.currF2) / this.sr;
+    const alpha2 = Math.sin(w2) / 12.0;
+    this.f2_b0 = (Math.sin(w2) / 2.0) / (1.0 + alpha2);
+    this.f2_a1 = (-2.0 * Math.cos(w2)) / (1.0 + alpha2);
+    this.f2_a2 = (1.0 - alpha2) / (1.0 + alpha2);
+
+    const ws = 2.0 * Math.PI * 1400.0 / this.sr;
+    const alphas = Math.sin(ws) / 7.0;
+    this.sinus_b0 = (Math.sin(ws) / 2.0) / (1.0 + alphas);
+    this.sinus_a1 = (-2.0 * Math.cos(ws)) / (1.0 + alphas);
+    this.sinus_a2 = (1.0 - alphas) / (1.0 + alphas);
+  }
+
+  process(targetLungP, vowel = 'tu', articulation = 'none', lipAperture = 1.0) {
+    const dt = 1.0 / this.sr;
+    this.diaphragmPhase += 2.0 * Math.PI * 5.2 * dt;
+    this.heartbeatPhase += 2.0 * Math.PI * 1.1 * dt;
+
+    const tremor = 0.008 * Math.sin(this.diaphragmPhase);
+    const heartPulse = 0.003 * Math.sin(this.heartbeatPhase);
+
+    this.lungState += (targetLungP - this.lungState) * 0.03;
+    const baseP = Math.max(0.0, this.lungState + tremor + heartPulse);
+
+    let tongueMod = 1.0;
+    if (articulation === 'flutter') {
+      this.flutterPhase += 2.0 * Math.PI * 24.0 * dt;
+      tongueMod = 0.35 + 0.65 * Math.max(0.0, Math.sin(this.flutterPhase));
+    } else if (articulation === 't_attack') {
+      tongueMod = 1.45;
+    } else if (articulation === 'd_soft') {
+      tongueMod = 1.15;
+    }
+
+    const jetVelocityFactor = 1.0 / Math.sqrt(Math.max(0.2, lipAperture));
+    const pJet = baseP * tongueMod * jetVelocityFactor;
+
+    const [targetF1, targetF2] = this.vowels[vowel] || [450.0, 1750.0];
+    if (Math.abs(targetF1 - this.currF1) > 1.0) {
+      this.currF1 += (targetF1 - this.currF1) * 0.01;
+      this.currF2 += (targetF2 - this.currF2) * 0.01;
+      this.updateFormantFilters();
+    }
+
+    const rawNoise = Math.random() * 2.0 - 1.0;
+    const f1Out = this.f1_b0 * rawNoise - this.f1_a1 * this.f1_y1 - this.f1_a2 * this.f1_y2;
+    this.f1_y2 = this.f1_y1; this.f1_y1 = f1Out;
+
+    const f2Out = this.f2_b0 * rawNoise - this.f2_a1 * this.f2_y1 - this.f2_a2 * this.f2_y2;
+    this.f2_y2 = this.f2_y1; this.f2_y1 = f2Out;
+
+    const sinusOut = this.sinus_b0 * rawNoise - this.sinus_a1 * this.sinus_y1 - this.sinus_a2 * this.sinus_y2;
+    this.sinus_y2 = this.sinus_y1; this.sinus_y1 = sinusOut;
+
+    const throatColor = (f1Out * 0.6 + f2Out * 0.3 + sinusOut * 0.2) * 0.003;
+    return [pJet, throatColor];
+  }
+}
+
+// Physical Modeling Flute Pipe with Modal Standing Waves & Chimney Impedance in JS
 class WebPhysicalPipe {
   constructor(sampleRate, boreDiameter = 19.0, windwayProfile = "flat", windwayTexture = "smooth") {
     this.sr = sampleRate;
@@ -690,12 +808,12 @@ class WebPhysicalPipe {
     this.windwayTexture = windwayTexture;
 
     this.baseQ = 26.0 + (boreDiameter / 25.0) * 14.0;
-    this.tuneRatio = 1.221;
+    this.tuneRatio = 1.0;
 
     this.modes = [
-      { freqMult: this.tuneRatio * 1.0, gain: 1.00, q: this.baseQ, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: this.tuneRatio * 2.0, gain: 0.20, q: this.baseQ * 0.85, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: this.tuneRatio * 3.0, gain: 0.05, q: this.baseQ * 0.70, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
+      { freqMult: 1.0, gain: 1.00, q: this.baseQ, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 2.0, gain: 0.20, q: this.baseQ * 0.85, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 3.0, gain: 0.05, q: this.baseQ * 0.70, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
     ];
 
     this.jetLen = Math.floor(sampleRate * 0.05);
@@ -747,7 +865,7 @@ class WebPhysicalPipe {
     return (1.0 - frac) * this.jetDelay[idx1] + frac * this.jetDelay[idx2];
   }
 
-  process(breathP, noiseGain = 0.0015) {
+  process(breathP, throatModulation = 0.0, noiseGain = 0.0015) {
     if (breathP <= 0.0001) return 0.0;
 
     if (Math.abs(this.targetFreq - this.currFreq) > 0.1) {
@@ -766,7 +884,7 @@ class WebPhysicalPipe {
     const pinkPole = (this.windwayTexture === "ribbed") ? 0.88 : 0.92;
     this.noiseState = this.noiseState * pinkPole + rawN * (1.0 - pinkPole);
     const actualNoise = noiseGain * (this.windwayTexture === "ribbed" ? 1.5 : 1.0);
-    const pJet = effBreath + this.noiseState * actualNoise * Math.sqrt(effBreath);
+    const pJet = effBreath + (this.noiseState + throatModulation) * actualNoise * Math.sqrt(effBreath);
 
     let pAcoustic = 0;
     for (let m of this.modes) pAcoustic += m.y1 * m.gain;
@@ -863,7 +981,7 @@ class WebLiveFreeverb {
 }
 
 // Live Real-Time Synthesizer State
-let liveMelPipe = null, liveD1Pipe = null, liveD2Pipe = null, liveReverb = null;
+let liveMelPipe = null, liveD1Pipe = null, liveD2Pipe = null, liveReverb = null, liveVocalTract = null;
 let currentPlaybackTime = 0.0;
 
 function updateAcousticSpecs() {
@@ -898,9 +1016,10 @@ function updateAcousticSpecs() {
   update3DModel(lMel, lD1, lD2);
 }
 
-// 3D Three.js Scene with dynamic live morphing
+// 3D Three.js Scene with dynamic live morphing & hole glow
 let scene, camera, renderer, controls;
-let tubeMelody, tubeDrone1, tubeDrone2, fippleGroup, toneHolesGroup;
+let tubeMelody, tubeDrone1, tubeDrone2, toneHolesGroup;
+let holeMeshes = [];
 
 function init3D() {
   const container = document.getElementById('viewport-container');
@@ -919,7 +1038,6 @@ function init3D() {
   scene.add(light);
 
   const matFlute = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.35, metalness: 0.15 });
-  const matHole = new THREE.MeshBasicMaterial({ color: 0x11141e });
 
   tubeMelody = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 9.5, 360, 24), matFlute);
   tubeDrone1 = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 355, 24), matFlute);
@@ -934,6 +1052,17 @@ function init3D() {
 
   toneHolesGroup = new THREE.Group();
   scene.add(toneHolesGroup);
+
+  // Tone Hole Visual Meshes
+  const holeGeom = new THREE.CylinderGeometry(3.5, 3.5, 3, 16);
+  for (let i = 0; i < 6; i++) {
+    const matHole = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.4 });
+    const hMesh = new THREE.Mesh(holeGeom, matHole);
+    hMesh.rotation.x = Math.PI / 2;
+    hMesh.position.set(0, -120 - i * 32, 9.5);
+    toneHolesGroup.add(hMesh);
+    holeMeshes.push(hMesh);
+  }
 
   function animate() {
     requestAnimationFrame(animate);
@@ -955,11 +1084,25 @@ function update3DModel(lMel, lD1, lD2) {
   tubeDrone2.position.y = -lD2 / 2.0;
 }
 
-// Live Audio Engine Loop via Web Audio ScriptProcessor / AudioWorklet
-let dummyOsc = null;
-let dummyGain = null;
-let masterGainNode = null;
+function updateHoleGlow(activeMidi) {
+  if (!holeMeshes.length) return;
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
 
+  const scaleMidis = scaleIntervals.map(i => rootMidi + i);
+  const activeIdx = scaleMidis.indexOf(activeMidi);
+
+  holeMeshes.forEach((mesh, idx) => {
+    // When playing a note higher up the scale, holes above it are OPEN (glow cyan), holes below are covered (dark wood)
+    const isOpen = (activeIdx >= 0 && idx < activeIdx);
+    mesh.material.color.setHex(isOpen ? 0x06b6d4 : 0x221c16);
+    mesh.material.emissive.setHex(isOpen ? 0x06b6d4 : 0x000000);
+    mesh.material.emissiveIntensity = isOpen ? 0.8 : 0.0;
+  });
+}
+
+// Live Audio Engine Loop via Web Audio ScriptProcessor
 async function startLivePhysicalSynth() {
   if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
   if (audioContext.state === 'suspended') {
@@ -970,6 +1113,7 @@ async function startLivePhysicalSynth() {
   liveMelPipe = new WebPhysicalPipe(sampleRate, 19.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
   liveD1Pipe = new WebPhysicalPipe(sampleRate, 22.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
   liveD2Pipe = new WebPhysicalPipe(sampleRate, 16.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
+  liveVocalTract = new WebHumanVocalTract(sampleRate);
   liveReverb = new WebLiveFreeverb(sampleRate);
 
   const rootMidi = parseInt(document.getElementById('sel-root').value);
@@ -985,14 +1129,12 @@ async function startLivePhysicalSynth() {
   const bufferSize = 2048;
   liveProcessorNode = audioContext.createScriptProcessor(bufferSize, 1, 2);
 
-  // Master Gain Stage for clear presence
   if (!masterGainNode) {
     masterGainNode = audioContext.createGain();
     masterGainNode.gain.value = 1.0;
     masterGainNode.connect(audioContext.destination);
   }
 
-  // Dummy silent carrier to guarantee ScriptProcessor clock runs in all browsers
   dummyOsc = audioContext.createOscillator();
   dummyGain = audioContext.createGain();
   dummyGain.gain.value = 0.0;
@@ -1013,6 +1155,9 @@ async function startLivePhysicalSynth() {
     const droneAirRatio = parseFloat(document.getElementById('rng-air-ratio').value);
     const roomSize = parseFloat(document.getElementById('rng-room').value);
     const reverbWet = parseFloat(document.getElementById('rng-wet').value);
+    const vowel = document.getElementById('sel-vowel').value;
+    const articulation = document.getElementById('sel-articulation').value;
+    const lipAperture = parseFloat(document.getElementById('rng-lip').value);
 
     const droneP1 = 0.55 + 0.15 * droneAirRatio;
     const droneP2 = 0.50 + 0.15 * droneAirRatio;
@@ -1027,14 +1172,15 @@ async function startLivePhysicalSynth() {
 
       const currentBeat = currentPlaybackTime / secPerBeat;
 
-      // Find active note in score
       let activeFreq = null;
+      let activeMidi = null;
       let activeVel = 0.0;
       let noteElapsed = 0.0;
       let noteDur = 0.0;
 
       for (let n of sortedScore) {
         if (currentBeat >= n.startBeat && currentBeat < n.startBeat + n.durationBeats) {
+          activeMidi = n.midiNote;
           activeFreq = midiToFreq(n.midiNote);
           activeVel = (n.velocity || 84) / 127.0;
           noteElapsed = (currentBeat - n.startBeat) * secPerBeat;
@@ -1043,17 +1189,19 @@ async function startLivePhysicalSynth() {
         }
       }
 
-      let breathM = 0.0;
+      let targetLung = 0.0;
       if (activeFreq !== null) {
-        const vib = (noteDur > 0.6 && noteElapsed > noteDur * 0.45) ? 1.0 + 0.0030 * Math.sin(2.0 * Math.PI * 5.0 * noteElapsed) : 1.0;
+        const vib = (noteDur > 0.6 && noteElapsed > noteDur * 0.45) ? 1.0 + 0.0030 * Math.sin(2.0 * Math.PI * 5.2 * noteElapsed) : 1.0;
         liveMelPipe.setFreq(activeFreq * vib);
 
         const att = Math.min(1.0, noteElapsed / 0.04);
         const rel = Math.min(1.0, (noteDur - noteElapsed) / 0.04);
-        breathM = (0.58 + activeVel * 0.18) * att * rel;
+        targetLung = (0.58 + activeVel * 0.18) * att * rel;
       }
 
-      const sM = liveMelPipe.process(breathM);
+      const [pJetBio, throatMod] = liveVocalTract.process(targetLung, vowel, articulation, lipAperture);
+
+      const sM = liveMelPipe.process(pJetBio, throatMod);
       const sD1 = liveD1Pipe.process(droneP1);
       const sD2 = liveD2Pipe.process(droneP2);
 
@@ -1068,14 +1216,17 @@ async function startLivePhysicalSynth() {
   };
 
   liveProcessorNode.connect(masterGainNode);
-  document.getElementById('btn-play').innerText = 'Playing Physical Flute... 🪈';
+  document.getElementById('btn-play').innerText = 'Playing Bio-Acoustic Flute... 🪈';
 
-  // Animate playhead
   if (window.livePlayheadTimer) clearInterval(window.livePlayheadTimer);
   window.livePlayheadTimer = setInterval(() => {
     if (!isAudioRunning) return;
     const secPerBeat = 60.0 / bpm;
-    drawPianoRoll(currentPlaybackTime / secPerBeat);
+    const curBeat = currentPlaybackTime / secPerBeat;
+    drawSequencer(curBeat);
+
+    const activeNote = currentScore.find(n => curBeat >= n.startBeat && curBeat < n.startBeat + n.durationBeats);
+    if (activeNote) updateHoleGlow(activeNote.midiNote);
   }, 25);
 }
 
@@ -1093,8 +1244,9 @@ function stopLivePhysicalSynth() {
     clearInterval(window.livePlayheadTimer);
     window.livePlayheadTimer = null;
   }
-  drawPianoRoll(null);
-  document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
+  drawSequencer(null);
+  updateHoleGlow(null);
+  document.getElementById('btn-play').innerText = '▶ Play Bio-Acoustic Engine';
 }
 
 document.getElementById('btn-play').addEventListener('click', async () => {
@@ -1107,22 +1259,23 @@ document.getElementById('btn-play').addEventListener('click', async () => {
 
 document.getElementById('btn-stop').addEventListener('click', stopLivePhysicalSynth);
 
-// Realtime Config Listeners — live audio immediately adapts without restarting!
+// Realtime Bio-Acoustic & Flute Physics Listeners
 document.getElementById('sel-root').addEventListener('change', () => {
   loadPresetMelody(document.getElementById('sel-preset-melody').value);
   updateAcousticSpecs();
 });
-
 document.getElementById('sel-scale').addEventListener('change', () => {
-  drawPianoRoll();
+  drawSequencer();
   updateAcousticSpecs();
 });
-
 document.getElementById('sel-d1').addEventListener('change', updateAcousticSpecs);
 document.getElementById('sel-d2').addEventListener('change', updateAcousticSpecs);
 document.getElementById('sel-profile').addEventListener('change', updateAcousticSpecs);
 document.getElementById('sel-texture').addEventListener('change', updateAcousticSpecs);
 
+document.getElementById('rng-lip').addEventListener('input', (e) => {
+  document.getElementById('val-lip').innerText = parseFloat(e.target.value).toFixed(2);
+});
 document.getElementById('rng-air-ratio').addEventListener('input', (e) => {
   document.getElementById('val-air-ratio').innerText = e.target.value;
   updateAcousticSpecs();
@@ -1224,7 +1377,7 @@ sys.path.insert(0, '/home/pyodide')
 
     document.getElementById('lbl-pyodide-status').innerText = 'Python Engine Ready (WASM)';
   } catch (err) {
-    document.getElementById('lbl-pyodide-status').innerText = 'Physical Engine Ready';
+    document.getElementById('lbl-pyodide-status').innerText = 'Bio-Acoustic Engine Ready';
   }
 }
 
