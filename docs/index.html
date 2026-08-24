@@ -2295,11 +2295,6 @@ function rebuild3DFlute() {
       }
 
 
-      fluteRootGroup.add(fingerGroup);
-          fingerMeshes.push(fingerGroup);
-        }
-      }
-
       const facets = (stl.match(/facet normal/g) || []).length;
       document.getElementById('lbl-status').innerText = 'Engine Ready';
       document.getElementById('lbl-viewport-title').innerText =
