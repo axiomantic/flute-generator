@@ -2028,15 +2028,11 @@ class WebPhysicalPipe {
   }
 
   updateCoeffs(freq, breathP) {
-    // Blowing pressure slightly increases resonant pitch (~10-25 cents) just like a real flute embouchure
-    const blownFreq = freq * (1.0 + (breathP - 0.7) * 0.028);
-
+    // Exact pitch lock (Zero detuning from breath modulation)
     for (let m of this.modes) {
-      const f = Math.min(this.sr * 0.46, blownFreq * m.freqMult);
+      const f = Math.min(this.sr * 0.46, freq * m.freqMult);
       const w0 = 2.0 * Math.PI * f / this.sr;
-      // High breath pressure increases mode coupling and reduces damping
-      const dynamicQ = m.q * (0.75 + breathP * 0.35);
-      const alpha = Math.sin(w0) / (2.0 * dynamicQ);
+      const alpha = Math.sin(w0) / (2.0 * m.q);
       m.b0 = (Math.sin(w0) / 2.0) / (1.0 + alpha);
       m.a1 = (-2.0 * Math.cos(w0)) / (1.0 + alpha);
       m.a2 = (1.0 - alpha) / (1.0 + alpha);
@@ -2065,9 +2061,8 @@ class WebPhysicalPipe {
     this.noiseState = this.noiseState * 0.85 + whiteNoise * 0.15;
     const breathTurbulence = this.noiseState * Math.pow(pBreath, 1.2) * 0.008;
 
-    // 2. Continuous Jet Delay with subtle breath-speed scaling
-    const jetSpeedFactor = Math.sqrt(Math.max(0.3, pBreath));
-    const dJet = Math.max(2.0, (this.sr / this.currFreq) * (0.30 / jetSpeedFactor));
+    // 2. Phase-locked acoustic jet delay
+    const dJet = Math.max(2.0, (this.sr / this.currFreq) * 0.30);
 
     let pAcoustic = 0;
     for (let m of this.modes) pAcoustic += m.y1 * m.gain;
