@@ -2824,20 +2824,34 @@ z_cut1 = ${zCut1.toFixed(2)};
 z_cut2 = ${zCut2.toFixed(2)};
 z_cut3 = ${zCut3.toFixed(2)};
 
+module individual_tube_tenon(x_pos, bore_d, z_pos) {
+    tenon_outer_d = bore_d + (wall - joint_tol);
+    translate([x_pos, 0, z_pos - 0.1])
+        difference() {
+            cylinder(d = tenon_outer_d, h = joint_len + 0.1, $fn = 32);
+            translate([0, 0, -0.5])
+                cylinder(d = bore_d, h = joint_len + 1.2, $fn = 32);
+        }
+}
+
+module individual_tube_mortise(x_pos, bore_d, z_pos) {
+    mortise_d = bore_d + (wall + joint_tol);
+    translate([x_pos, 0, z_pos - 0.1])
+        cylinder(d = mortise_d, h = joint_len + 0.2, $fn = 32);
+}
+
 module male_tenon(z_pos) {
-    // Stepped male tenon with exact tolerance offset ($fn=6 matching hexagonal profile)
-    translate([0, 0, z_pos - 0.1])
-        linear_extrude(height = joint_len + 0.1)
-            offset(r = -(wall/2 + joint_tol/2))
-                hex_profile_2d();
+    // 3 Independent cylindrical tube tenons matching each pipe axis
+    individual_tube_tenon(-spacing, bore_drone1, z_pos);
+    individual_tube_tenon(0, bore_melody, z_pos);
+    individual_tube_tenon(spacing, bore_drone2, z_pos);
 }
 
 module female_mortise(z_pos) {
-    // Stepped female socket opening
-    translate([0, 0, z_pos - 0.1])
-        linear_extrude(height = joint_len + 0.2)
-            offset(r = -(wall/2 - joint_tol/2))
-                hex_profile_2d();
+    // 3 Independent cylindrical tube socket counterbores
+    individual_tube_mortise(-spacing, bore_drone1, z_pos);
+    individual_tube_mortise(0, bore_melody, z_pos);
+    individual_tube_mortise(spacing, bore_drone2, z_pos);
 }
 
 module slice_part(z_bottom, z_top, has_male_bottom, has_female_top) {
@@ -2849,13 +2863,7 @@ module slice_part(z_bottom, z_top, has_male_bottom, has_female_top) {
                     cube([outer_d * 6, outer_d * 6, z_top - z_bottom], center=true);
             }
             if (has_male_bottom) {
-                difference() {
-                    male_tenon(z_bottom);
-                    // Clear internal resonator bores through joint
-                    translate([0, 0, z_bottom - 1]) cylinder(d=bore_melody, h=joint_len + 2, $fn=24);
-                    translate([-spacing, 0, z_bottom - 1]) cylinder(d=bore_drone1, h=joint_len + 2, $fn=24);
-                    translate([spacing, 0, z_bottom - 1]) cylinder(d=bore_drone2, h=joint_len + 2, $fn=24);
-                }
+                male_tenon(z_bottom);
             }
         }
         if (has_female_top) {
@@ -2865,20 +2873,14 @@ module slice_part(z_bottom, z_top, has_male_bottom, has_female_top) {
 }
 
 module joint_seam_groove(z_pos) {
-    // Subtle V-groove chamfer showing the precision interlocking joint seam line
-    translate([0, 0, z_pos])
-        rotate_extrude($fn=6)
-            translate([outer_d * 0.866 / 2 + spacing, 0])
-                polygon([[-1.5, 0.35], [0.3, 0], [-1.5, -0.35]]);
-    
-    // Flat perimeter joint seam split line
-    translate([0, 0, z_pos])
-        difference() {
-            linear_extrude(height=0.4, center=true)
-                offset(r=1.5) hex_profile_2d();
-            linear_extrude(height=0.5, center=true)
-                offset(r=-0.3) hex_profile_2d();
-        }
+    // Visible cylindrical tube seam lines around each of the 3 individual pipes
+    for (xp = [-spacing, 0, spacing]) {
+        translate([xp, 0, z_pos])
+            difference() {
+                cylinder(d = outer_d + 1.0, h = 0.45, center = true, $fn = 24);
+                cylinder(d = outer_d - 0.4, h = 0.55, center = true, $fn = 24);
+            }
+    }
 }
 
 if (num_segments == 1) {
