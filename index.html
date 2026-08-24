@@ -2876,47 +2876,49 @@ z_cut2 = ${zCut2.toFixed(2)};
 z_cut3 = ${zCut3.toFixed(2)};
 
 module male_spigot_joint(z_pos) {
-    // Protruding Male Spigot Tenon (extends downward from z_pos to z_pos - joint_len)
-    // 1. Outer Body Interlocking Step
-    translate([0, 0, z_pos - joint_len])
+    // 4 Distinct Sockets: 1 Outer Body Tenon + 3 Extended Cylindrical Tube Spigots
+
+    // 1. Outer Hexagonal Body Shoulder Tenon (Steps down by joint_len * 0.50)
+    translate([0, 0, z_pos - joint_len * 0.50])
         difference() {
-            linear_extrude(height = joint_len)
-                offset(r = -(wall * 0.40 + joint_tol/2))
+            linear_extrude(height = joint_len * 0.50)
+                offset(r = -(wall * 0.35 + joint_tol/2))
                     hex_profile_2d();
-            // Clear bores through tenon
-            translate([-spacing, 0, -0.5]) cylinder(d = bore_drone1, h = joint_len + 1.0, $fn = 24);
-            translate([0, 0, -0.5]) cylinder(d = bore_melody, h = joint_len + 1.0, $fn = 24);
-            translate([spacing, 0, -0.5]) cylinder(d = bore_drone2, h = joint_len + 1.0, $fn = 24);
+            // Clear bores through outer tenon
+            translate([-spacing, 0, -0.5]) cylinder(d = bore_drone1 + wall * 0.8, h = joint_len + 1.0, $fn = 24);
+            translate([0, 0, -0.5]) cylinder(d = bore_melody + wall * 0.8, h = joint_len + 1.0, $fn = 24);
+            translate([spacing, 0, -0.5]) cylinder(d = bore_drone2 + wall * 0.8, h = joint_len + 1.0, $fn = 24);
         }
 
-    // 2. Individual Protruding Cylindrical Acoustic Spigots
+    // 2. Three Distinct Extended Cylindrical Tube Spigots (Protrude full joint_len past the outer shoulder)
     for (pipe = [[-spacing, bore_drone1], [0, bore_melody], [spacing, bore_drone2]]) {
         xp = pipe[0];
         bd = pipe[1];
-        spigot_od = bd + (wall * 0.48 - joint_tol);
+        spigot_od = bd + (wall * 0.70 - joint_tol);
         translate([xp, 0, z_pos - joint_len])
             difference() {
-                cylinder(d = spigot_od, h = joint_len, $fn = 24);
-                translate([0, 0, -0.5]) cylinder(d = bd, h = joint_len + 1.0, $fn = 24);
+                cylinder(d = spigot_od, h = joint_len, $fn = 32);
+                translate([0, 0, -0.5]) cylinder(d = bd, h = joint_len + 1.0, $fn = 32);
             }
     }
 }
 
 module female_socket_joint(z_pos) {
-    // Female Socket / Counterbore Cavity (pockets downward from z_pos to z_pos - joint_len)
-    // 1. Outer Body Mortise Pocket
-    translate([0, 0, z_pos - joint_len - 0.1])
-        linear_extrude(height = joint_len + 0.2)
-            offset(r = -(wall * 0.40 - joint_tol/2))
+    // 4 Matching Female Receptors: 1 Outer Body Shelf + 3 Deep Tube Counterbores
+
+    // 1. Outer Body Pocket Shelf (recessed joint_len * 0.50)
+    translate([0, 0, z_pos - joint_len * 0.50 - 0.1])
+        linear_extrude(height = joint_len * 0.50 + 0.2)
+            offset(r = -(wall * 0.35 - joint_tol/2))
                 hex_profile_2d();
 
-    // 2. Individual Cylindrical Tube Mortise Sleeves
+    // 2. Three Deep Cylindrical Tube Counterbores (recessed full joint_len deep)
     for (pipe = [[-spacing, bore_drone1], [0, bore_melody], [spacing, bore_drone2]]) {
         xp = pipe[0];
         bd = pipe[1];
-        mortise_od = bd + (wall * 0.48 + joint_tol);
+        mortise_od = bd + (wall * 0.70 + joint_tol);
         translate([xp, 0, z_pos - joint_len - 0.1])
-            cylinder(d = mortise_od, h = joint_len + 0.2, $fn = 24);
+            cylinder(d = mortise_od, h = joint_len + 0.2, $fn = 32);
     }
 }
 
