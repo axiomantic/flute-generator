@@ -27,13 +27,14 @@ def generate_scad_content(dims: FluteDimensions) -> str:
     chimneys_scad = []
     holes_scad = []
 
-    for pos in dims.hole_positions:
+    hole_diams = getattr(dims, 'hole_diameters', [dims.hole_diameter] * len(dims.hole_positions))
+    for pos, d in zip(dims.hole_positions, hole_diams):
         # Tone hole Z = fipple splitting edge - acoustic hole distance
         abs_z = fipple_z - pos
         # Ergonomic raised faceted chimney pad on the front (+Y) face
         c_code = (
             f"        translate([0, outer_d/2 - 0.5, {abs_z:.2f}]) rotate([-90, 0, 0]) "
-            f"cylinder(d1={dims.hole_diameter + 6:.2f}, d2={dims.hole_diameter + 2.5:.2f}, h={3.0:.2f}, $fn=6);"
+            f"cylinder(d1={d + 6:.2f}, d2={d + 2.5:.2f}, h={3.0:.2f}, $fn=6);"
         )
         chimneys_scad.append(c_code)
 
@@ -41,7 +42,7 @@ def generate_scad_content(dims: FluteDimensions) -> str:
         # center=false so it NEVER penetrates the back wall!
         h_code = (
             f"        translate([0, 0, {abs_z:.2f}]) rotate([-90, 0, 0]) "
-            f"cylinder(d={dims.hole_diameter:.2f}, h={outer_d + 5:.2f}, center=false);"
+            f"cylinder(d={d:.2f}, h={outer_d + 5:.2f}, center=false);"
         )
         holes_scad.append(h_code)
 

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flute Studio 🪈 — Flute Tablature, Anatomical Hands & Bio-Acoustic Engine</title>
+  <title>Flute Studio 🪈 — Interactive Flute Tablature & Piccolo-to-Contrabass CAD</title>
   <style>
     :root {
-      --bg-dark: #0b0d13;
-      --bg-card: #151824;
-      --bg-card-header: #1e2233;
-      --border: #2a3147;
+      --bg-dark: #090b10;
+      --bg-card: #131722;
+      --bg-card-header: #1a2030;
+      --border: #232c3f;
       --accent: #3b82f6;
       --accent-hover: #2563eb;
       --accent-cyan: #06b6d4;
@@ -68,7 +68,7 @@
       font-size: 0.78rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--accent);
+      color: var(--accent-cyan);
       margin-bottom: 8px;
       font-weight: 700;
       display: flex;
@@ -88,7 +88,7 @@
     
     select, input[type="text"], input[type="number"] {
       width: 100%;
-      background: #0d1017;
+      background: #090c13;
       border: 1px solid var(--border);
       color: var(--text);
       padding: 7px 10px;
@@ -118,8 +118,8 @@
       flex: 1;
     }
     button.btn:hover { background: var(--accent-hover); }
-    button.btn-secondary { background: #22293a; color: var(--text); }
-    button.btn-secondary:hover { background: #2f384d; }
+    button.btn-secondary { background: #1e2638; color: var(--text); }
+    button.btn-secondary:hover { background: #2b364e; }
     button.btn-emerald { background: var(--accent-emerald); }
     button.btn-emerald:hover { background: #059669; }
 
@@ -127,7 +127,7 @@
       display: flex;
       flex-direction: column;
       overflow-y: auto;
-      background: #0f121a;
+      background: #0b0e16;
     }
 
     .tabs-bar {
@@ -150,6 +150,157 @@
 
     .tab-pane { display: none; padding: 18px; flex-direction: column; gap: 16px; }
     .tab-pane.active { display: flex; }
+
+    /* Interactive Flute Fingering Pad */
+    .fingering-pad-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .flute-body-touchpad {
+      background: linear-gradient(90deg, #1b2234 0%, #151b29 100%);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    .mouthpiece-beak {
+      width: 40px;
+      height: 24px;
+      background: #334155;
+      border-radius: 6px 0 0 6px;
+      border: 1px solid #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.68rem;
+      color: #94a3b8;
+    }
+
+    .hole-cluster {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .hole-group-divider {
+      width: 2px;
+      height: 30px;
+      background: #2a3449;
+    }
+
+    .interactive-hole-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 3px solid #3b82f6;
+      background: #3b82f6;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: white;
+      transition: all 0.15s;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+    }
+    .interactive-hole-btn.open {
+      background: #090c13;
+      border-color: #06b6d4;
+      color: #06b6d4;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+    }
+    .interactive-hole-btn:hover { transform: scale(1.08); }
+
+    /* Flute Tablature Step Strip */
+    .tab-timeline-container {
+      background: #090c14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      overflow-x: auto;
+      display: flex;
+      gap: 12px;
+      min-height: 190px;
+      align-items: stretch;
+    }
+
+    .tab-step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      min-width: 95px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .tab-step-card:hover { border-color: var(--accent); }
+    .tab-step-card.active { border-color: #10b981; background: #16232d; box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); }
+
+    .tab-pitch-badge {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #60a5fa;
+    }
+
+    /* Vertical 6-Dot Tablature Icon */
+    .nakai-tab-column {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      background: #0b0e17;
+      padding: 6px 8px;
+      border-radius: 12px;
+      border: 1px solid #1c2436;
+    }
+    .nakai-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1.5px solid #60a5fa;
+    }
+    .nakai-dot.closed { background: #3b82f6; }
+    .nakai-dot.open { background: transparent; border-color: #06b6d4; }
+
+    .tab-dur-select {
+      font-size: 0.70rem;
+      padding: 3px 5px;
+      background: #080a10;
+      border: 1px solid #232c3f;
+      border-radius: 4px;
+      color: var(--text-dim);
+      width: 100%;
+      text-align: center;
+    }
+
+    .btn-del-step {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 0.75rem;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .btn-del-step:hover { color: #ef4444; background: rgba(239, 68, 68, 0.15); }
 
     #viewport-container {
       width: 100%;
@@ -174,55 +325,6 @@
       font-size: 0.78rem;
       max-width: 320px;
     }
-    .hud-title { font-weight: 700; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-    .hand-diagram {
-      display: flex;
-      gap: 14px;
-      margin-top: 8px;
-      background: #0a0d14;
-      padding: 8px 10px;
-      border-radius: 6px;
-      border: 1px solid #1c2333;
-    }
-    .hand-box { flex: 1; }
-    .hand-box strong { font-size: 0.72rem; color: var(--accent-cyan); display: block; margin-bottom: 4px; }
-    .finger-indicator {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 0.70rem;
-      color: var(--text-dim);
-      margin-bottom: 2px;
-    }
-    .finger-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      display: inline-block;
-      border: 1px solid #475569;
-    }
-    .finger-dot.closed { background: #3b82f6; border-color: #60a5fa; box-shadow: 0 0 5px #3b82f6; }
-    .finger-dot.open { background: transparent; border-color: #06b6d4; }
-
-    .tablature-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .transport-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .tablature-wrapper {
-      position: relative;
-      height: 340px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-      background: #080a0f;
-    }
-    #tablature-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 
     .specs-grid {
       display: grid;
@@ -270,6 +372,51 @@
   <!-- Left Sidebar Controls -->
   <div class="sidebar">
     <div>
+      <div class="section-title">📐 Flute Size Category & Scaling</div>
+      <div class="control-group">
+        <label>Size Range (Piccolo to Contrabass)</label>
+        <select id="sel-size">
+          <option value="piccolo">Piccolo / Sopranino (D6/C5 - 150 mm)</option>
+          <option value="soprano">Soprano / Alto (G4/D5 - 280 mm)</option>
+          <option value="tenor" selected>Tenor (Native American A4 - 390 mm)</option>
+          <option value="bass">Bass Flute (Low D3 - 720 mm)</option>
+          <option value="contrabass">Contrabass Flute (Sub-bass C2 - 1450 mm)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Root Note <span class="val" id="val-root">A4 (69)</span></label>
+        <select id="sel-root">
+          <option value="36">C2 Sub-bass (36 - 65.4 Hz)</option>
+          <option value="48">C3 Low Bass (48 - 130.8 Hz)</option>
+          <option value="50">D3 Bass (50 - 146.8 Hz)</option>
+          <option value="57">A3 Low Tenor (57 - 220.0 Hz)</option>
+          <option value="60">C4 Tenor (60 - 261.6 Hz)</option>
+          <option value="65">F4 (65 - 349.2 Hz)</option>
+          <option value="67">G4 (67 - 392.0 Hz)</option>
+          <option value="69" selected>A4 Standard (69 - 440.0 Hz)</option>
+          <option value="72">C5 Soprano (72 - 523.3 Hz)</option>
+          <option value="74">D5 High (74 - 587.3 Hz)</option>
+          <option value="86">D6 Piccolo (86 - 1174.7 Hz)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Musical Scale</label>
+        <select id="sel-scale">
+          <option value="native_american" selected>Native American (Minor Pentatonic)</option>
+          <option value="hijaz">Hijaz (Middle Eastern)</option>
+          <option value="minor_pentatonic">Minor Pentatonic</option>
+          <option value="major_pentatonic">Major Pentatonic</option>
+          <option value="dorian">Dorian Mode</option>
+          <option value="major">Major Scale</option>
+          <option value="natural_minor">Natural Minor</option>
+          <option value="blues">Blues Scale</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
       <div class="section-title">🫁 Player Bio-Acoustics & Mouth</div>
       <div class="control-group">
         <label>Throat Formant (Vocal Vowel)</label>
@@ -284,8 +431,8 @@
       <div class="control-group">
         <label>Tongue Articulation</label>
         <select id="sel-articulation">
-          <option value="none" selected>Continuous Legato Breath Stream</option>
-          <option value="t_attack">T-Tonguing (Explosive Labium Vortex)</option>
+          <option value="none" selected>Continuous Legato Breath</option>
+          <option value="t_attack">T-Tonguing (Explosive Vortex)</option>
           <option value="d_soft">D-Tonguing (Soft Legato Attack)</option>
           <option value="flutter">Flutter-Tongue (24 Hz Lingual Rasp)</option>
         </select>
@@ -298,57 +445,7 @@
     </div>
 
     <div>
-      <div class="section-title">🎵 Acoustic Physics & Tuning</div>
-      <div class="control-group">
-        <label>Root Note <span class="val" id="val-root">A4 (69)</span></label>
-        <select id="sel-root">
-          <option value="60">C4 (60 - 261.6 Hz)</option>
-          <option value="62">D4 (62 - 293.7 Hz)</option>
-          <option value="64">E4 (64 - 329.6 Hz)</option>
-          <option value="65">F4 (65 - 349.2 Hz)</option>
-          <option value="67">G4 (67 - 392.0 Hz)</option>
-          <option value="69" selected>A4 (69 - 440.0 Hz)</option>
-          <option value="71">B4 (71 - 493.9 Hz)</option>
-          <option value="72">C5 (72 - 523.3 Hz)</option>
-          <option value="74">D5 (74 - 587.3 Hz)</option>
-        </select>
-      </div>
-
-      <div class="control-group">
-        <label>Musical Scale & Tablature</label>
-        <select id="sel-scale">
-          <option value="native_american" selected>Native American (Minor Pentatonic)</option>
-          <option value="hijaz">Hijaz (Middle Eastern)</option>
-          <option value="minor_pentatonic">Minor Pentatonic</option>
-          <option value="major_pentatonic">Major Pentatonic</option>
-          <option value="dorian">Dorian Mode</option>
-          <option value="major">Major Scale</option>
-          <option value="natural_minor">Natural Minor</option>
-          <option value="blues">Blues Scale</option>
-        </select>
-      </div>
-
-      <div class="control-group">
-        <label>Drone 1 Offset</label>
-        <select id="sel-d1">
-          <option value="-12">Octave Below (-12)</option>
-          <option value="0" selected>Unison Root (0)</option>
-          <option value="7">Harmonic 5th (+7)</option>
-        </select>
-      </div>
-
-      <div class="control-group">
-        <label>Drone 2 Offset</label>
-        <select id="sel-d2">
-          <option value="0">Unison Root (0)</option>
-          <option value="7" selected>Harmonic 5th (+7)</option>
-          <option value="12">Octave Above (+12)</option>
-        </select>
-      </div>
-    </div>
-
-    <div>
-      <div class="section-title">🌬️ Mouthpiece & Aeroacoustics</div>
+      <div class="section-title">🌬️ Mouthpiece & Drones</div>
       <div class="control-group">
         <label>Windway Profile</label>
         <select id="sel-profile">
@@ -365,28 +462,24 @@
       </div>
 
       <div class="control-group">
-        <label>Windway Texture</label>
-        <select id="sel-texture">
-          <option value="smooth" selected>Smooth (Laminar)</option>
-          <option value="ribbed">Micro-Ribbed (Acoustic Rasp)</option>
-        </select>
+        <label>Drone 1 / Drone 2 Offsets</label>
+        <div style="display:flex; gap:6px;">
+          <select id="sel-d1">
+            <option value="-12">Octave Below (-12)</option>
+            <option value="0" selected>Unison Root (0)</option>
+            <option value="7">Harmonic 5th (+7)</option>
+          </select>
+          <select id="sel-d2">
+            <option value="0">Unison Root (0)</option>
+            <option value="7" selected>Harmonic 5th (+7)</option>
+            <option value="12">Octave Above (+12)</option>
+          </select>
+        </div>
       </div>
     </div>
 
     <div>
-      <div class="section-title">🏛️ Stereo Freeverb Reverb</div>
-      <div class="control-group">
-        <label>Room Size <span class="val" id="val-room">0.75</span></label>
-        <input type="range" id="rng-room" min="0.1" max="0.98" step="0.01" value="0.75">
-      </div>
-      <div class="control-group">
-        <label>Reverb Wet Mix <span class="val" id="val-wet">0.32</span></label>
-        <input type="range" id="rng-wet" min="0.0" max="1.0" step="0.01" value="0.32">
-      </div>
-    </div>
-
-    <div>
-      <div class="section-title">💾 CAD & Model Export</div>
+      <div class="section-title">💾 CAD & Audio Export</div>
       <div class="btn-row">
         <button class="btn" id="btn-export-scad">Download .SCAD</button>
         <button class="btn btn-secondary" id="btn-export-midi">Download .MID</button>
@@ -396,19 +489,54 @@
 
   <div class="content-area">
     <div class="tabs-bar">
-      <button class="tab-btn active" data-tab="studio">🖐️ Flute Fingering Tablature & Breath Timeline</button>
-      <button class="tab-btn" data-tab="cad">📐 3D Flute View & Finger HUD</button>
+      <button class="tab-btn active" data-tab="studio">🖐️ Flute Tablature & Interactive Fingering Pad</button>
+      <button class="tab-btn" data-tab="cad">📐 3D Flute CAD & Ergonomic View</button>
       <button class="tab-btn" data-tab="gallery">🌟 Showcase Gallery</button>
     </div>
 
     <div class="tab-pane active" id="tab-studio">
-      <div class="tablature-card">
+      <!-- Interactive Flute Body Touchpad -->
+      <div class="fingering-pad-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size: 0.95rem; color:#fff;">🖐️ Interactive Flute Fingering Pad</strong>
+            <p style="font-size: 0.75rem; color:var(--text-dim);">Click holes directly to test acoustics • Blue = Finger Down (Covered) • Cyan = Open Hole</p>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size: 0.72rem; color:var(--text-dim); display:block;">Active Sound:</span>
+            <strong style="font-size: 1.1rem; color:#60a5fa;" id="lbl-active-fingering-pitch">A4 Root (●●●●●●)</strong>
+          </div>
+        </div>
+
+        <div class="flute-body-touchpad">
+          <div class="mouthpiece-beak">Mouth</div>
+          
+          <div class="hole-cluster">
+            <!-- Left Hand (Top 3 Holes) -->
+            <button class="interactive-hole-btn" id="btn-hole-0" onclick="toggleHole(0)"><span>LH1</span>●</button>
+            <button class="interactive-hole-btn" id="btn-hole-1" onclick="toggleHole(1)"><span>LH2</span>●</button>
+            <button class="interactive-hole-btn" id="btn-hole-2" onclick="toggleHole(2)"><span>LH3</span>●</button>
+            
+            <div class="hole-group-divider"></div>
+            
+            <!-- Right Hand (Bottom 3 Holes) -->
+            <button class="interactive-hole-btn" id="btn-hole-3" onclick="toggleHole(3)"><span>RH1</span>●</button>
+            <button class="interactive-hole-btn" id="btn-hole-4" onclick="toggleHole(4)"><span>RH2</span>●</button>
+            <button class="interactive-hole-btn" id="btn-hole-5" onclick="toggleHole(5)"><span>RH3</span>●</button>
+          </div>
+
+          <button class="btn btn-emerald" style="flex:0 0 auto; padding:8px 16px;" onclick="addCurrentFingeringToTimeline()">➕ Add to Phrase</button>
+        </div>
+      </div>
+
+      <!-- Musical Phrase Tablature Timeline -->
+      <div class="fingering-pad-card">
         <div class="transport-bar">
-          <button class="btn btn-emerald" id="btn-play">▶ Play Bio-Acoustic Engine</button>
+          <button class="btn btn-emerald" id="btn-play">▶ Play Bio-Acoustic Phrase</button>
           <button class="btn btn-secondary" id="btn-stop">⏹ Stop</button>
           
           <select id="sel-preset-melody" style="width: 210px;">
-            <option value="native_motif" selected>Preset: Native Spirit Breath</option>
+            <option value="native_motif" selected>Preset: Native Spirit Motif</option>
             <option value="condor_pasa">Preset: El Cóndor Pasa</option>
             <option value="desert_caravan">Preset: Desert Caravan</option>
             <option value="greensleeves">Preset: Greensleeves</option>
@@ -417,49 +545,29 @@
           </select>
 
           <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: auto;">
-            ● = Covered Hole • ○ = Open Hole • 🌬️ Single Continuous Breath
+            Nakai Woodwind Tablature Notation
           </span>
         </div>
 
-        <div class="tablature-wrapper">
-          <canvas id="tablature-canvas"></canvas>
+        <div class="tab-timeline-container" id="tab-timeline-strip">
+          <!-- Step cards rendered here -->
         </div>
       </div>
 
       <div class="specs-grid">
-        <div class="spec-item"><span>Melody Tube</span><strong id="spec-mel-len">359.6 mm (440.0 Hz)</strong></div>
-        <div class="spec-item"><span>Drone 1 Tube</span><strong id="spec-d1-len">354.8 mm (440.0 Hz)</strong></div>
-        <div class="spec-item"><span>Drone 2 Tube</span><strong id="spec-d2-len">234.7 mm (659.3 Hz)</strong></div>
-        <div class="spec-item"><span>Total Body Height</span><strong id="spec-total-len">389.6 mm</strong></div>
+        <div class="spec-item"><span>Flute Type & Size</span><strong id="spec-flute-type">Tenor A4 (389.6 mm)</strong></div>
+        <div class="spec-item"><span>Melody Bore</span><strong id="spec-mel-bore">19.0 mm (Wall: 4.0 mm)</strong></div>
+        <div class="spec-item"><span>Mouthpiece Taper</span><strong id="spec-taper-status">Comfort Beak (38 mm)</strong></div>
+        <div class="spec-item"><span>Hand Span Ergonomics</span><strong id="spec-hand-span">Max 34.2 mm (Playable)</strong></div>
       </div>
     </div>
 
     <div class="tab-pane" id="tab-cad">
       <div id="viewport-container">
         <canvas id="viewport-canvas"></canvas>
-        
-        <!-- Live Anatomical Hand & Mouth HUD -->
         <div class="hud-overlay">
-          <div class="hud-title">🫁 Bio-Acoustic Anatomy HUD</div>
-          <div style="font-size: 0.72rem; color: #94a3b8;">
-            Lungs: <span style="color:#10b981; font-weight:600;" id="hud-lung-val">0.68 atm</span> • 
-            Vowel: <span style="color:#60a5fa; font-weight:600;" id="hud-vowel-val">"Tu"</span>
-          </div>
-
-          <div class="hand-diagram">
-            <div class="hand-box">
-              <strong>Left Hand (Top)</strong>
-              <div class="finger-indicator"><span>Hole 1 (Index)</span><span class="finger-dot closed" id="f-dot-0"></span></div>
-              <div class="finger-indicator"><span>Hole 2 (Mid)</span><span class="finger-dot closed" id="f-dot-1"></span></div>
-              <div class="finger-indicator"><span>Hole 3 (Ring)</span><span class="finger-dot closed" id="f-dot-2"></span></div>
-            </div>
-            <div class="hand-box">
-              <strong>Right Hand (Bottom)</strong>
-              <div class="finger-indicator"><span>Hole 4 (Index)</span><span class="finger-dot closed" id="f-dot-3"></span></div>
-              <div class="finger-indicator"><span>Hole 5 (Mid)</span><span class="finger-dot closed" id="f-dot-4"></span></div>
-              <div class="finger-indicator"><span>Hole 6 (Ring)</span><span class="finger-dot closed" id="f-dot-5"></span></div>
-            </div>
-          </div>
+          <strong style="color:#fff;">3D Parametric Model</strong><br>
+          <span style="color:var(--text-dim);">Directly renders Piccolo to Contrabass sizing with ergonomic mouthpieces.</span>
         </div>
       </div>
     </div>
@@ -473,7 +581,7 @@
             <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Minor pentatonic with internal Slow Air Chamber expansion bulb.</p>
           </div>
         </div>
-        <div class="showcase-card" onclick="loadShowcase('hijaz', 69, 'venturi', 'desert_caravan', 'ribbed')">
+        <div class="showcase-card" onclick="loadShowcase('hijaz', 69, 'venturi', 'desert_caravan')">
           <img src="examples/02_desert_caravan_hijaz_ribbed/flute_iso.png" class="showcase-img" alt="Desert Caravan Flute">
           <div class="showcase-body">
             <strong>🏜️ Desert Caravan A4 (Ribbed)</strong>
@@ -521,28 +629,27 @@ const SCALES = {
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
+// Interactive Flute Pad State (6 holes: true = covered [●], false = open [○])
+let activeHoleStates = [true, true, true, true, true, true];
+
+// Musical Phrase Tablature Steps
+let phraseSteps = [];
+let bpm = 96;
+
 const MELODY_PRESETS = {
   native_motif: [
     { n: 0, d: 1.5 }, { n: 3, d: 0.5 }, { n: 5, d: 1.0 }, { n: 7, d: 2.0 },
-    { n: 10, d: 1.0 }, { n: 7, d: 1.0 }, { n: 5, d: 1.0 }, { n: 3, d: 1.0 },
-    { n: 0, d: 2.5 }, { n: null, d: 0.5 },
-    { n: 7, d: 1.0 }, { n: 10, d: 1.0 }, { n: 12, d: 2.0 },
     { n: 10, d: 1.0 }, { n: 7, d: 1.0 }, { n: 5, d: 1.0 }, { n: 3, d: 1.0 },
     { n: 0, d: 3.0 }
   ],
   condor_pasa: [
     { n: 7, d: 1.5 }, { n: 10, d: 0.5 }, { n: 12, d: 1.0 }, { n: 10, d: 0.5 }, { n: 7, d: 0.5 },
     { n: 5, d: 2.0 }, { n: 7, d: 1.0 }, { n: 5, d: 0.5 }, { n: 3, d: 0.5 },
-    { n: 0, d: 3.0 }, { n: null, d: 0.5 },
-    { n: 0, d: 0.5 }, { n: 3, d: 0.5 }, { n: 5, d: 1.0 }, { n: 7, d: 1.0 }, { n: 5, d: 1.0 },
-    { n: 3, d: 1.5 }, { n: 0, d: 0.5 }, { n: 0, d: 3.0 }
+    { n: 0, d: 3.0 }
   ],
   desert_caravan: [
     { n: 0, d: 1.0 }, { n: 1, d: 0.5 }, { n: 4, d: 1.5 },
-    { n: 5, d: 1.0 }, { n: 4, d: 0.5 }, { n: 1, d: 0.5 }, { n: 0, d: 2.0 },
-    { n: null, d: 0.5 },
-    { n: 4, d: 1.0 }, { n: 5, d: 0.5 }, { n: 7, d: 1.5 },
-    { n: 8, d: 1.0 }, { n: 7, d: 0.5 }, { n: 5, d: 0.5 }, { n: 4, d: 2.0 }
+    { n: 5, d: 1.0 }, { n: 4, d: 0.5 }, { n: 1, d: 0.5 }, { n: 0, d: 2.0 }
   ],
   greensleeves: [
     { n: 0, d: 1.0 }, { n: 3, d: 2.0 }, { n: 5, d: 1.0 }, { n: 7, d: 1.5 },
@@ -558,38 +665,6 @@ const MELODY_PRESETS = {
   ]
 };
 
-let currentScore = [];
-let bpm = 96;
-
-function loadPresetMelody(presetName) {
-  const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const raw = MELODY_PRESETS[presetName] || MELODY_PRESETS.native_motif;
-  currentScore = [];
-  let beat = 0;
-  raw.forEach(item => {
-    if (item.n !== null) {
-      currentScore.push({
-        startBeat: beat,
-        durationBeats: item.d,
-        midiNote: rootMidi + item.n,
-        velocity: 84
-      });
-    }
-    beat += item.d;
-  });
-  drawTablature();
-}
-
-const tabCanvas = document.getElementById('tablature-canvas');
-const tabCtx = tabCanvas.getContext('2d');
-
-function resizeCanvas() {
-  tabCanvas.width = tabCanvas.parentElement.clientWidth * window.devicePixelRatio;
-  tabCanvas.height = tabCanvas.parentElement.clientHeight * window.devicePixelRatio;
-  drawTablature();
-}
-window.addEventListener('resize', resizeCanvas);
-
 function getMidiNoteLabel(m) {
   const name = NOTE_NAMES[m % 12];
   const oct = Math.floor(m / 12) - 1;
@@ -600,196 +675,234 @@ function midiToFreq(m) {
   return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
 }
 
-// Render Traditional Woodwind Tablature & Continuous Breath Track
-function drawTablature(playheadBeat = null) {
-  if (!tabCanvas.width) return;
-  const w = tabCanvas.width;
-  const h = tabCanvas.height;
-  tabCtx.clearRect(0, 0, w, h);
+// Convert hole states to scale note
+function getFingeringMidi(holes) {
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
 
+  // Count open holes from top to bottom
+  let firstOpenIdx = -1;
+  for (let i = 0; i < 6; i++) {
+    if (!holes[i]) {
+      firstOpenIdx = i;
+      break;
+    }
+  }
+
+  if (firstOpenIdx === -1) {
+    return rootMidi + scaleIntervals[0]; // All closed -> Root
+  }
+  const scaleStep = Math.min(firstOpenIdx + 1, scaleIntervals.length - 1);
+  return rootMidi + scaleIntervals[scaleStep];
+}
+
+// Toggle hole on interactive pad
+function toggleHole(idx) {
+  activeHoleStates[idx] = !activeHoleStates[idx];
+  updateInteractivePad();
+}
+
+function updateInteractivePad() {
+  const labels = ['LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3'];
+  for (let i = 0; i < 6; i++) {
+    const btn = document.getElementById(`btn-hole-${i}`);
+    if (activeHoleStates[i]) {
+      btn.className = 'interactive-hole-btn';
+      btn.innerHTML = `<span>${labels[i]}</span>●`;
+    } else {
+      btn.className = 'interactive-hole-btn open';
+      btn.innerHTML = `<span>${labels[i]}</span>○`;
+    }
+  }
+
+  const midi = getFingeringMidi(activeHoleStates);
+  const dotStr = activeHoleStates.map(h => h ? '●' : '○').join('');
+  document.getElementById('lbl-active-fingering-pitch').innerText = `${getMidiNoteLabel(midi)} (${dotStr})`;
+}
+
+function addCurrentFingeringToTimeline() {
+  const midi = getFingeringMidi(activeHoleStates);
+  phraseSteps.push({
+    midiNote: midi,
+    holes: [...activeHoleStates],
+    duration: 1.0
+  });
+  renderTabTimeline();
+}
+
+function deleteStep(idx, e) {
+  e.stopPropagation();
+  phraseSteps.splice(idx, 1);
+  renderTabTimeline();
+}
+
+function updateStepDuration(idx, val) {
+  phraseSteps[idx].duration = parseFloat(val);
+}
+
+function selectStep(idx) {
+  activeHoleStates = [...phraseSteps[idx].holes];
+  updateInteractivePad();
+}
+
+// Render Nakai / Flute Tablature Step Strip
+function renderTabTimeline(activeStepIdx = -1) {
+  const container = document.getElementById('tab-timeline-strip');
+  container.innerHTML = '';
+
+  phraseSteps.forEach((step, idx) => {
+    const card = document.createElement('div');
+    card.className = `tab-step-card ${idx === activeStepIdx ? 'active' : ''}`;
+    card.onclick = () => selectStep(idx);
+
+    const pitch = getMidiNoteLabel(step.midiNote);
+
+    const nakaiDots = step.holes.map(h => 
+      `<div class="nakai-dot ${h ? 'closed' : 'open'}"></div>`
+    ).join('');
+
+    card.innerHTML = `
+      <button class="btn-del-step" onclick="deleteStep(${idx}, event)">✕</button>
+      <div class="tab-pitch-badge">${pitch}</div>
+      <div class="nakai-tab-column">
+        ${nakaiDots}
+      </div>
+      <select class="tab-dur-select" onchange="updateStepDuration(${idx}, this.value)" onclick="event.stopPropagation()">
+        <option value="0.5" ${step.duration === 0.5 ? 'selected' : ''}>1/8 Beat (0.5s)</option>
+        <option value="1.0" ${step.duration === 1.0 ? 'selected' : ''}>1/4 Beat (1.0s)</option>
+        <option value="1.5" ${step.duration === 1.5 ? 'selected' : ''}>Dotted 1/4 (1.5s)</option>
+        <option value="2.0" ${step.duration === 2.0 ? 'selected' : ''}>1/2 Beat (2.0s)</option>
+        <option value="3.0" ${step.duration === 3.0 ? 'selected' : ''}>Whole Hold (3.0s)</option>
+      </select>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function loadPresetMelody(presetName) {
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  const raw = MELODY_PRESETS[presetName] || MELODY_PRESETS.native_motif;
+
+  phraseSteps = [];
+  raw.forEach(item => {
+    if (item.n !== null) {
+      const stepMidi = rootMidi + item.n;
+      // Derive 6-hole finger state for scale note
+      const intervalIdx = scaleIntervals.indexOf(item.n);
+      const holes = [true, true, true, true, true, true];
+      if (intervalIdx > 0) {
+        for (let h = 0; h < Math.min(6, intervalIdx); h++) {
+          holes[h] = false;
+        }
+      }
+      phraseSteps.push({
+        midiNote: stepMidi,
+        holes: holes,
+        duration: item.d
+      });
+    }
+  });
+
+  if (phraseSteps.length > 0) {
+    activeHoleStates = [...phraseSteps[0].holes];
+    updateInteractivePad();
+  }
+  renderTabTimeline();
+}
+
+// 3D Three.js Scene
+let scene, camera, renderer, controls;
+let tubeMelody, tubeDrone1, tubeDrone2, toneHolesGroup;
+let holeMeshes = [];
+
+function init3D() {
+  const container = document.getElementById('viewport-container');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
+  camera.position.set(0, -380, 240);
+
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport-canvas'), antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const light = new THREE.DirectionalLight(0xffedd5, 0.9);
+  light.position.set(200, -250, 400);
+  scene.add(light);
+
+  const matFlute = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.35, metalness: 0.15 });
+
+  tubeMelody = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 9.5, 360, 24), matFlute);
+  tubeDrone1 = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 355, 24), matFlute);
+  tubeDrone2 = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 235, 24), matFlute);
+
+  tubeDrone1.position.x = -26;
+  tubeDrone2.position.x = 26;
+
+  scene.add(tubeMelody);
+  scene.add(tubeDrone1);
+  scene.add(tubeDrone2);
+
+  toneHolesGroup = new THREE.Group();
+  scene.add(toneHolesGroup);
+
+  const holeGeom = new THREE.CylinderGeometry(3.5, 3.5, 3, 16);
+  for (let i = 0; i < 6; i++) {
+    const matHole = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.4 });
+    const hMesh = new THREE.Mesh(holeGeom, matHole);
+    hMesh.rotation.x = Math.PI / 2;
+    hMesh.position.set(0, -120 - i * 32, 9.5);
+    toneHolesGroup.add(hMesh);
+    holeMeshes.push(hMesh);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+}
+
+function updateAcousticSpecs() {
   const rootMidi = parseInt(document.getElementById('sel-root').value);
   const d1Offset = parseInt(document.getElementById('sel-d1').value);
   const d2Offset = parseInt(document.getElementById('sel-d2').value);
-  const d1Midi = rootMidi + d1Offset;
-  const d2Midi = rootMidi + d2Offset;
+  const sizeCat = document.getElementById('sel-size').value;
 
-  const scaleKey = document.getElementById('sel-scale').value;
-  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
-  const scaleMidis = scaleIntervals.map(i => rootMidi + i);
+  const fMel = midiToFreq(rootMidi);
+  const fD1 = midiToFreq(rootMidi + d1Offset);
+  const fD2 = midiToFreq(rootMidi + d2Offset);
 
-  const totalBeats = Math.max(16, Math.ceil((currentScore.length ? Math.max(...currentScore.map(n => n.startBeat + n.durationBeats)) : 16) / 4) * 4);
-  const beatW = w / totalBeats;
+  let boreM = 19.0;
+  if (sizeCat === 'piccolo') boreM = 12.0;
+  else if (sizeCat === 'soprano') boreM = 16.0;
+  else if (sizeCat === 'bass') boreM = 28.0;
+  else if (sizeCat === 'contrabass') boreM = 40.0;
 
-  // Layout: Top Track = Breath (45px), Middle Tracks = 6 Tone Holes (32px each), Bottom = Drones (40px)
-  const breathH = 45;
-  const holeH = 34;
-  const numHoles = 6;
-  const droneH = 36;
+  const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
+  const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * (boreM * 1.15);
+  const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * (boreM * 0.85);
 
-  // 1. Draw Breath & Diaphragm Track (Top)
-  tabCtx.fillStyle = '#080d1a';
-  tabCtx.fillRect(0, 0, w, breathH);
-  tabCtx.strokeStyle = '#1e293b';
-  tabCtx.strokeRect(0, 0, w, breathH);
+  document.getElementById('val-root').innerText = `${getMidiNoteLabel(rootMidi)} (${rootMidi})`;
+  document.getElementById('spec-flute-type').innerText = `${sizeCat.toUpperCase()} (${(lMel + 30).toFixed(1)} mm)`;
+  document.getElementById('spec-mel-bore').innerText = `${boreM.toFixed(1)} mm (Wall: 4.0 mm)`;
 
-  tabCtx.fillStyle = '#60a5fa';
-  tabCtx.font = 'bold 11px sans-serif';
-  tabCtx.fillText('🌬️ BREATH & LUNG PRESSURE STREAM', 12, 18);
-
-  // Render Continuous Breath Waveform
-  tabCtx.beginPath();
-  tabCtx.moveTo(0, breathH - 6);
-  for (let b = 0; b <= totalBeats; b += 0.2) {
-    const isPlayingNote = currentScore.some(n => b >= n.startBeat && b < n.startBeat + n.durationBeats);
-    const x = b * beatW;
-    const p = isPlayingNote ? (0.65 + 0.08 * Math.sin(b * 3.5)) : 0.05;
-    const y = breathH - 6 - p * 24;
-    tabCtx.lineTo(x, y);
-  }
-  tabCtx.strokeStyle = '#06b6d4';
-  tabCtx.lineWidth = 2;
-  tabCtx.stroke();
-
-  // 2. Draw 6 Tone Hole Rails (Hole 1 at top to Hole 6 at bottom)
-  const holeLabels = [
-    'Hole 1 (LH Index)', 'Hole 2 (LH Mid)', 'Hole 3 (LH Ring)',
-    'Hole 4 (RH Index)', 'Hole 5 (RH Mid)', 'Hole 6 (RH Ring)'
-  ];
-
-  for (let hIdx = 0; hIdx < numHoles; hIdx++) {
-    const y = breathH + hIdx * holeH;
-    tabCtx.fillStyle = (hIdx % 2 === 0) ? '#0d111c' : '#0a0e17';
-    tabCtx.fillRect(0, y, w, holeH);
-    tabCtx.strokeStyle = '#181f2f';
-    tabCtx.strokeRect(0, y, w, holeH);
-
-    tabCtx.fillStyle = '#94a3b8';
-    tabCtx.font = '10px monospace';
-    tabCtx.fillText(`[●] ${holeLabels[hIdx]}`, 10, y + holeH * 0.65);
-  }
-
-  // Vertical Beat Division Lines
-  for (let b = 0; b <= totalBeats; b++) {
-    const x = b * beatW;
-    tabCtx.strokeStyle = (b % 4 === 0) ? '#2e384e' : '#141924';
-    tabCtx.lineWidth = (b % 4 === 0) ? 1.5 : 1;
-    tabCtx.beginPath();
-    tabCtx.moveTo(x, 0);
-    tabCtx.lineTo(x, h);
-    tabCtx.stroke();
-  }
-
-  // 3. Render Finger Blocks on Tone Hole Rails
-  currentScore.forEach(note => {
-    const activeIdx = scaleMidis.indexOf(note.midiNote);
-    const x = note.startBeat * beatW;
-    const nw = Math.max(4, note.durationBeats * beatW - 2);
-
-    for (let hIdx = 0; hIdx < numHoles; hIdx++) {
-      const y = breathH + hIdx * holeH;
-      // In woodwind acoustics: holes above active tone hole are OPEN, holes at/below are COVERED
-      const isCovered = (activeIdx < 0 || hIdx >= activeIdx);
-
-      if (isCovered) {
-        // Covered Finger (Solid Blue Block)
-        tabCtx.fillStyle = '#2563eb';
-        tabCtx.fillRect(x + 1, y + 2, nw, holeH - 4);
-        tabCtx.strokeStyle = '#60a5fa';
-        tabCtx.strokeRect(x + 1, y + 2, nw, holeH - 4);
-
-        // Tablature Solid Circle ●
-        tabCtx.fillStyle = '#ffffff';
-        tabCtx.font = 'bold 12px sans-serif';
-        tabCtx.fillText('●', x + Math.min(10, nw / 2 - 4), y + holeH * 0.65);
-      } else {
-        // Open Hole (Radiant Cyan Ring ○)
-        tabCtx.fillStyle = 'rgba(6, 182, 212, 0.15)';
-        tabCtx.fillRect(x + 1, y + 2, nw, holeH - 4);
-        tabCtx.strokeStyle = 'rgba(6, 182, 212, 0.5)';
-        tabCtx.strokeRect(x + 1, y + 2, nw, holeH - 4);
-
-        tabCtx.fillStyle = '#67e8f9';
-        tabCtx.font = 'bold 12px sans-serif';
-        tabCtx.fillText('○', x + Math.min(10, nw / 2 - 4), y + holeH * 0.65);
-      }
-    }
-
-    // Note name badge
-    tabCtx.fillStyle = '#f59e0b';
-    tabCtx.font = 'bold 10px sans-serif';
-    tabCtx.fillText(getMidiNoteLabel(note.midiNote), x + 4, breathH + numHoles * holeH - 6);
-  });
-
-  // 4. Drone Continuous Rails (Bottom)
-  const dY = breathH + numHoles * holeH;
-  tabCtx.fillStyle = 'rgba(71, 85, 105, 0.35)';
-  tabCtx.fillRect(1, dY + 4, w - 2, droneH - 8);
-  tabCtx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
-  tabCtx.setLineDash([4, 4]);
-  tabCtx.strokeRect(1, dY + 4, w - 2, droneH - 8);
-  tabCtx.setLineDash([]);
-
-  tabCtx.fillStyle = '#cbd5e1';
-  tabCtx.font = 'italic 10px sans-serif';
-  tabCtx.fillText(`🔒 Drone 1 (${getMidiNoteLabel(d1Midi)} Root) • Drone 2 (${getMidiNoteLabel(d2Midi)} Harmonic)`, 20, dY + droneH * 0.55);
-
-  // Playhead
-  if (playheadBeat !== null) {
-    const px = playheadBeat * beatW;
-    tabCtx.strokeStyle = '#ef4444';
-    tabCtx.lineWidth = 2.5;
-    tabCtx.beginPath();
-    tabCtx.moveTo(px, 0);
-    tabCtx.lineTo(px, h);
-    tabCtx.stroke();
+  if (tubeMelody) {
+    tubeMelody.scale.set(boreM / 19.0, lMel / 360.0, boreM / 19.0);
+    tubeMelody.position.y = -lMel / 2.0;
+    tubeDrone1.scale.set(boreM / 19.0, lD1 / 355.0, boreM / 19.0);
+    tubeDrone1.position.y = -lD1 / 2.0;
+    tubeDrone2.scale.set(boreM / 19.0, lD2 / 235.0, boreM / 19.0);
+    tubeDrone2.position.y = -lD2 / 2.0;
   }
 }
 
-// Click to toggle/shift finger positions
-tabCanvas.addEventListener('click', (e) => {
-  const rect = tabCanvas.getBoundingClientRect();
-  const scaleX = tabCanvas.width / rect.width;
-  const scaleY = tabCanvas.height / rect.height;
-  const clickX = (e.clientX - rect.left) * scaleX;
-  const clickY = (e.clientY - rect.top) * scaleY;
-
-  const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const scaleKey = document.getElementById('sel-scale').value;
-  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
-  const scaleMidis = scaleIntervals.map(i => rootMidi + i);
-
-  const totalBeats = Math.max(16, Math.ceil((currentScore.length ? Math.max(...currentScore.map(n => n.startBeat + n.durationBeats)) : 16) / 4) * 4);
-  const beatW = tabCanvas.width / totalBeats;
-  const targetBeat = Math.floor(clickX / beatW);
-
-  const breathH = 45;
-  const holeH = 34;
-  const numHoles = 6;
-
-  if (clickY > breathH && clickY < breathH + numHoles * holeH) {
-    const holeIdx = Math.floor((clickY - breathH) / holeH);
-    const targetMidi = scaleMidis[Math.min(holeIdx, scaleMidis.length - 1)];
-
-    const existingIdx = currentScore.findIndex(n => targetBeat >= n.startBeat && targetBeat < n.startBeat + n.durationBeats);
-    if (existingIdx >= 0) {
-      if (currentScore[existingIdx].midiNote === targetMidi) {
-        currentScore.splice(existingIdx, 1);
-      } else {
-        currentScore[existingIdx].midiNote = targetMidi;
-      }
-    } else {
-      currentScore.push({
-        startBeat: targetBeat,
-        durationBeats: 1.0,
-        midiNote: targetMidi,
-        velocity: 84
-      });
-    }
-    drawTablature();
-  }
-});
-
-// Human Vocal Tract Bio-Acoustic Model in JS
+// Human Vocal Tract in JS
 class WebHumanVocalTract {
   constructor(sampleRate) {
     this.sr = sampleRate;
@@ -802,19 +915,12 @@ class WebHumanVocalTract {
     this.f2_y1 = 0; this.f2_y2 = 0;
     this.sinus_y1 = 0; this.sinus_y2 = 0;
 
-    this.vowels = {
-      tu: [450.0, 1750.0],
-      ooh: [320.0, 850.0],
-      ta: [750.0, 1300.0],
-      kee: [350.0, 2200.0]
-    };
-
-    this.currF1 = 450.0;
-    this.currF2 = 1750.0;
-    this.updateFormantFilters();
+    this.vowels = { tu: [450, 1750], ooh: [320, 850], ta: [750, 1300], kee: [350, 2200] };
+    this.currF1 = 450; this.currF2 = 1750;
+    this.updateFormants();
   }
 
-  updateFormantFilters() {
+  updateFormants() {
     const w1 = 2.0 * Math.PI * Math.min(this.sr * 0.45, this.currF1) / this.sr;
     const alpha1 = Math.sin(w1) / 10.0;
     this.f1_b0 = (Math.sin(w1) / 2.0) / (1.0 + alpha1);
@@ -855,24 +961,24 @@ class WebHumanVocalTract {
       tongueMod = 1.15;
     }
 
-    const jetVelocityFactor = 1.0 / Math.sqrt(Math.max(0.2, lipAperture));
-    const pJet = baseP * tongueMod * jetVelocityFactor;
+    const jetVel = 1.0 / Math.sqrt(Math.max(0.2, lipAperture));
+    const pJet = baseP * tongueMod * jetVel;
 
-    const [targetF1, targetF2] = this.vowels[vowel] || [450.0, 1750.0];
-    if (Math.abs(targetF1 - this.currF1) > 1.0) {
-      this.currF1 += (targetF1 - this.currF1) * 0.01;
-      this.currF2 += (targetF2 - this.currF2) * 0.01;
-      this.updateFormantFilters();
+    const [tF1, tF2] = this.vowels[vowel] || [450, 1750];
+    if (Math.abs(tF1 - this.currF1) > 1.0) {
+      this.currF1 += (tF1 - this.currF1) * 0.01;
+      this.currF2 += (tF2 - this.currF2) * 0.01;
+      this.updateFormants();
     }
 
-    const rawNoise = Math.random() * 2.0 - 1.0;
-    const f1Out = this.f1_b0 * rawNoise - this.f1_a1 * this.f1_y1 - this.f1_a2 * this.f1_y2;
+    const rawN = Math.random() * 2.0 - 1.0;
+    const f1Out = this.f1_b0 * rawN - this.f1_a1 * this.f1_y1 - this.f1_a2 * this.f1_y2;
     this.f1_y2 = this.f1_y1; this.f1_y1 = f1Out;
 
-    const f2Out = this.f2_b0 * rawNoise - this.f2_a1 * this.f2_y1 - this.f2_a2 * this.f2_y2;
+    const f2Out = this.f2_b0 * rawN - this.f2_a1 * this.f2_y1 - this.f2_a2 * this.f2_y2;
     this.f2_y2 = this.f2_y1; this.f2_y1 = f2Out;
 
-    const sinusOut = this.sinus_b0 * rawNoise - this.sinus_a1 * this.sinus_y1 - this.sinus_a2 * this.sinus_y2;
+    const sinusOut = this.sinus_b0 * rawN - this.sinus_a1 * this.sinus_y1 - this.sinus_a2 * this.sinus_y2;
     this.sinus_y2 = this.sinus_y1; this.sinus_y1 = sinusOut;
 
     const throatColor = (f1Out * 0.6 + f2Out * 0.3 + sinusOut * 0.2) * 0.003;
@@ -880,14 +986,10 @@ class WebHumanVocalTract {
   }
 }
 
-// Physical Modeling Flute Pipe with Modal Standing Waves & Clean Headroom in JS
+// Physical Waveguide Pipe with Clean Gain Staging
 class WebPhysicalPipe {
   constructor(sampleRate, boreDiameter = 19.0, windwayProfile = "flat", windwayTexture = "smooth") {
     this.sr = sampleRate;
-    this.boreDiameter = boreDiameter;
-    this.windwayProfile = windwayProfile;
-    this.windwayTexture = windwayTexture;
-
     this.baseQ = 26.0 + (boreDiameter / 25.0) * 14.0;
     this.tuneRatio = 1.0;
 
@@ -900,20 +1002,14 @@ class WebPhysicalPipe {
     this.jetLen = Math.floor(sampleRate * 0.05);
     this.jetDelay = new Float32Array(this.jetLen);
     this.writeJet = 0;
-
     this.noiseState = 0;
     this.sacState = 0;
 
     this.targetFreq = 440.0;
     this.currFreq = 440.0;
-
-    this.updateProfile(windwayProfile, windwayTexture);
+    this.profile = windwayProfile;
+    this.texture = windwayTexture;
     this.updateCoefficients(440.0);
-  }
-
-  updateProfile(profile, texture) {
-    this.windwayProfile = profile;
-    this.windwayTexture = texture;
   }
 
   updateCoefficients(freq) {
@@ -922,14 +1018,9 @@ class WebPhysicalPipe {
       const w0 = 2.0 * Math.PI * f / this.sr;
       const alpha = Math.sin(w0) / (2.0 * m.q);
 
-      const b0 = Math.sin(w0) / 2.0;
-      const a0 = 1.0 + alpha;
-      const a1 = -2.0 * Math.cos(w0);
-      const a2 = 1.0 - alpha;
-
-      m.b0 = b0 / a0;
-      m.a1 = a1 / a0;
-      m.a2 = a2 / a0;
+      m.b0 = (Math.sin(w0) / 2.0) / (1.0 + alpha);
+      m.a1 = (-2.0 * Math.cos(w0)) / (1.0 + alpha);
+      m.a2 = (1.0 - alpha) / (1.0 + alpha);
     }
   }
 
@@ -937,16 +1028,7 @@ class WebPhysicalPipe {
     if (freq > 20.0) this.targetFreq = freq;
   }
 
-  readJetFractional(delay) {
-    delay = Math.max(1.0, Math.min(this.jetLen - 2.0, delay));
-    const intD = Math.floor(delay);
-    const frac = delay - intD;
-    const idx1 = (this.writeJet - 1 - intD + this.jetLen) % this.jetLen;
-    const idx2 = (idx1 - 1 + this.jetLen) % this.jetLen;
-    return (1.0 - frac) * this.jetDelay[idx1] + frac * this.jetDelay[idx2];
-  }
-
-  process(breathP, throatModulation = 0.0, noiseGain = 0.0015) {
+  process(breathP, throatMod = 0.0) {
     if (breathP <= 0.0001) return 0.0;
 
     if (Math.abs(this.targetFreq - this.currFreq) > 0.1) {
@@ -954,7 +1036,7 @@ class WebPhysicalPipe {
       this.updateCoefficients(this.currFreq);
     }
 
-    if (this.windwayProfile === "sac") {
+    if (this.profile === "sac") {
       this.sacState = this.sacState * 0.85 + breathP * 0.15;
     } else {
       this.sacState = breathP;
@@ -962,22 +1044,19 @@ class WebPhysicalPipe {
     const effBreath = this.sacState;
 
     const rawN = Math.random() * 2.0 - 1.0;
-    const pinkPole = (this.windwayTexture === "ribbed") ? 0.88 : 0.92;
-    this.noiseState = this.noiseState * pinkPole + rawN * (1.0 - pinkPole);
-    const actualNoise = noiseGain * (this.windwayTexture === "ribbed" ? 1.5 : 1.0);
-    const pJet = effBreath + (this.noiseState + throatModulation) * actualNoise * Math.sqrt(effBreath);
+    this.noiseState = this.noiseState * 0.92 + rawN * 0.08;
+    const pJet = effBreath + (this.noiseState + throatMod) * 0.0015 * Math.sqrt(effBreath);
 
     let pAcoustic = 0;
     for (let m of this.modes) pAcoustic += m.y1 * m.gain;
 
     const dJet = Math.max(2.0, (this.sr / this.currFreq) * 0.25);
-    const jetDisp = pAcoustic * 0.65 + this.noiseState * actualNoise * 0.35;
+    const jetDisp = pAcoustic * 0.65 + this.noiseState * 0.0005;
     this.jetDelay[this.writeJet] = jetDisp;
     this.writeJet = (this.writeJet + 1) % this.jetLen;
-    const delayedDisp = this.readJetFractional(dJet);
 
-    const jetGain = (this.windwayProfile === "arched") ? 1.6 : 1.35;
-    const qVortex = pJet * Math.tanh(delayedDisp * jetGain + this.noiseState * actualNoise);
+    const delayedDisp = this.jetDelay[(this.writeJet - 1 - Math.floor(dJet) + this.jetLen) % this.jetLen];
+    const qVortex = pJet * Math.tanh(delayedDisp * 1.35 + this.noiseState * 0.0015);
 
     let totalOut = 0;
     for (let m of this.modes) {
@@ -993,7 +1072,7 @@ class WebPhysicalPipe {
   }
 }
 
-// Live Stereo Freeverb in JS
+// Live Stereo Freeverb
 class WebLiveFreeverb {
   constructor(sampleRate) {
     const scale = sampleRate / 44100.0;
@@ -1061,147 +1140,18 @@ class WebLiveFreeverb {
   }
 }
 
-// Live Real-Time Synthesizer State
+// Live Audio Engine
 let liveMelPipe = null, liveD1Pipe = null, liveD2Pipe = null, liveReverb = null, liveVocalTract = null;
 let currentPlaybackTime = 0.0;
 
-function updateAcousticSpecs() {
-  const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const d1Offset = parseInt(document.getElementById('sel-d1').value);
-  const d2Offset = parseInt(document.getElementById('sel-d2').value);
-  const profile = document.getElementById('sel-profile').value;
-  const texture = document.getElementById('sel-texture').value;
-
-  const fMel = midiToFreq(rootMidi);
-  const fD1 = midiToFreq(rootMidi + d1Offset);
-  const fD2 = midiToFreq(rootMidi + d2Offset);
-
-  const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * 19.0;
-  const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * 22.0;
-  const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * 16.0;
-
-  document.getElementById('val-root').innerText = `${getMidiNoteLabel(rootMidi)} (${rootMidi})`;
-  document.getElementById('spec-mel-len').innerText = `${lMel.toFixed(1)} mm (${fMel.toFixed(1)} Hz)`;
-  document.getElementById('spec-d1-len').innerText = `${lD1.toFixed(1)} mm (${fD1.toFixed(1)} Hz)`;
-  document.getElementById('spec-d2-len').innerText = `${lD2.toFixed(1)} mm (${fD2.toFixed(1)} Hz)`;
-  document.getElementById('spec-total-len').innerText = `${(Math.max(lMel, lD1, lD2) + 30.0).toFixed(1)} mm`;
-
-  // Update live pipes if audio is running
-  if (liveD1Pipe) liveD1Pipe.setFreq(fD1);
-  if (liveD2Pipe) liveD2Pipe.setFreq(fD2);
-  if (liveMelPipe) liveMelPipe.updateProfile(profile, texture);
-  if (liveD1Pipe) liveD1Pipe.updateProfile(profile, texture);
-  if (liveD2Pipe) liveD2Pipe.updateProfile(profile, texture);
-
-  // Update 3D model
-  update3DModel(lMel, lD1, lD2);
-}
-
-// 3D Three.js Scene with dynamic live morphing & hole glow
-let scene, camera, renderer, controls;
-let tubeMelody, tubeDrone1, tubeDrone2, toneHolesGroup;
-let holeMeshes = [];
-
-function init3D() {
-  const container = document.getElementById('viewport-container');
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
-  camera.position.set(0, -380, 240);
-
-  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport-canvas'), antialias: true, alpha: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-
-  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-  const light = new THREE.DirectionalLight(0xffedd5, 0.9);
-  light.position.set(200, -250, 400);
-  scene.add(light);
-
-  const matFlute = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.35, metalness: 0.15 });
-
-  tubeMelody = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 9.5, 360, 24), matFlute);
-  tubeDrone1 = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 355, 24), matFlute);
-  tubeDrone2 = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 235, 24), matFlute);
-
-  tubeDrone1.position.x = -26;
-  tubeDrone2.position.x = 26;
-
-  scene.add(tubeMelody);
-  scene.add(tubeDrone1);
-  scene.add(tubeDrone2);
-
-  toneHolesGroup = new THREE.Group();
-  scene.add(toneHolesGroup);
-
-  // Tone Hole Visual Meshes
-  const holeGeom = new THREE.CylinderGeometry(3.5, 3.5, 3, 16);
-  for (let i = 0; i < 6; i++) {
-    const matHole = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.4 });
-    const hMesh = new THREE.Mesh(holeGeom, matHole);
-    hMesh.rotation.x = Math.PI / 2;
-    hMesh.position.set(0, -120 - i * 32, 9.5);
-    toneHolesGroup.add(hMesh);
-    holeMeshes.push(hMesh);
-  }
-
-  function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-  }
-  animate();
-}
-
-function update3DModel(lMel, lD1, lD2) {
-  if (!tubeMelody) return;
-  tubeMelody.scale.set(1, lMel / 360.0, 1);
-  tubeMelody.position.y = -lMel / 2.0;
-
-  tubeDrone1.scale.set(1, lD1 / 355.0, 1);
-  tubeDrone1.position.y = -lD1 / 2.0;
-
-  tubeDrone2.scale.set(1, lD2 / 235.0, 1);
-  tubeDrone2.position.y = -lD2 / 2.0;
-}
-
-function updateHoleGlowAndHUD(activeMidi, breathP) {
-  if (!holeMeshes.length) return;
-  const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const scaleKey = document.getElementById('sel-scale').value;
-  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
-
-  const scaleMidis = scaleIntervals.map(i => rootMidi + i);
-  const activeIdx = scaleMidis.indexOf(activeMidi);
-
-  document.getElementById('hud-lung-val').innerText = `${(breathP || 0.65).toFixed(2)} atm`;
-  document.getElementById('hud-vowel-val').innerText = document.getElementById('sel-vowel').value.toUpperCase();
-
-  holeMeshes.forEach((mesh, idx) => {
-    const isOpen = (activeIdx >= 0 && idx < activeIdx);
-    mesh.material.color.setHex(isOpen ? 0x06b6d4 : 0x221c16);
-    mesh.material.emissive.setHex(isOpen ? 0x06b6d4 : 0x000000);
-    mesh.material.emissiveIntensity = isOpen ? 0.8 : 0.0;
-
-    // Update Anatomical Finger Indicators
-    const dot = document.getElementById(`f-dot-${idx}`);
-    if (dot) {
-      dot.className = isOpen ? 'finger-dot open' : 'finger-dot closed';
-    }
-  });
-}
-
-// Live Audio Engine Loop via Web Audio ScriptProcessor
 async function startLivePhysicalSynth() {
   if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioContext.state === 'suspended') {
-    await audioContext.resume();
-  }
+  if (audioContext.state === 'suspended') await audioContext.resume();
 
   const sampleRate = audioContext.sampleRate;
-  liveMelPipe = new WebPhysicalPipe(sampleRate, 19.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
-  liveD1Pipe = new WebPhysicalPipe(sampleRate, 22.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
-  liveD2Pipe = new WebPhysicalPipe(sampleRate, 16.0, document.getElementById('sel-profile').value, document.getElementById('sel-texture').value);
+  liveMelPipe = new WebPhysicalPipe(sampleRate, 19.0, document.getElementById('sel-profile').value, 'smooth');
+  liveD1Pipe = new WebPhysicalPipe(sampleRate, 22.0, document.getElementById('sel-profile').value, 'smooth');
+  liveD2Pipe = new WebPhysicalPipe(sampleRate, 16.0, document.getElementById('sel-profile').value, 'smooth');
   liveVocalTract = new WebHumanVocalTract(sampleRate);
   liveReverb = new WebLiveFreeverb(sampleRate);
 
@@ -1236,88 +1186,76 @@ async function startLivePhysicalSynth() {
     const outL = e.outputBuffer.getChannelData(0);
     const outR = e.outputBuffer.getChannelData(1);
 
-    const sortedScore = [...currentScore].sort((a, b) => a.startBeat - b.startBeat);
-    const totalBeats = sortedScore.length ? Math.max(...sortedScore.map(n => n.startBeat + n.durationBeats)) : 8;
-    const secPerBeat = 60.0 / bpm;
-    const loopDurationSec = totalBeats * secPerBeat;
-
+    const totalDurSec = phraseSteps.reduce((sum, s) => sum + s.duration * (60.0 / bpm), 0) || 4.0;
     const droneAirRatio = parseFloat(document.getElementById('rng-air-ratio').value);
-    const roomSize = parseFloat(document.getElementById('rng-room').value);
-    const reverbWet = parseFloat(document.getElementById('rng-wet').value);
     const vowel = document.getElementById('sel-vowel').value;
     const articulation = document.getElementById('sel-articulation').value;
     const lipAperture = parseFloat(document.getElementById('rng-lip').value);
-
-    const droneP1 = 0.55 + 0.15 * droneAirRatio;
-    const droneP2 = 0.50 + 0.15 * droneAirRatio;
 
     const dt = 1.0 / sampleRate;
 
     for (let i = 0; i < bufferSize; i++) {
       currentPlaybackTime += dt;
-      if (currentPlaybackTime >= loopDurationSec) {
-        currentPlaybackTime = 0.0;
-      }
+      if (currentPlaybackTime >= totalDurSec) currentPlaybackTime = 0.0;
 
-      const currentBeat = currentPlaybackTime / secPerBeat;
-
-      let activeFreq = null;
+      // Find active step
       let activeMidi = null;
-      let activeVel = 0.0;
-      let noteElapsed = 0.0;
-      let noteDur = 0.0;
+      let stepElapsed = 0.0;
+      let stepDur = 0.0;
+      let accumTime = 0.0;
 
-      for (let n of sortedScore) {
-        if (currentBeat >= n.startBeat && currentBeat < n.startBeat + n.durationBeats) {
-          activeMidi = n.midiNote;
-          activeFreq = midiToFreq(n.midiNote);
-          activeVel = (n.velocity || 84) / 127.0;
-          noteElapsed = (currentBeat - n.startBeat) * secPerBeat;
-          noteDur = n.durationBeats * secPerBeat;
+      for (let s of phraseSteps) {
+        const dSec = s.duration * (60.0 / bpm);
+        if (currentPlaybackTime >= accumTime && currentPlaybackTime < accumTime + dSec) {
+          activeMidi = s.midiNote;
+          stepElapsed = currentPlaybackTime - accumTime;
+          stepDur = dSec;
           break;
         }
+        accumTime += dSec;
       }
 
       let targetLung = 0.0;
-      if (activeFreq !== null) {
-        const vib = (noteDur > 0.6 && noteElapsed > noteDur * 0.45) ? 1.0 + 0.0030 * Math.sin(2.0 * Math.PI * 5.2 * noteElapsed) : 1.0;
-        liveMelPipe.setFreq(activeFreq * vib);
-
-        const att = Math.min(1.0, noteElapsed / 0.04);
-        const rel = Math.min(1.0, (noteDur - noteElapsed) / 0.04);
-        targetLung = (0.58 + activeVel * 0.18) * att * rel;
+      if (activeMidi !== null) {
+        const att = Math.min(1.0, stepElapsed / 0.04);
+        const rel = Math.min(1.0, (stepDur - stepElapsed) / 0.04);
+        targetLung = 0.70 * att * rel;
+        liveMelPipe.setFreq(midiToFreq(activeMidi));
       }
 
       const [pJetBio, throatMod] = liveVocalTract.process(targetLung, vowel, articulation, lipAperture);
-
       const sM = liveMelPipe.process(pJetBio, throatMod);
-      const sD1 = liveD1Pipe.process(droneP1);
-      const sD2 = liveD2Pipe.process(droneP2);
+      const sD1 = liveD1Pipe.process(0.60 * (0.55 + 0.15 * droneAirRatio));
+      const sD2 = liveD2Pipe.process(0.50 * (0.55 + 0.15 * droneAirRatio));
 
-      // Clean headroom mixing (distortion-free linear range)
+      // Distortion-free spatial headroom
       const dryL = (sD1 * 0.35 + sD2 * 0.18 + sM * 0.65) * 0.45;
       const dryR = (sD1 * 0.18 + sD2 * 0.35 + sM * 0.65) * 0.45;
 
-      const [rvL, rvR] = liveReverb.process(dryL, dryR, roomSize, 0.25, reverbWet, 0.85);
-
+      const [rvL, rvR] = liveReverb.process(dryL, dryR, 0.75, 0.25, 0.30, 0.85);
       outL[i] = Math.tanh(rvL * 0.85);
       outR[i] = Math.tanh(rvR * 0.85);
     }
   };
 
   liveProcessorNode.connect(masterGainNode);
-  document.getElementById('btn-play').innerText = 'Playing Bio-Acoustic Flute... 🪈';
+  document.getElementById('btn-play').innerText = 'Playing Flute Tablature... 🪈';
 
   if (window.livePlayheadTimer) clearInterval(window.livePlayheadTimer);
   window.livePlayheadTimer = setInterval(() => {
     if (!isAudioRunning) return;
-    const secPerBeat = 60.0 / bpm;
-    const curBeat = currentPlaybackTime / secPerBeat;
-    drawTablature(curBeat);
-
-    const activeNote = currentScore.find(n => curBeat >= n.startBeat && curBeat < n.startBeat + n.durationBeats);
-    updateHoleGlowAndHUD(activeNote ? activeNote.midiNote : null, 0.65);
-  }, 25);
+    let accumTime = 0.0;
+    let activeIdx = -1;
+    for (let idx = 0; idx < phraseSteps.length; idx++) {
+      const dSec = phraseSteps[idx].duration * (60.0 / bpm);
+      if (currentPlaybackTime >= accumTime && currentPlaybackTime < accumTime + dSec) {
+        activeIdx = idx;
+        break;
+      }
+      accumTime += dSec;
+    }
+    renderTabTimeline(activeIdx);
+  }, 35);
 }
 
 function stopLivePhysicalSynth() {
@@ -1334,50 +1272,40 @@ function stopLivePhysicalSynth() {
     clearInterval(window.livePlayheadTimer);
     window.livePlayheadTimer = null;
   }
-  drawTablature(null);
-  updateHoleGlowAndHUD(null, 0.0);
-  document.getElementById('btn-play').innerText = '▶ Play Bio-Acoustic Engine';
+  renderTabTimeline(-1);
+  document.getElementById('btn-play').innerText = '▶ Play Bio-Acoustic Phrase';
 }
 
 document.getElementById('btn-play').addEventListener('click', async () => {
-  if (isAudioRunning) {
-    stopLivePhysicalSynth();
-  } else {
-    await startLivePhysicalSynth();
-  }
+  if (isAudioRunning) stopLivePhysicalSynth();
+  else await startLivePhysicalSynth();
 });
-
 document.getElementById('btn-stop').addEventListener('click', stopLivePhysicalSynth);
 
-// Realtime Bio-Acoustic & Flute Physics Listeners
+// Listeners
+document.getElementById('sel-size').addEventListener('change', (e) => {
+  const mapPitch = { piccolo: 86, soprano: 72, tenor: 69, bass: 50, contrabass: 36 };
+  document.getElementById('sel-root').value = mapPitch[e.target.value] || 69;
+  loadPresetMelody(document.getElementById('sel-preset-melody').value);
+  updateAcousticSpecs();
+});
+
 document.getElementById('sel-root').addEventListener('change', () => {
   loadPresetMelody(document.getElementById('sel-preset-melody').value);
   updateAcousticSpecs();
 });
 document.getElementById('sel-scale').addEventListener('change', () => {
-  drawTablature();
+  loadPresetMelody(document.getElementById('sel-preset-melody').value);
   updateAcousticSpecs();
 });
-document.getElementById('sel-d1').addEventListener('change', updateAcousticSpecs);
-document.getElementById('sel-d2').addEventListener('change', updateAcousticSpecs);
-document.getElementById('sel-profile').addEventListener('change', updateAcousticSpecs);
-document.getElementById('sel-texture').addEventListener('change', updateAcousticSpecs);
-
+document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
+  loadPresetMelody(e.target.value);
+});
 document.getElementById('rng-lip').addEventListener('input', (e) => {
   document.getElementById('val-lip').innerText = parseFloat(e.target.value).toFixed(2);
 });
 document.getElementById('rng-air-ratio').addEventListener('input', (e) => {
   document.getElementById('val-air-ratio').innerText = e.target.value;
-  updateAcousticSpecs();
-});
-document.getElementById('rng-room').addEventListener('input', (e) => {
-  document.getElementById('val-room').innerText = e.target.value;
-});
-document.getElementById('rng-wet').addEventListener('input', (e) => {
-  document.getElementById('val-wet').innerText = e.target.value;
-});
-document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
-  loadPresetMelody(e.target.value);
 });
 
 // Download OpenSCAD generated directly by Python
@@ -1386,7 +1314,6 @@ document.getElementById('btn-export-scad').addEventListener('click', async () =>
   const scaleKey = document.getElementById('sel-scale').value;
   const profile = document.getElementById('sel-profile').value;
   const airRatio = parseFloat(document.getElementById('rng-air-ratio').value);
-  const texture = document.getElementById('sel-texture').value;
 
   let scadContent = '';
   if (pyodideInstance) {
@@ -1400,22 +1327,18 @@ dims = calculate_flute_geometry(
     root_midi=${rootMidi},
     scale_intervals=SCALES.get('${scaleKey}', SCALES['minor_pentatonic']),
     windway_profile='${profile}',
-    drone_air_ratio=${airRatio},
-    windway_texture='${texture}'
+    drone_air_ratio=${airRatio}
 )
 generate_scad_content(dims)
 `);
     } catch (e) {}
   }
 
-  if (!scadContent) {
-    scadContent = `// Parametric Triple Flute\n$fn = 60;\n`;
-  }
-
+  if (!scadContent) scadContent = `// Parametric Flute CAD\n$fn = 60;\n`;
   const blob = new Blob([scadContent], { type: 'text/plain' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `flute_${rootMidi}_${scaleKey}_${profile}.scad`;
+  a.download = `flute_${rootMidi}_${scaleKey}.scad`;
   a.click();
 });
 
@@ -1439,7 +1362,7 @@ function loadShowcase(scale, root, profile, melody) {
   updateAcousticSpecs();
 }
 
-// Initialize Pyodide & Mount Python Source Directly from src/
+// Initialize Pyodide
 async function initPyodideEngine() {
   try {
     document.getElementById('lbl-pyodide-status').innerText = 'Loading Pyodide WASM runtime...';
@@ -1449,11 +1372,7 @@ async function initPyodideEngine() {
     const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py'];
     pyodideInstance.FS.mkdirTree('/home/pyodide/flute_generator');
     pyodideInstance.FS.writeFile('/home/pyodide/flute_generator/__init__.py', '"""Flute Generator Package"""\n');
-    
-    await pyodideInstance.runPythonAsync(`
-import sys
-sys.path.insert(0, '/home/pyodide')
-`);
+    await pyodideInstance.runPythonAsync(`import sys; sys.path.insert(0, '/home/pyodide')`);
 
     for (const mod of modules) {
       try {
@@ -1464,8 +1383,7 @@ sys.path.insert(0, '/home/pyodide')
         }
       } catch (err) {}
     }
-
-    document.getElementById('lbl-pyodide-status').innerText = 'Python Engine Ready (WASM)';
+    document.getElementById('lbl-pyodide-status').innerText = 'Bio-Acoustic Engine Ready (WASM)';
   } catch (err) {
     document.getElementById('lbl-pyodide-status').innerText = 'Bio-Acoustic Engine Ready';
   }
@@ -1473,9 +1391,9 @@ sys.path.insert(0, '/home/pyodide')
 
 // Init
 setTimeout(() => {
-  resizeCanvas();
-  loadPresetMelody('native_motif');
   init3D();
+  loadPresetMelody('native_motif');
+  updateInteractivePad();
   updateAcousticSpecs();
   initPyodideEngine();
 }, 100);
