@@ -2612,6 +2612,40 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
 
   const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
   
+    // Compute smart, collision-free slice planes that NEVER cut through a tone hole, chimney, or fipple window!
+  const forbiddenZRanges = [
+    { min: fippleZ - winLen - 6, max: fippleZ + winLen + 8 } // Fipple labium & sound windows
+  ];
+
+  for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+    const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
+    const hFreq = midiToFreq(rootMidi + targetInterval);
+    const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
+    const absZ = fippleZ - hDist;
+    const padMargin = holeDiam / 2 + chimneyDepth + 6; // Safety clearance around chimney pad
+    forbiddenZRanges.push({ min: absZ - padMargin, max: absZ + padMargin });
+  }
+
+  function findSafeCutZ(targetZ) {
+    let safeZ = targetZ;
+    // Check if targetZ collides with any forbidden hole or fipple zone
+    for (let r of forbiddenZRanges) {
+      if (safeZ >= r.min && safeZ <= r.max) {
+        // Shift cut to the nearest safe clearance above or below the hole
+        if (Math.abs(safeZ - r.min) < Math.abs(safeZ - r.max)) {
+          safeZ = r.min - 1.0;
+        } else {
+          safeZ = r.max + 1.0;
+        }
+      }
+    }
+    return Math.max(jointLen + 5, Math.min(totalCadLen - headLen - jointLen - 5, safeZ));
+  }
+
+  // Calculate safe cuts for 2, 3, or 4 segments
+  const zCut1 = findSafeCutZ(totalCadLen * (1.0 / numSegments));
+  const zCut2 = (numSegments >= 3) ? findSafeCutZ(totalCadLen * (2.0 / numSegments)) : totalCadLen;
+  const zCut3 = (numSegments >= 4) ? findSafeCutZ(totalCadLen * (3.0 / numSegments)) : totalCadLen;
   let chimneysScad = [];
   let holesScad = [];
 
@@ -2781,10 +2815,10 @@ print_part = "${printPart}";
 joint_tol = ${jointTol.toFixed(2)};
 joint_len = ${jointLen.toFixed(1)};
 
-// Compute slice cut heights along the flute Z-axis
-z_cut1 = (num_segments >= 2) ? total_L * (1.0 / num_segments) : total_L;
-z_cut2 = (num_segments >= 3) ? total_L * (2.0 / num_segments) : total_L;
-z_cut3 = (num_segments >= 4) ? total_L * (3.0 / num_segments) : total_L;
+// Smart Safe Cut Planes (computed in JS with safety clearances away from tone holes & fipple)
+z_cut1 = ${zCut1.toFixed(2)};
+z_cut2 = ${zCut2.toFixed(2)};
+z_cut3 = ${zCut3.toFixed(2)};
 
 module male_tenon(z_pos) {
     // Stepped male tenon with exact tolerance offset ($fn=6 matching hexagonal profile)
