@@ -2148,17 +2148,18 @@ function rebuild3DFlute() {
       fluteRootGroup.add(fluteMesh);
 
       
+      
       // Multi-Color Functional Component Materials (Distinct Visual Identification)
       const matAxlePin      = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.95, roughness: 0.15 }); // Silver Chrome Axle
       const matHingeStanch  = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.80, roughness: 0.30 }); // Slate Steel Clevis
-      const matHingeBoss    = new THREE.MeshStandardMaterial({ color: 0xa855f7, metalness: 0.70, roughness: 0.25 }); // Anodized Purple/Indigo Boss
+      const matHingeBoss    = new THREE.MeshStandardMaterial({ color: 0xa855f7, metalness: 0.70, roughness: 0.25 }); // Anodized Purple Boss
       const matConnectRod   = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.85, roughness: 0.20 }); // Polished Gold Rocker Rod
-      const matTouchPad     = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0x713f12, emissiveIntensity: 0.2, roughness: 0.18, metalness: 0.35 }); // Pearl Ivory Touchpad
-      const matKeyCup       = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.88, roughness: 0.22 }); // Polished Amber Brass Flap
-      const matPadGasket    = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.6, roughness: 0.45, metalness: 0.10 }); // Vibrant Soft Cyan TPU Gasket
-      const matChimneyRim   = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.40, roughness: 0.40 }); // Dark Chimney Seat
+      const matTouchPad     = new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0x713f12, emissiveIntensity: 0.25, roughness: 0.15, metalness: 0.30 }); // Pearl Ivory Touchpad
+      const matKeyCup       = new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.88, roughness: 0.22 }); // Polished Amber Brass Flap Cup
+      const matPadGasket    = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.7, roughness: 0.40, metalness: 0.10 }); // Luminous Soft Cyan TPU Gasket
+      const matChimneyRim   = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.50, roughness: 0.35 }); // Dark Chimney Seat
 
-      // Add High-Contrast Chimney Donut Rim Rings on Tone Holes
+      // Add High-Contrast Donut Rim Rings on Tone Holes
       for (let hIdx = 0; hIdx < numHoles; hIdx++) {
         const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
         const hFreq = midiToFreq(rootMidi + targetInterval);
@@ -2167,49 +2168,20 @@ function rebuild3DFlute() {
         const frontY = outerD * 0.433;
 
         const chimRing = new THREE.Mesh(
-          new THREE.TorusGeometry((holeDiam + rimThickness)/2, 0.8, 16, 24),
+          new THREE.TorusGeometry((holeDiam + rimThickness)/2, 0.9, 16, 24),
           matChimneyRim
         );
         chimRing.position.set(-cx, absZ, frontY + chimneyDepth + 0.4 + cy);
         fluteRootGroup.add(chimRing);
       }
 
-      // Build Multi-Color Dynamic Animated Articulated Keywork in Three.js
+      // Build Multi-Color Articulated Keywork with Side Rods & S-Curved Tone Hole Flap Levers
       if (keyworkMode !== 'none') {
         const clusterTopZ = fippleZ - 65.0;
         const keyPitch = 22.0;
         const frontY = outerD * 0.433;
-        const deckY = frontY + 3.6;
+        const deckY = frontY + 3.2;
 
-        // Add Multi-Color Hinge Stanchions on Keyboard Deck
-        for (let hIdx = 0; hIdx < numHoles; hIdx++) {
-          const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
-          if (!isKeyed) continue;
-
-          const padZ = clusterTopZ - hIdx * keyPitch;
-          const sideOffset = (hIdx % 2 === 0) ? -12.0 : 12.0;
-
-          // 1. Static Hinge Clevis Stanchions (Fixed on Deck)
-          const stanchGroup = new THREE.Group();
-          stanchGroup.position.set(sideOffset - cx, padZ, deckY + cy);
-
-          const leftClevis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.0, 6.0), matHingeStanch);
-          leftClevis.position.set(-3.2, 0, 0);
-          stanchGroup.add(leftClevis);
-
-          const rightClevis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.0, 6.0), matHingeStanch);
-          rightClevis.position.set(3.2, 0, 0);
-          stanchGroup.add(rightClevis);
-
-          // Transverse Silver Chrome Axle Pin
-          const pin = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 8.2, 16), matAxlePin);
-          pin.rotation.z = Math.PI / 2;
-          stanchGroup.add(pin);
-
-          fluteRootGroup.add(stanchGroup);
-        }
-
-        // 2. Animated Articulated Levers (Rocker Boss + Gold Rod + Pearl Touchpad + Brass Cup + Cyan TPU Gasket)
         for (let hIdx = 0; hIdx < numHoles; hIdx++) {
           const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
           const hFreq = midiToFreq(rootMidi + targetInterval);
@@ -2218,69 +2190,90 @@ function rebuild3DFlute() {
           const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
 
           if (isKeyed) {
-            const padZ = clusterTopZ - hIdx * keyPitch;
-            const sideOffset = (hIdx % 2 === 0) ? -12.0 : 12.0;
+            const isLeftHand = hIdx < Math.floor(numHoles / 2);
+            const sideX = isLeftHand ? -spacing * 0.75 : spacing * 0.75;
+            const padZ = clusterTopZ - hIdx * keyPitch; // Touchpad clustered in stationary hand row
             const cupD = holeDiam + rimThickness * 2 + 2.0;
             const cupY = frontY + chimneyDepth + 1.2;
 
-            // Hinge Pivot Root Group
+            // 1. Static Hinge Stanchion & Chrome Axle Pin
+            const stanchGroup = new THREE.Group();
+            stanchGroup.position.set(sideX - cx, padZ, deckY + cy);
+
+            const leftClevis = new THREE.Mesh(new THREE.BoxGeometry(1.6, 5.0, 5.0), matHingeStanch);
+            leftClevis.position.set(-2.4, 0, 0);
+            stanchGroup.add(leftClevis);
+
+            const rightClevis = new THREE.Mesh(new THREE.BoxGeometry(1.6, 5.0, 5.0), matHingeStanch);
+            rightClevis.position.set(2.4, 0, 0);
+            stanchGroup.add(rightClevis);
+
+            const axlePin = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 6.5, 16), matAxlePin);
+            axlePin.rotation.z = Math.PI / 2;
+            stanchGroup.add(axlePin);
+
+            fluteRootGroup.add(stanchGroup);
+
+            // 2. Articulated Key Rocker Lever Group (Pivoting at the Hinge Axle)
             const keyRockerGroup = new THREE.Group();
-            const pivotX = sideOffset - cx;
-            const pivotY = padZ;
-            const pivotZ = deckY + cy;
-            keyRockerGroup.position.set(pivotX, pivotY, pivotZ);
+            keyRockerGroup.position.set(sideX - cx, padZ, deckY + cy);
 
-            // A. Pearl Touchpad with Gold Bezel Rim
+            // A. Pearl Touchpad with Gold Bezel (Stationary Hand Rest Cluster on the Side)
             const touchGroup = new THREE.Group();
-            touchGroup.position.set(0, 0, 3.5);
+            touchGroup.position.set(0, 0, 3.2);
 
-            const touchBezel = new THREE.Mesh(new THREE.CylinderGeometry(7.8, 7.8, 1.2, 24), matConnectRod);
+            const touchBezel = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 1.2, 24), matConnectRod);
             touchBezel.rotation.x = Math.PI / 2;
             touchGroup.add(touchBezel);
 
-            const touchPearl = new THREE.Mesh(new THREE.CylinderGeometry(6.8, 6.8, 1.6, 24), matTouchPad);
+            const touchPearl = new THREE.Mesh(new THREE.CylinderGeometry(6.6, 6.6, 1.5, 24), matTouchPad);
             touchPearl.rotation.x = Math.PI / 2;
             touchPearl.position.set(0, 0, 0.4);
             touchGroup.add(touchPearl);
 
             keyRockerGroup.add(touchGroup);
 
-            // B. Anodized Purple/Indigo Hinge Rocker Boss Sleeve
-            const bossMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 4.5, 16), matHingeBoss);
+            // B. Anodized Purple Hinge Rocker Boss Sleeve
+            const bossMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 3.6, 16), matHingeBoss);
             bossMesh.rotation.z = Math.PI / 2;
             keyRockerGroup.add(bossMesh);
 
-            // C. Polished Gold Longitudinal Rocker Rod
-            const deltaY = absZ - padZ;
-            const deltaX = -sideOffset;
-            const deltaZ = (cupY - deckY);
+            // C. Longitudinal Side Rod (Runs entirely on the SIDE, completely clear of center holes!)
+            const rodDeltaY = absZ - padZ;
+            const sideRodLen = Math.abs(rodDeltaY);
+            if (sideRodLen > 1.0) {
+              const sideRod = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, sideRodLen, 12), matConnectRod);
+              sideRod.position.set(0, rodDeltaY / 2, 0);
+              keyRockerGroup.add(sideRod);
+            }
 
-            const rodLen = Math.sqrt(deltaY * deltaY + deltaX * deltaX + deltaZ * deltaZ);
-            const rodGeom = new THREE.CylinderGeometry(1.8, 1.8, rodLen, 12);
-            const rodMesh = new THREE.Mesh(rodGeom, matConnectRod);
-            rodMesh.position.set(deltaX / 2, deltaY / 2, deltaZ / 2);
-            const vSource = new THREE.Vector3(0, 1, 0);
-            const vTarget = new THREE.Vector3(deltaX, deltaY, deltaZ).normalize();
-            const q = new THREE.Quaternion().setFromUnitVectors(vSource, vTarget);
-            rodMesh.setRotationFromQuaternion(q);
-            keyRockerGroup.add(rodMesh);
+            // D. S-Curved / Dogleg Rocker Arm Reaching from Side Rod inward to Center Tone Hole
+            const sArmGroup = new THREE.Group();
+            sArmGroup.position.set(0, rodDeltaY, 0);
 
-            // D. Amber Brass Key Cup Flap + Glowing Cyan TPU Sealing Gasket
+            // Transverse Dogleg Bridge Arm (-sideX reaches from side to center X=0)
+            const armLen = Math.abs(sideX);
+            const armBridge = new THREE.Mesh(new THREE.BoxGeometry(armLen, 3.2, 2.0), matConnectRod);
+            armBridge.position.set(-sideX / 2, 0, (cupY - deckY) * 0.5);
+            sArmGroup.add(armBridge);
+
+            // E. Amber Brass Key Cup Flap + Luminous Cyan Soft TPU Gasket (Centered directly over hole)
             const cupGroup = new THREE.Group();
-            cupGroup.position.set(deltaX, deltaY, deltaZ);
-            
-            const cupMesh = new THREE.Mesh(new THREE.CylinderGeometry(cupD/2, cupD/2, 2.8, 24), matKeyCup);
+            cupGroup.position.set(-sideX, 0, cupY - deckY);
+
+            const cupMesh = new THREE.Mesh(new THREE.CylinderGeometry(cupD/2, cupD/2, 2.6, 24), matKeyCup);
             cupMesh.rotation.x = Math.PI / 2;
             cupGroup.add(cupMesh);
 
             const gasketMesh = new THREE.Mesh(new THREE.CylinderGeometry((cupD - 1.2)/2, (cupD - 1.2)/2, 1.2, 24), matPadGasket);
             gasketMesh.rotation.x = Math.PI / 2;
-            gasketMesh.position.set(0, 0, -1.2);
+            gasketMesh.position.set(0, 0, -1.1);
             cupGroup.add(gasketMesh);
 
-            keyRockerGroup.add(cupGroup);
+            sArmGroup.add(cupGroup);
+            keyRockerGroup.add(sArmGroup);
 
-            // Animated Pivot State
+            // Animation Pivot (Rotates ~10 degrees on transverse hinge pin)
             keyRockerGroup.userData = {
               openAngle: -0.16,
               closedAngle: 0.0,
@@ -2851,96 +2844,39 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
   const zCut2 = (numSegments >= 3) ? findSafeCutZ(totalCadLen * (2.0 / numSegments)) : totalCadLen;
   const zCut3 = (numSegments >= 4) ? findSafeCutZ(totalCadLen * (3.0 / numSegments)) : totalCadLen;
   
-            // Ergonomic Clustered Keyboard & Mechanical Keywork Architecture
+                // Keywork Mounting Posts & Side Rails (OpenSCAD static body)
     let keysScad = [];
     let tpuGasketsScad = [];
 
     const clusterTopZ = fippleZ - 65.0;
-    const keyPitch = 22.0; // 22mm pitch between touchpads in the compact keyboard
-    const frontY = outerD * 0.433; // Front hexagonal flat face
+    const keyPitch = 22.0;
+    const frontY = outerD * 0.433;
 
     if (keyworkMode !== 'none') {
-      const keyboardBottomZ = clusterTopZ - (numHoles - 1) * keyPitch - 12.0;
-      const keyboardTopZ = clusterTopZ + 14.0;
-      const keyboardLen = keyboardTopZ - keyboardBottomZ;
+      // Dual Side Mounting Rails running along the flute next to the holes
+      const railLen = Math.max(lMel, lD1, lD2) * 0.85;
+      const railZ = fippleZ - railLen / 2 - 20.0;
 
-      // 1. Sleek Integrated Keyboard Mounting Deck / Baseplate Rib
-      keysScad.push(`        // Integrated Ergonomic Keyboard Deck & Hinge Stanchion Rail
-        translate([0, ${(frontY + 1.2).toFixed(2)}, ${(keyboardBottomZ + keyboardLen/2).toFixed(2)}])
-            cube([spacing * 2.2, 4.5, ${keyboardLen.toFixed(2)}], center=true);`);
-    }
+      keysScad.push(`        // Static Key Mounting Rails on Left & Right Flute Sides (Clears center tone holes!)
+        translate([-spacing * 0.75, ${(frontY + 1.0).toFixed(2)}, ${railZ.toFixed(2)}])
+            cube([4.0, 3.5, ${railLen.toFixed(2)}], center=true);
+        translate([spacing * 0.75, ${(frontY + 1.0).toFixed(2)}, ${railZ.toFixed(2)}])
+            cube([4.0, 3.5, ${railLen.toFixed(2)}], center=true);`);
 
-    for (let hIdx = 0; hIdx < numHoles; hIdx++) {
-      const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
-      const hFreq = midiToFreq(rootMidi + targetInterval);
-      const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
-      const absZ = fippleZ - hDist;
-      const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
+      for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+        const isLeftHand = hIdx < Math.floor(numHoles / 2);
+        const sideX = isLeftHand ? -spacing * 0.75 : spacing * 0.75;
+        const padZ = clusterTopZ - hIdx * keyPitch;
 
-      if (isKeyed) {
-        const cupD = holeDiam + rimThickness * 2 + 2.0;
-        const padZ = clusterTopZ - hIdx * keyPitch; // Compact stationary keyboard key position
-        const sideOffset = (hIdx % 2 === 0) ? -12.0 : 12.0; // Left hand / Right hand split
-        const cupY = frontY + chimneyDepth + 0.6;
-        const deckY = frontY + 3.6;
-
-        keysScad.push(`        // === Articulated Keywork Mechanism for Hole ${hIdx + 1} ===
-        // Hinge Pivot Stanchions (Fixed to Keyboard Deck at Touchpad Z=${padZ.toFixed(1)})
-        translate([${sideOffset.toFixed(2)}, ${deckY.toFixed(2)}, ${padZ.toFixed(2)}]) {
-            // Left & Right captive clevis stanchions
-            translate([-3.2, 0, 0]) cube([1.8, 5.0, 6.0], center=true);
-            translate([3.2, 0, 0]) cube([1.8, 5.0, 6.0], center=true);
-            // Transverse Axle Pin (X-axis)
-            rotate([0, 90, 0]) cylinder(d=2.8, h=8.0, center=true, $fn=16);
-        }
-
-        // Articulated Rocker Lever + Longitudinal Rod + Tone Hole Cup
-        // (Built along global Z axis, 0.35mm print-in-place clearance gap)
-        difference() {
-            union() {
-                // A. Touchpad on Keyboard Deck (Fingertip Press Area)
-                translate([${sideOffset.toFixed(2)}, ${(deckY + 3.2).toFixed(2)}, ${padZ.toFixed(2)}])
-                    rotate([0, 0, 0]) cylinder(d=15.0, h=2.6, center=true, $fn=24);
-
-                // B. Hinge Rocker Boss (Captive sleeve over Axle Pin)
-                translate([${sideOffset.toFixed(2)}, ${deckY.toFixed(2)}, ${padZ.toFixed(2)}])
-                    rotate([0, 90, 0]) cylinder(d=5.2, h=4.2, center=true, $fn=16);
-
-                // C. Longitudinal Rod Linking Keyboard Touchpad to Tone Hole Cup
-                hull() {
-                    // Start at Hinge Rocker Boss
-                    translate([${sideOffset.toFixed(2)}, ${deckY.toFixed(2)}, ${padZ.toFixed(2)}])
-                        cylinder(d=4.2, h=2.0, center=true, $fn=16);
-                    // End at Tone Hole Cup
-                    translate([0, ${cupY.toFixed(2)}, ${absZ.toFixed(2)}])
-                        cylinder(d=4.2, h=2.0, center=true, $fn=16);
-                }
-
-                // D. Key Cup over Chimney Lip (Oriented perpendicular to Hole along +Y)
-                translate([0, ${(frontY + chimneyDepth + 1.2).toFixed(2)}, ${absZ.toFixed(2)}])
-                    rotate([-90, 0, 0])
-                        cylinder(d=${cupD.toFixed(2)}, h=2.8, $fn=24);
-
-                // E. Compliant Leaf Spring (Returns key open)
-                translate([${sideOffset.toFixed(2)}, ${(deckY - 1.8).toFixed(2)}, ${(padZ + 4.0).toFixed(2)}])
-                    cube([2.0, 1.2, 7.0], center=true);
-            }
-
-            // Subtraction: 0.35mm Print-in-Place Hinge Axle Clearance Bore
-            translate([${sideOffset.toFixed(2)}, ${deckY.toFixed(2)}, ${padZ.toFixed(2)}])
-                rotate([0, 90, 0]) cylinder(d=3.5, h=10.0, center=true, $fn=16);
-
-            // Subtraction: Recessed TPU Pad Gasket Groove inside Key Cup
-            translate([0, ${(frontY + chimneyDepth + 1.0).toFixed(2)}, ${absZ.toFixed(2)}])
-                rotate([-90, 0, 0]) {
-                    difference() {
-                        cylinder(d=${(cupD - 1.2).toFixed(2)}, h=1.6, $fn=24);
-                        cylinder(d=${(holeDiam + 0.8).toFixed(2)}, h=2.0, center=true, $fn=24);
-                    }
-                }
+        keysScad.push(`        // Hinge Pivot Clevis Post for Key ${hIdx + 1}
+        translate([${sideX.toFixed(2)}, ${(frontY + 3.0).toFixed(2)}, ${padZ.toFixed(2)}]) {
+            translate([-2.4, 0, 0]) cube([1.6, 5.0, 5.0], center=true);
+            translate([2.4, 0, 0]) cube([1.6, 5.0, 5.0], center=true);
+            rotate([0, 90, 0]) cylinder(d=2.6, h=6.5, center=true, $fn=16);
         }`);
 
-        tpuGasketsScad.push(`    // TPU Soft Key Gasket Ring for Hole ${hIdx + 1}
+        const cupD = holeDiam + rimThickness * 2 + 2.0;
+        tpuGasketsScad.push(`    // Standalone TPU Key Gasket Ring for Hole ${hIdx + 1}
     translate([${(hIdx * 25 - (numHoles * 12)).toFixed(2)}, 0, 0])
         difference() {
             cylinder(d=${(cupD - 1.4).toFixed(2)}, h=1.8, $fn=32);
