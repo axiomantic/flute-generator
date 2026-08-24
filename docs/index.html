@@ -1674,6 +1674,51 @@ const WOOD_PROFILES = {
 
 
 // Atmospheric lighting & backgrounds
+// Streamlined Visual Theme Presets (Material Finish + Atmospheric Lighting + Contrast Pairing)
+const THEME_PRESETS = {
+  cedar_canyon: { wood: 'cedar', env: 'canyon', opacity: 100, indicator: 'minimal_gem' },
+  ebony_studio: { wood: 'ebony', env: 'studio', opacity: 100, indicator: 'minimal_gem' },
+  bamboo_forest: { wood: 'bamboo', env: 'forest', opacity: 100, indicator: 'floating_orbs' },
+  walnut_dark:   { wood: 'walnut', env: 'cad_dark', opacity: 100, indicator: 'minimal_gem' },
+  cherry_studio: { wood: 'cherry', env: 'studio', opacity: 100, indicator: 'minimal_gem' },
+  xray_cad:      { wood: 'bamboo', env: 'cad_dark', opacity: 35, indicator: 'minimal_gem' }
+};
+
+let currentThemeKey = 'cedar_canyon';
+
+function applyTheme(themeKey) {
+  const theme = THEME_PRESETS[themeKey] || THEME_PRESETS.cedar_canyon;
+  currentThemeKey = themeKey;
+
+  applyEnvironment(theme.env);
+  updateRoomAcoustics(theme.env);
+
+  const finish = WOOD_PROFILES[theme.wood] || WOOD_PROFILES.cedar;
+  const woodMap = createWoodGrainTexture(finish.color, finish.dark, finish.grain, finish.isBamboo);
+  const opacityVal = theme.opacity / 100.0;
+
+  if (fluteMesh) {
+    fluteMesh.material.color.setHex(finish.color);
+    fluteMesh.material.map = woodMap;
+    fluteMesh.material.roughness = finish.roughness;
+    fluteMesh.material.metalness = finish.metalness;
+    fluteMesh.material.transparent = (opacityVal < 0.99);
+    fluteMesh.material.opacity = opacityVal;
+    fluteMesh.material.depthWrite = (opacityVal > 0.6);
+    fluteMesh.material.needsUpdate = true;
+  }
+
+  const themeSel = document.getElementById('sel-theme');
+  if (themeSel) themeSel.value = themeKey;
+
+  persistCurrentStudioState();
+}
+
+document.getElementById('sel-theme').addEventListener('change', (e) => {
+  applyTheme(e.target.value);
+});
+
+
 // High-contrast, studio-grade atmospheric lighting & backgrounds
 const ENV_PROFILES = {
   canyon: {
@@ -1778,23 +1823,20 @@ function init3D() {
   groundGrid.material.transparent = true;
   scene.add(groundGrid);
 
-  // Paired High-Contrast Selection (Guarantees strong visual pop and readability)
-  const CONTRAST_PAIRS = [
-    { wood: 'ebony', env: 'studio' },       // Jet black flute against bright studio highlight
-    { wood: 'bamboo', env: 'canyon' },      // Bright golden bamboo against rich crimson canyon
-    { wood: 'cedar', env: 'forest' },       // Warm reddish cedar against deep emerald forest
-    { wood: 'walnut', env: 'cad_dark' },     // Rich dark walnut against cyan-rimmed studio
-    { wood: 'cherry', env: 'studio' },      // Rich wild cherry against neutral studio lighting
-    { wood: 'bamboo', env: 'forest' }       // Golden bamboo against forest background
-  ];
-  const chosenPair = CONTRAST_PAIRS[Math.floor(Math.random() * CONTRAST_PAIRS.length)];
+  // Load last selected theme from LocalStorage (or default to Warm Cedar & Canyon)
+  let savedTheme = 'cedar_canyon';
+  try {
+    const raw = localStorage.getItem('flute_studio_state_v1');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.theme) savedTheme = parsed.theme;
+    }
+  } catch(e){}
 
-  const envSel = document.getElementById('sel-environment');
-  if (envSel) envSel.value = chosenPair.env;
-  applyEnvironment(chosenPair.env);
-
-  const woodSel = document.getElementById('sel-wood-finish');
-  if (woodSel) woodSel.value = chosenPair.wood;
+  const themeSel = document.getElementById('sel-theme');
+  if (themeSel) themeSel.value = savedTheme;
+  const initialTheme = THEME_PRESETS[savedTheme] || THEME_PRESETS.cedar_canyon;
+  applyEnvironment(initialTheme.env);
 
   fluteRootGroup = new THREE.Group();
   scene.add(fluteRootGroup);
@@ -1824,50 +1866,6 @@ function init3D() {
 
 let fluteMesh = null;
 
-
-// Streamlined Visual Theme Presets (Material Finish + Atmospheric Lighting + Contrast Pairing)
-const THEME_PRESETS = {
-  cedar_canyon: { wood: 'cedar', env: 'canyon', opacity: 100, indicator: 'minimal_gem' },
-  ebony_studio: { wood: 'ebony', env: 'studio', opacity: 100, indicator: 'minimal_gem' },
-  bamboo_forest: { wood: 'bamboo', env: 'forest', opacity: 100, indicator: 'floating_orbs' },
-  walnut_dark:   { wood: 'walnut', env: 'cad_dark', opacity: 100, indicator: 'minimal_gem' },
-  cherry_studio: { wood: 'cherry', env: 'studio', opacity: 100, indicator: 'minimal_gem' },
-  xray_cad:      { wood: 'bamboo', env: 'cad_dark', opacity: 35, indicator: 'minimal_gem' }
-};
-
-let currentThemeKey = 'cedar_canyon';
-
-function applyTheme(themeKey) {
-  const theme = THEME_PRESETS[themeKey] || THEME_PRESETS.cedar_canyon;
-  currentThemeKey = themeKey;
-
-  applyEnvironment(theme.env);
-  updateRoomAcoustics(theme.env);
-
-  const finish = WOOD_PROFILES[theme.wood] || WOOD_PROFILES.cedar;
-  const woodMap = createWoodGrainTexture(finish.color, finish.dark, finish.grain, finish.isBamboo);
-  const opacityVal = theme.opacity / 100.0;
-
-  if (fluteMesh) {
-    fluteMesh.material.color.setHex(finish.color);
-    fluteMesh.material.map = woodMap;
-    fluteMesh.material.roughness = finish.roughness;
-    fluteMesh.material.metalness = finish.metalness;
-    fluteMesh.material.transparent = (opacityVal < 0.99);
-    fluteMesh.material.opacity = opacityVal;
-    fluteMesh.material.depthWrite = (opacityVal > 0.6);
-    fluteMesh.material.needsUpdate = true;
-  }
-
-  const themeSel = document.getElementById('sel-theme');
-  if (themeSel) themeSel.value = themeKey;
-
-  persistCurrentStudioState();
-}
-
-document.getElementById('sel-theme').addEventListener('change', (e) => {
-  applyTheme(e.target.value);
-});
 
 function updateFluteMaterialOnly() {
   if (!fluteMesh) return;
