@@ -169,14 +169,20 @@ The web interface compiles parametric CAD models client-side into 3D polygon mes
 
 ### Building OpenSCAD WASM with the Fast Manifold Engine
 
-The project includes git submodules for `emsdk` and `openscad` under `vendor/`. The build script handles toolchain installation, environment activation, CMake configuration, and compilation automatically:
+The project includes git submodules for `emsdk` and `openscad` under `vendor/`. The build script handles toolchain installation, recursive dependency checking (including `manifold`, `Clipper2`, `mimalloc`, and `sanitizers-cmake`), CMake configuration, and compilation automatically:
 
 ```bash
-# Run the self-contained Manifold WASM build script
+# 1. (Optional) Initialize submodules manually, or let the script handle it:
+git submodule update --init --recursive
+
+# 2. Run the self-contained Manifold WASM build script
 ./scripts/build_manifold_wasm.sh
 ```
 
-This compiles upstream OpenSCAD with the Manifold geometry kernel and places `openscad.js` and `openscad.wasm` into the project root for immediate in-browser execution.
+#### How it works:
+- If Docker is running on your machine, the script uses the verified `openscad/wasm-base:latest` container containing pre-compiled WASM dependencies (`Eigen3`, `Boost`, `CGAL`, `DoubleConversion`, `HarfBuzz`, `FontConfig`).
+- If Docker is not available, it automatically uses the native Emscripten toolchain inside `vendor/emsdk/`.
+- The compilation produces `openscad.js` and `openscad.wasm` with `-DENABLE_MANIFOLD=ON` and deploys them to the project root for sub-50ms in-browser CSG boolean rendering.
 
 ---
 
