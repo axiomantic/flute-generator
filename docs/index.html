@@ -2210,6 +2210,12 @@ function rebuild3DFlute() {
 
       
       
+      
+      // Exact Coordinate Converter from OpenSCAD to Three.js
+      function toThreePos(scadX, scadY, scadZ) {
+        return new THREE.Vector3(scadX - cx, scadZ, -scadY + cy);
+      }
+
       // Multi-Color Functional Component Materials (Distinct Visual Identification)
       const matAxlePin      = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.95, roughness: 0.15 }); // Silver Chrome Axle
       const matHingeStanch  = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.80, roughness: 0.30 }); // Slate Steel Clevis
@@ -2220,7 +2226,7 @@ function rebuild3DFlute() {
       const matPadGasket    = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.7, roughness: 0.40, metalness: 0.10 }); // Luminous Soft Cyan TPU Gasket
       const matChimneyRim   = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.50, roughness: 0.35 }); // Dark Chimney Seat
 
-      // Add High-Contrast Donut Rim Rings on Tone Holes
+      // Add High-Contrast Donut Rim Rings directly over Tone Holes (Front Face)
       for (let hIdx = 0; hIdx < numHoles; hIdx++) {
         const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
         const hFreq = midiToFreq(rootMidi + targetInterval);
@@ -2228,15 +2234,16 @@ function rebuild3DFlute() {
         const absZ = fippleZ - hDist;
         const frontY = outerD * 0.433;
 
+        const chimPos = toThreePos(0, frontY + chimneyDepth + 0.5, absZ);
         const chimRing = new THREE.Mesh(
           new THREE.TorusGeometry((holeDiam + rimThickness)/2, 0.9, 16, 24),
           matChimneyRim
         );
-        chimRing.position.set(-cx, absZ, frontY + chimneyDepth + 0.4 + cy);
+        chimRing.position.copy(chimPos);
         fluteRootGroup.add(chimRing);
       }
 
-      // Build Multi-Color Articulated Keywork with Side Rods & S-Curved Tone Hole Flap Levers
+      // Build Multi-Color Articulated Keywork with Side Rods & S-Curved Dogleg Flap Arms on Front Face
       if (keyworkMode !== 'none') {
         const clusterTopZ = fippleZ - 65.0;
         const keyPitch = 22.0;
@@ -2252,14 +2259,17 @@ function rebuild3DFlute() {
 
           if (isKeyed) {
             const isLeftHand = hIdx < Math.floor(numHoles / 2);
-            const sideX = isLeftHand ? -spacing * 0.75 : spacing * 0.75;
-            const padZ = clusterTopZ - hIdx * keyPitch; // Touchpad clustered in stationary hand row
+            const sideX = isLeftHand ? -spacing * 0.72 : spacing * 0.72;
+            const padZ = clusterTopZ - hIdx * keyPitch; // Stationary hand rest row
             const cupD = holeDiam + rimThickness * 2 + 2.0;
             const cupY = frontY + chimneyDepth + 1.2;
 
-            // 1. Static Hinge Stanchion & Chrome Axle Pin
+            // Transformed 3D Pivot Position
+            const pivotPos = toThreePos(sideX, deckY, padZ);
+
+            // 1. Static Hinge Stanchions (Anchored on Side Rail)
             const stanchGroup = new THREE.Group();
-            stanchGroup.position.set(sideX - cx, padZ, deckY + cy);
+            stanchGroup.position.copy(pivotPos);
 
             const leftClevis = new THREE.Mesh(new THREE.BoxGeometry(1.6, 5.0, 5.0), matHingeStanch);
             leftClevis.position.set(-2.4, 0, 0);
@@ -2275,13 +2285,13 @@ function rebuild3DFlute() {
 
             fluteRootGroup.add(stanchGroup);
 
-            // 2. Articulated Key Rocker Lever Group (Pivoting at the Hinge Axle)
+            // 2. Articulated Key Rocker Lever Group (Pivoting at the Axle Pin)
             const keyRockerGroup = new THREE.Group();
-            keyRockerGroup.position.set(sideX - cx, padZ, deckY + cy);
+            keyRockerGroup.position.copy(pivotPos);
 
-            // A. Pearl Touchpad with Gold Bezel (Stationary Hand Rest Cluster on the Side)
+            // A. Pearl Touchpad with Gold Bezel (Stationary Hand Rest on the Side)
             const touchGroup = new THREE.Group();
-            touchGroup.position.set(0, 0, 3.2);
+            touchGroup.position.set(0, 0, -3.2); // Pointing forward toward camera (-Z in Three.js)
 
             const touchBezel = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 1.2, 24), matConnectRod);
             touchBezel.rotation.x = Math.PI / 2;
@@ -2289,38 +2299,38 @@ function rebuild3DFlute() {
 
             const touchPearl = new THREE.Mesh(new THREE.CylinderGeometry(6.6, 6.6, 1.5, 24), matTouchPad);
             touchPearl.rotation.x = Math.PI / 2;
-            touchPearl.position.set(0, 0, 0.4);
+            touchPearl.position.set(0, 0, -0.4);
             touchGroup.add(touchPearl);
 
             keyRockerGroup.add(touchGroup);
 
-            // B. Anodized Purple Hinge Rocker Boss Sleeve
+            // B. Rotating Hinge Rocker Boss
             const bossMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 3.6, 16), matHingeBoss);
             bossMesh.rotation.z = Math.PI / 2;
             keyRockerGroup.add(bossMesh);
 
-            // C. Longitudinal Side Rod (Runs entirely on the SIDE, completely clear of center holes!)
-            const rodDeltaY = absZ - padZ;
-            const sideRodLen = Math.abs(rodDeltaY);
+            // C. Longitudinal Side Rod (Running along Y-axis in Three.js / Z-axis in OpenSCAD)
+            const deltaScadZ = absZ - padZ;
+            const sideRodLen = Math.abs(deltaScadZ);
             if (sideRodLen > 1.0) {
               const sideRod = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, sideRodLen, 12), matConnectRod);
-              sideRod.position.set(0, rodDeltaY / 2, 0);
+              sideRod.position.set(0, deltaScadZ / 2, 0);
               keyRockerGroup.add(sideRod);
             }
 
-            // D. S-Curved / Dogleg Rocker Arm Reaching from Side Rod inward to Center Tone Hole
+            // D. S-Curved Dogleg Arm Reaching Inward from Side Rod to Center Hole (X=0)
             const sArmGroup = new THREE.Group();
-            sArmGroup.position.set(0, rodDeltaY, 0);
+            sArmGroup.position.set(0, deltaScadZ, 0);
 
-            // Transverse Dogleg Bridge Arm (-sideX reaches from side to center X=0)
-            const armLen = Math.abs(sideX);
-            const armBridge = new THREE.Mesh(new THREE.BoxGeometry(armLen, 3.2, 2.0), matConnectRod);
-            armBridge.position.set(-sideX / 2, 0, (cupY - deckY) * 0.5);
+            // Transverse Bridge (-sideX reaches from side to center X=0)
+            const deltaThreeZ = -(cupY - deckY); // Forward offset toward front face
+            const armBridge = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(sideX), 3.2, 2.0), matConnectRod);
+            armBridge.position.set(-sideX / 2, 0, deltaThreeZ * 0.5);
             sArmGroup.add(armBridge);
 
-            // E. Amber Brass Key Cup Flap + Luminous Cyan Soft TPU Gasket (Centered directly over hole)
+            // E. Amber Brass Key Cup Flap + Luminous Cyan Soft TPU Gasket (Directly over Chimney)
             const cupGroup = new THREE.Group();
-            cupGroup.position.set(-sideX, 0, cupY - deckY);
+            cupGroup.position.set(-sideX, 0, deltaThreeZ);
 
             const cupMesh = new THREE.Mesh(new THREE.CylinderGeometry(cupD/2, cupD/2, 2.6, 24), matKeyCup);
             cupMesh.rotation.x = Math.PI / 2;
@@ -2328,19 +2338,20 @@ function rebuild3DFlute() {
 
             const gasketMesh = new THREE.Mesh(new THREE.CylinderGeometry((cupD - 1.2)/2, (cupD - 1.2)/2, 1.2, 24), matPadGasket);
             gasketMesh.rotation.x = Math.PI / 2;
-            gasketMesh.position.set(0, 0, -1.1);
+            gasketMesh.position.set(0, 0, 1.1); // Faces into chimney
             cupGroup.add(gasketMesh);
 
             sArmGroup.add(cupGroup);
             keyRockerGroup.add(sArmGroup);
 
-            // Animation Pivot (Rotates ~10 degrees on transverse hinge pin)
+            // Animation Pivot around local X-axis (Swing ~9 degrees)
             keyRockerGroup.userData = {
-              openAngle: -0.16,
+              openAngle: 0.16,
               closedAngle: 0.0,
-              currAngle: -0.16
+              currAngle: 0.16,
+              targetAngle: 0.16
             };
-            keyRockerGroup.rotation.x = -0.16;
+            keyRockerGroup.rotation.x = 0.16;
 
             fluteRootGroup.add(keyRockerGroup);
             keyLeverMeshes.push(keyRockerGroup);
