@@ -496,6 +496,40 @@
       </div>
     </div>
 
+        <div>
+      <div class="section-label">3D Print Slicing & Socket Joints</div>
+      <div class="field-group">
+        <label>Printable Segments</label>
+        <select id="sel-print-segments">
+          <option value="1" selected>1 Piece (Full Monolithic Body)</option>
+          <option value="2">2 Segments (Mouthpiece / Body Foot)</option>
+          <option value="3">3 Segments (Head / Mid Tone-Holes / Foot)</option>
+          <option value="4">4 Segments (Compact 3D Bed Slices)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Segment View / Export Part</label>
+        <select id="sel-print-part">
+          <option value="assembled" selected>Full Assembled Preview</option>
+          <option value="part_1">Segment 1 (Mouthpiece / Head)</option>
+          <option value="part_2">Segment 2 (Upper Mid)</option>
+          <option value="part_3">Segment 3 (Lower Tone Holes)</option>
+          <option value="part_4">Segment 4 (Foot Bell Base)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Socket Joint Tolerance <span class="val" id="val-joint-tol">0.18 mm</span></label>
+        <input type="range" id="rng-joint-tol" min="0.05" max="0.45" step="0.01" value="0.18">
+      </div>
+
+      <div class="field-group">
+        <label>Tenon / Socket Length <span class="val" id="val-joint-len">14.0 mm</span></label>
+        <input type="range" id="rng-joint-len" min="8.0" max="24.0" step="1.0" value="14.0">
+      </div>
+    </div>
+
     <div>
       <div class="section-label">3D Printable Donut Chimneys</div>
       <div class="field-group">
