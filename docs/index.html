@@ -371,10 +371,9 @@
             <div class="field-group">
         <label>Finger / Note Indicator</label>
         <select id="sel-indicator-style">
-          <option value="minimal_gem" selected>Acoustic Gem Rings (Minimal & Clear)</option>
+          <option value="minimal_gem" selected>Acoustic Gem Rings (Minimal & Clean)</option>
           <option value="floating_orbs">Luminescent Orbs (Ethereal)</option>
-          <option value="spirit_pads">Spirit Wood Blocks (Totem Pads)</option>
-          <option value="anatomical">Anatomical Fingers</option>
+          <option value="spirit_pads">Spirit Wood Blocks (Carved Totems)</option>
           <option value="hidden">Hidden (Pure Instrument View)</option>
         </select>
       </div>
@@ -1590,19 +1589,15 @@ function rebuild3DFlute() {
             fingerGroup.add(padMesh);
 
           } else {
-            // Anatomical fingers
-            const matHand = new THREE.MeshStandardMaterial({ color: 0xe2a77f, roughness: 0.5 });
-            const fingerLen = 18.0;
-            const tipGeom = new THREE.CylinderGeometry(3.6, 4.2, fingerLen, 16);
-            const tipMesh = new THREE.Mesh(tipGeom, matHand);
-            tipMesh.rotation.z = isLeftHand ? (Math.PI / 2) : (-Math.PI / 2);
-            tipMesh.position.x = isLeftHand ? (-fingerLen / 2 + 2) : (fingerLen / 2 - 2);
-            fingerGroup.add(tipMesh);
-
-            const knuckleGeom = new THREE.SphereGeometry(4.2, 14, 14);
-            const knuckleMesh = new THREE.Mesh(knuckleGeom, matHand);
-            knuckleMesh.position.x = isLeftHand ? (-fingerLen + 2) : (fingerLen - 2);
-            fingerGroup.add(knuckleMesh);
+            // Default clean gemstone ring
+            const gemGeom = new THREE.TorusGeometry(holeDiam * 0.52, 1.4, 16, 32);
+            const gemMat = new THREE.MeshStandardMaterial({
+              color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.7,
+              roughness: 0.15, metalness: 0.4
+            });
+            const gemMesh = new THREE.Mesh(gemGeom, gemMat);
+            gemMesh.rotation.x = Math.PI / 2;
+            fingerGroup.add(gemMesh);
           }
 
           // Align indicator position directly with the mesh center offset (-cx, 0, cy)
