@@ -189,112 +189,142 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* Minimalist Proportional Breath Ribbon */
+    /* Finger-Hole Piano Roll Dock */
     .timeline-dock {
-      height: 175px;
-      background: var(--bg-panel);
-      border-top: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      flex: 0 0 auto;
+      height: 220px !important;
+      background: #090c14 !important;
+      border-top: 1px solid var(--border) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 0 0 auto !important;
+      user-select: none !important;
     }
 
     .transport-bar {
-      padding: 6px 14px;
-      background: #0a0d15;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      height: 38px !important;
+      padding: 0 14px !important;
+      background: #0d121f !important;
+      border-bottom: 1px solid var(--border) !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      flex-shrink: 0 !important;
     }
 
-    .ribbon-scroll-container {
-      flex: 1;
-      position: relative;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      background: #06080d;
+    .pianoroll-wrapper {
+      flex: 1 !important;
+      height: calc(100% - 38px) !important;
+      display: flex !important;
+      position: relative !important;
+      background: #06080d !important;
+      overflow: hidden !important;
     }
 
-    .breath-ribbon {
-      position: relative;
-      height: 96px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: #090c14;
-      border: 1px solid #141b2b;
-      border-radius: 8px;
-      padding: 6px 10px;
-      min-width: 100%;
+    .pianoroll-labels {
+      width: 140px !important;
+      flex-shrink: 0 !important;
+      background: #0a0e1a !important;
+      border-right: 1px solid #1e293b !important;
+      display: flex !important;
+      flex-direction: column !important;
+      height: 100% !important;
+      z-index: 5 !important;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.5) !important;
     }
 
-    .note-pill {
-      height: 80px;
-      background: #111724;
-      border: 1px solid #222e44;
-      border-radius: 6px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 8px;
-      cursor: pointer;
-      user-select: none;
-      position: relative;
-      transition: all 0.15s;
+    .roll-row-label {
+      flex: 1 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 0 10px !important;
+      font-size: 0.70rem !important;
+      font-family: monospace !important;
+      color: #94a3b8 !important;
+      border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+      background: #0a0e1a !important;
     }
-    .note-pill:hover { border-color: var(--accent); transform: translateY(-1px); }
-    .note-pill.active {
-      border-color: #10b981;
-      background: #0b201a;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+    .roll-row-label.active {
+      background: #0e2942 !important;
+      color: #38bdf8 !important;
+      font-weight: 700 !important;
+      border-left: 3px solid #38bdf8 !important;
     }
-
-    .pill-pitch {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #60a5fa;
+    .roll-row-label .hole-tag {
+      font-size: 0.60rem !important;
+      padding: 2px 5px !important;
+      border-radius: 3px !important;
+      background: #1e293b !important;
+      color: #cbd5e1 !important;
     }
 
-    .pill-dots {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      background: #06080e;
-      padding: 3px 5px;
-      border-radius: 4px;
-    }
-    .pill-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      border: 1px solid #60a5fa;
-    }
-    .pill-dot.closed { background: #3b82f6; }
-    .pill-dot.open { background: transparent; border-color: #06b6d4; }
-
-    .pill-dur {
-      font-size: 0.65rem;
-      color: var(--text-muted);
-      font-family: monospace;
+    .pianoroll-grid-scroll {
+      flex: 1 !important;
+      height: 100% !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      position: relative !important;
+      background: #05070c !important;
     }
 
-    #ribbon-playhead {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 2.5px;
-      background: #ef4444;
-      box-shadow: 0 0 6px #ef4444;
-      pointer-events: none;
-      z-index: 10;
-      left: 10px;
+    .pianoroll-canvas-track {
+      position: relative !important;
+      height: 100% !important;
+      min-width: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
     }
-  </style>
+
+    .roll-grid-row {
+      flex: 1 !important;
+      position: relative !important;
+      border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+      background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px) !important;
+      background-size: 40px 100% !important;
+      cursor: crosshair !important;
+    }
+    .roll-grid-row:nth-child(even) { background-color: rgba(255,255,255,0.015) !important; }
+
+    .piano-note-block {
+      position: absolute !important;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.92), rgba(2, 132, 199, 0.92)) !important;
+      border: 1px solid #38bdf8 !important;
+      border-radius: 4px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 0.72rem !important;
+      font-family: monospace !important;
+      cursor: grab !important;
+      backdrop-filter: blur(2px) !important;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.4) !important;
+      transition: box-shadow 0.08s !important;
+      z-index: 2 !important;
+    }
+    .piano-note-block:hover {
+      border-color: #ffffff !important;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8) !important;
+    }
+    .piano-note-block.active {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.95), rgba(190, 18, 60, 0.95)) !important;
+      border-color: #fda4af !important;
+      box-shadow: 0 0 16px rgba(244, 63, 94, 0.9) !important;
+      z-index: 4 !important;
+    }
+
+    #pianoroll-playhead {
+      position: absolute !important;
+      top: 0 !important; bottom: 0 !important;
+      width: 2px !important;
+      background: #f43f5e !important;
+      box-shadow: 0 0 10px #f43f5e !important;
+      pointer-events: none !important;
+      z-index: 10 !important;
+      left: 0px !important;
+    }
+</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
