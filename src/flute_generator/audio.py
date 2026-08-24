@@ -65,7 +65,7 @@ def create_flute_midi(
     bpm: int = 96,
     drone_velocity: int = 68,
 ) -> Path:
-    """Create an expressive multi-channel MIDI sequence utilizing CC11 breath swells, CC1 delayed vibrato, pitch scoops, and stereo panning."""
+    """Create a natural, expressive multi-channel MIDI sequence with CC11 breath swells, delayed vibrato, and stereo panning."""
     mid = MidiFile(type=1)  # Synchronous multitrack MIDI
     ticks_per_beat = mid.ticks_per_beat  # 480
     tempo_us = mido.bpm2tempo(bpm)
@@ -88,8 +88,8 @@ def create_flute_midi(
     chan_m = 0
     melody_track.append(Message('program_change', channel=chan_m, program=73, time=0))
     melody_track.append(Message('control_change', channel=chan_m, control=10, value=64, time=0))  # Center Pan
-    melody_track.append(Message('control_change', channel=chan_m, control=91, value=75, time=0))  # Reverb send
-    melody_track.append(Message('control_change', channel=chan_m, control=11, value=90, time=0))  # Expression
+    melody_track.append(Message('control_change', channel=chan_m, control=91, value=70, time=0))  # Natural Reverb
+    melody_track.append(Message('control_change', channel=chan_m, control=11, value=85, time=0))  # Expression
     melody_track.append(Message('control_change', channel=chan_m, control=1, value=0, time=0))    # Vibrato 0
 
     pending_delta = 0
@@ -105,60 +105,45 @@ def create_flute_midi(
         note = event.midi_note
         vel = event.velocity
 
-        # Handle ornamentations
+        # Subtle grace note on designated ornaments (gentle flick, not a scratch)
         if event.ornament == "grace_dip" and note > 2:
             grace_note = note - 2
-            grace_dur = min(40, duration_ticks // 4)
-            melody_track.append(Message('note_on', channel=chan_m, note=grace_note, velocity=max(45, vel - 15), time=pending_delta))
+            grace_dur = min(35, duration_ticks // 5)
+            melody_track.append(Message('note_on', channel=chan_m, note=grace_note, velocity=max(45, vel - 18), time=pending_delta))
             melody_track.append(Message('note_off', channel=chan_m, note=grace_note, velocity=vel, time=grace_dur))
             duration_ticks = max(10, duration_ticks - grace_dur)
             pending_delta = 0
         elif event.ornament == "grace_lift" and note < 125:
             grace_note = note + 2
-            grace_dur = min(40, duration_ticks // 4)
-            melody_track.append(Message('note_on', channel=chan_m, note=grace_note, velocity=max(45, vel - 15), time=pending_delta))
+            grace_dur = min(35, duration_ticks // 5)
+            melody_track.append(Message('note_on', channel=chan_m, note=grace_note, velocity=max(45, vel - 18), time=pending_delta))
             melody_track.append(Message('note_off', channel=chan_m, note=grace_note, velocity=vel, time=grace_dur))
             duration_ticks = max(10, duration_ticks - grace_dur)
             pending_delta = 0
-        elif event.ornament == "scoop":
-            # Pitch bend scoop: start -1200 units (~1 semitone down) and glide up
-            melody_track.append(Message('pitchwheel', channel=chan_m, pitch=-1500, time=pending_delta))
-            pending_delta = 0
 
-        # Note On
+        # Main Note On
         melody_track.append(Message('note_on', channel=chan_m, note=note, velocity=vel, time=pending_delta))
         pending_delta = 0
 
-        # If sustained note (> 1 beat), introduce expressive breath swells (CC11) and delayed vibrato (CC1)
+        # If sustained note (> 1 beat), introduce gentle organic breath swell and subtle delayed vibrato
         if duration_ticks >= ticks_per_beat:
-            step1 = duration_ticks // 3
-            step2 = duration_ticks // 3
-            step3 = duration_ticks - (step1 + step2)
+            t_swell = duration_ticks // 3
+            t_vib = duration_ticks // 3
+            t_release = duration_ticks - (t_swell + t_vib)
 
-            # Pitch scoop recovery
-            if event.ornament == "scoop":
-                melody_track.append(Message('pitchwheel', channel=chan_m, pitch=0, time=step1 // 2))
-                melody_track.append(Message('control_change', channel=chan_m, control=11, value=min(120, int(vel * 1.15)), time=step1 - (step1 // 2)))
-            else:
-                # Breath swell
-                melody_track.append(Message('control_change', channel=chan_m, control=11, value=min(120, int(vel * 1.15)), time=step1))
+            # Breath dynamic swell
+            melody_track.append(Message('control_change', channel=chan_m, control=11, value=min(110, int(vel * 1.10)), time=t_swell))
 
-            # Delayed vibrato bloom
-            vib_val = int(event.vibrato_depth * 65)
-            melody_track.append(Message('control_change', channel=chan_m, control=1, value=vib_val, time=step2))
+            # Natural delayed vibrato (tasteful depth ~35-45)
+            vib_val = int(event.vibrato_depth * 45)
+            melody_track.append(Message('control_change', channel=chan_m, control=1, value=vib_val, time=t_vib))
 
-            # Soft release taper
-            melody_track.append(Message('control_change', channel=chan_m, control=11, value=max(50, int(vel * 0.75)), time=step3))
+            # Soft release
+            melody_track.append(Message('control_change', channel=chan_m, control=11, value=max(55, int(vel * 0.80)), time=t_release))
             melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=0))
             melody_track.append(Message('control_change', channel=chan_m, control=1, value=0, time=0))
-            melody_track.append(Message('pitchwheel', channel=chan_m, pitch=0, time=0))
         else:
-            if event.ornament == "scoop":
-                half_t = duration_ticks // 2
-                melody_track.append(Message('pitchwheel', channel=chan_m, pitch=0, time=half_t))
-                melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=duration_ticks - half_t))
-            else:
-                melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=duration_ticks))
+            melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=duration_ticks))
 
     # -------------------------------------------------------------
     # Track 2: Drone 1 - Root Resonator (Channel 1)
@@ -170,22 +155,22 @@ def create_flute_midi(
     chan_d1 = 1
     drone1_track.append(Message('program_change', channel=chan_d1, program=73, time=0))
     drone1_track.append(Message('control_change', channel=chan_d1, control=10, value=38, time=0))  # Left pan
-    drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=85, time=0))  # Deep Reverb
-    drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=75, time=0))
+    drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=80, time=0))  # Reverb
+    drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=70, time=0))
 
     drone1_midi = int(round(dims.root_midi + dims.scale_intervals[0]))
     total_piece_ticks = sum(int(round(e.duration_beats * ticks_per_beat)) for e in melody_events)
 
     drone1_track.append(Message('note_on', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=0))
 
-    # Undulating subtle breath wave on drone
-    num_cycles = max(1, int(total_piece_ticks / (ticks_per_beat * 2)))
+    # Slow, calming breath swell on drone
+    num_cycles = max(1, int(total_piece_ticks / (ticks_per_beat * 3)))
     cycle_ticks = total_piece_ticks // (num_cycles * 2) if num_cycles > 0 else total_piece_ticks
     curr_drone1_ticks = 0
     for _ in range(num_cycles):
         if curr_drone1_ticks + cycle_ticks * 2 <= total_piece_ticks:
-            drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=82, time=cycle_ticks))
-            drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=68, time=cycle_ticks))
+            drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=76, time=cycle_ticks))
+            drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=65, time=cycle_ticks))
             curr_drone1_ticks += cycle_ticks * 2
 
     remaining_d1 = max(0, total_piece_ticks - curr_drone1_ticks)
@@ -201,17 +186,17 @@ def create_flute_midi(
     chan_d2 = 2
     drone2_track.append(Message('program_change', channel=chan_d2, program=73, time=0))
     drone2_track.append(Message('control_change', channel=chan_d2, control=10, value=90, time=0))  # Right pan
-    drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=85, time=0))  # Deep Reverb
-    drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=65, time=0))
+    drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=80, time=0))  # Reverb
+    drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=60, time=0))
 
     drone2_midi = int(round(69 + 12 * math.log2(dims.drone2_frequency / 440.0)))
-    drone2_track.append(Message('note_on', channel=chan_d2, note=drone2_midi, velocity=max(45, drone_velocity - 6), time=0))
+    drone2_track.append(Message('note_on', channel=chan_d2, note=drone2_midi, velocity=max(40, drone_velocity - 8), time=0))
 
     curr_drone2_ticks = 0
     for _ in range(num_cycles):
         if curr_drone2_ticks + cycle_ticks * 2 <= total_piece_ticks:
-            drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=62, time=cycle_ticks))
-            drone2_track.append(Message('control_change', channel=chan_d2, control=76, time=cycle_ticks))
+            drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=58, time=cycle_ticks))
+            drone2_track.append(Message('control_change', channel=chan_d2, control=68, time=cycle_ticks))
             curr_drone2_ticks += cycle_ticks * 2
 
     remaining_d2 = max(0, total_piece_ticks - curr_drone2_ticks)
@@ -248,7 +233,7 @@ def synthesize_fallback_wav(
     sample_rate: int = 44100,
     bpm: int = 96,
 ) -> Path:
-    """Rich stereo harmonic audio synthesizer with breath chuff noise, delayed LFO vibrato, and dynamic envelopes."""
+    """Natural, smooth stereo harmonic synthesizer with phase-continuous oscillator, subtle air texture, and warm resonance."""
     seconds_per_beat = 60.0 / bpm
     total_beats = sum(e.duration_beats for e in melody_events)
     total_duration = total_beats * seconds_per_beat + 1.2
@@ -258,86 +243,87 @@ def synthesize_fallback_wav(
     drone2_f = dims.drone2_frequency
 
     # Parse note intervals
-    note_intervals: List[Tuple[float, float, Optional[float], float, str]] = []
+    note_intervals: List[Tuple[float, float, Optional[float], float, Optional[str]]] = []
     curr_time = 0.0
     for e in melody_events:
         dur = e.duration_beats * seconds_per_beat
         note_f = midi_to_freq(e.midi_note) if e.midi_note is not None else None
-        ornament = e.ornament or "normal"
-        note_intervals.append((curr_time, curr_time + dur, note_f, e.velocity / 127.0, ornament))
+        note_intervals.append((curr_time, curr_time + dur, note_f, e.velocity / 127.0, e.ornament))
         curr_time += dur
 
     rng = random.Random(42)
-
     frames = []
 
-    for i in range(total_samples):
-        t = float(i) / sample_rate
+    # Continuous phase state variables (prevents any phase acceleration / turntable artifacts)
+    drone1_phase = 0.0
+    drone2_phase = 0.0
+    melody_phase = 0.0
 
-        # 1. Drones (Stereo Panned with slow breath movement)
-        drone_swell1 = 0.5 + 0.15 * math.sin(2 * math.pi * 0.25 * t)
-        drone_swell2 = 0.5 + 0.15 * math.sin(2 * math.pi * 0.25 * t + math.pi / 2)
-        drone_global_env = min(1.0, t * 4.0, max(0.0, (total_duration - t) * 2.5))
+    two_pi = 2.0 * math.pi
+    dt = 1.0 / sample_rate
+
+    for i in range(total_samples):
+        t = float(i) * dt
+
+        # 1. Drones Synthesis (Phase continuous, gentle breathing dynamics)
+        drone1_phase += two_pi * drone1_f * dt
+        drone2_phase += two_pi * drone2_f * dt
+
+        drone_swell1 = 0.5 + 0.10 * math.sin(two_pi * 0.20 * t)
+        drone_swell2 = 0.5 + 0.10 * math.sin(two_pi * 0.20 * t + 1.5)
+        drone_global_env = min(1.0, t * 3.0, max(0.0, (total_duration - t) * 2.0))
 
         d1 = (
-            math.sin(2 * math.pi * drone1_f * t)
-            + 0.22 * math.sin(2 * math.pi * 2 * drone1_f * t)
-            + 0.08 * math.sin(2 * math.pi * 3 * drone1_f * t)
+            math.sin(drone1_phase)
+            + 0.20 * math.sin(2.0 * drone1_phase)
+            + 0.06 * math.sin(3.0 * drone1_phase)
         ) * 0.18 * drone_swell1 * drone_global_env
 
         d2 = (
-            math.sin(2 * math.pi * drone2_f * t)
-            + 0.18 * math.sin(2 * math.pi * 2 * drone2_f * t)
-            + 0.06 * math.sin(2 * math.pi * 3 * drone2_f * t)
+            math.sin(drone2_phase)
+            + 0.16 * math.sin(2.0 * drone2_phase)
+            + 0.05 * math.sin(3.0 * drone2_phase)
         ) * 0.15 * drone_swell2 * drone_global_env
 
-        # 2. Solo Flute Melody (with pitch scoop, delayed vibrato & breath noise)
+        # 2. Solo Flute Melody (True phase accumulation with subtle ~5 cents delayed vibrato)
         melody_sample = 0.0
         for start_t, end_t, note_f, vel, ornament in note_intervals:
             if start_t <= t < end_t and note_f is not None:
                 elapsed = t - start_t
                 note_dur = end_t - start_t
 
-                # Delayed vocal vibrato: LFO begins at 0.3s
-                vib_amount = min(1.0, max(0.0, (elapsed - 0.28) / 0.45)) * 0.015
-                vib_freq = note_f * (1.0 + vib_amount * math.sin(2 * math.pi * 5.6 * elapsed))
+                # Subtle, delicate vibrato (only develops after 0.35s, max ~4 cents)
+                vib_amount = min(1.0, max(0.0, (elapsed - 0.35) / 0.45)) * 0.003
+                target_f = note_f * (1.0 + vib_amount * math.sin(two_pi * 5.2 * elapsed))
 
-                # Pitch scoop on attack
-                if ornament == "scoop" and elapsed < 0.10:
-                    scoop_ratio = 1.0 - (0.06 * (1.0 - (elapsed / 0.10)))
-                    vib_freq *= scoop_ratio
+                # Phase accumulation
+                melody_phase += two_pi * target_f * dt
 
-                # ADSR Envelope with breath swell
-                attack = min(1.0, elapsed / 0.045)
-                release = min(1.0, (note_dur - elapsed) / 0.04)
-                swell = 1.0 + 0.15 * math.sin(math.pi * (elapsed / max(0.01, note_dur)))
+                # Smooth natural ADSR envelope
+                attack = min(1.0, elapsed / 0.04)
+                release = min(1.0, (note_dur - elapsed) / 0.035)
+                swell = 1.0 + 0.10 * math.sin(math.pi * (elapsed / max(0.01, note_dur)))
                 env = attack * release * swell * vel
 
-                # Flute body resonance + breath turbulence
-                harmonic_1 = math.sin(2 * math.pi * vib_freq * elapsed)
-                harmonic_2 = 0.28 * math.sin(2 * math.pi * 2 * vib_freq * elapsed)
-                harmonic_3 = 0.10 * math.sin(2 * math.pi * 3 * vib_freq * elapsed)
+                # Acoustic harmonics
+                harmonic_1 = math.sin(melody_phase)
+                harmonic_2 = 0.24 * math.sin(2.0 * melody_phase)
+                harmonic_3 = 0.07 * math.sin(3.0 * melody_phase)
 
-                # Breath turbulence noise (fipple air whisper)
-                air_chuff = (rng.random() * 2.0 - 1.0) * 0.035 * math.exp(-elapsed * 12.0)
+                # Delicate fipple air breath chuff (only on initial attack)
+                air_chuff = (rng.random() * 2.0 - 1.0) * 0.02 * math.exp(-elapsed * 18.0)
 
-                flute_voice = (harmonic_1 + harmonic_2 + harmonic_3 + air_chuff) * 0.38 * env
-                melody_sample = flute_voice
+                melody_sample = (harmonic_1 + harmonic_2 + harmonic_3 + air_chuff) * 0.42 * env
                 break
 
         # Stereo mixing (16-bit stereo PCM)
-        # Left channel: Drone 1 (70%) + Drone 2 (30%) + Melody (50%)
         left_mix = d1 * 0.70 + d2 * 0.30 + melody_sample * 0.50
-        # Right channel: Drone 1 (30%) + Drone 2 (70%) + Melody (50%)
         right_mix = d1 * 0.30 + d2 * 0.70 + melody_sample * 0.50
 
         left_clamped = max(-1.0, min(1.0, left_mix))
         right_clamped = max(-1.0, min(1.0, right_mix))
 
-        left_i = int(left_clamped * 32767.0)
-        right_i = int(right_clamped * 32767.0)
-
-        frames.append(struct.pack('<hh', left_i, right_i))
+        frames.append(struct.pack('<hh', int(left_clamped * 32767.0), int(right_clamped * 32767.0)))
 
     out_wav = Path(wav_path)
     out_wav.parent.mkdir(parents=True, exist_ok=True)

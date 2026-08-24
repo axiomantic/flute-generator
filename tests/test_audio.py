@@ -53,10 +53,6 @@ class TestMidiSequencing:
             assert 91 in cc_numbers  # Reverb send
             assert 10 in cc_numbers  # Pan
 
-            # Check pitchwheel events (pitch scoops)
-            pitch_msgs = [m for m in melody_track if m.type == 'pitchwheel']
-            assert len(pitch_msgs) > 0
-
     def test_drone_tracks_have_stereo_separation_and_independent_channels(self):
         """Drone 1 and Drone 2 must be on separate channels with distinct stereo panning."""
         dims = calculate_flute_geometry(root_midi=69, drone1_offset=0, drone2_offset=7)
