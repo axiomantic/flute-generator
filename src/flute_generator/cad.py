@@ -179,31 +179,31 @@ module fipple_sound_windows() {{
 }}
 
 module converging_windways() {{
-    // Melody Windway (Straight Center)
+    // Melody Windway (Center: angles to center of mouthpiece tip at Y=0)
     w_wm = bore_melody * {WINDWAY_WIDTH_RATIO:.2f};
     hull() {{
         translate([-w_wm/2, bore_melody/2 - w_h, fipple_z + win_len - 0.2])
             cube([w_wm, w_h, 1]);
-        translate([-w_wm/2, tip_d/2 - w_h - 1.0, total_L - 0.5])
-            cube([w_wm, w_h, 1]);
+        translate([-w_wm/2, -w_h/2, total_L - 0.1])
+            cube([w_wm, w_h, 1.2]);
     }}
 
-    // Drone 1 Windway (Left: angles inward from -spacing to -tip_spacing)
+    // Drone 1 Windway (Left: angles inward from -spacing to -tip_spacing, centered at Y=0)
     w_w1 = bore_drone1 * {WINDWAY_WIDTH_RATIO:.2f};
     hull() {{
         translate([-spacing - w_w1/2, bore_drone1/2 - w_h, fipple_z + win_len - 0.2])
             cube([w_w1, w_h, 1]);
-        translate([-tip_spacing - w_w1/2, tip_d/2 - w_h - 1.0, total_L - 0.5])
-            cube([w_w1, w_h, 1]);
+        translate([-tip_spacing - w_w1/2, -w_h/2, total_L - 0.1])
+            cube([w_w1, w_h, 1.2]);
     }}
 
-    // Drone 2 Windway (Right: angles inward from +spacing to +tip_spacing)
+    // Drone 2 Windway (Right: angles inward from +spacing to +tip_spacing, centered at Y=0)
     w_w2 = bore_drone2 * {WINDWAY_WIDTH_RATIO:.2f};
     hull() {{
         translate([spacing - w_w2/2, bore_drone2/2 - w_h, fipple_z + win_len - 0.2])
             cube([w_w2, w_h, 1]);
-        translate([tip_spacing - w_w2/2, tip_d/2 - w_h - 1.0, total_L - 0.5])
-            cube([w_w2, w_h, 1]);
+        translate([tip_spacing - w_w2/2, -w_h/2, total_L - 0.1])
+            cube([w_w2, w_h, 1.2]);
     }}
 }}
 
