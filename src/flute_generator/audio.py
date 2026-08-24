@@ -31,9 +31,27 @@ class DelayLine:
         delay = max(1.0, min(self.max_length - 2.0, delay))
         int_delay = int(delay)
         frac = delay - int_delay
-        idx1 = (self.write_ptr - 1 - int_delay) % self.max_length
-        idx2 = (idx1 - 1) % self.max_length
+        idx1 = (self.write_ptr - 1 - int_delay + self.max_length) % self.max_length
+        idx2 = (idx1 - 1 + self.max_length) % self.max_length
         return (1.0 - frac) * self.buffer[idx1] + frac * self.buffer[idx2]
+
+
+class OnePoleLowpass:
+    """1-pole lowpass filter for mode locking and viscous reflection loss."""
+    __slots__ = ('alpha', 'state')
+
+    def __init__(self, cutoff_freq: float = 1400.0, sample_rate: int = 44100):
+        costh = 2.0 - math.cos(2.0 * math.pi * cutoff_freq / sample_rate)
+        self.alpha = costh - math.sqrt(max(0.0, costh * costh - 1.0))
+        self.state = 0.0
+
+    def set_cutoff(self, cutoff_freq: float, sample_rate: int = 44100):
+        costh = 2.0 - math.cos(2.0 * math.pi * min(sample_rate * 0.45, cutoff_freq) / sample_rate)
+        self.alpha = costh - math.sqrt(max(0.0, costh * costh - 1.0))
+
+    def tick(self, x: float) -> float:
+        self.state = (1.0 - self.alpha) * x + self.alpha * self.state
+        return self.state
 
 
 class CombFilter:
@@ -112,54 +130,67 @@ class StereoFreeverb:
 
 
 class PhysicalWaveguidePipe:
-    """1D Digital Waveguide Acoustic Resonator with nonlinear vortex jet-drive."""
+    """1D Digital Waveguide Acoustic Flute Resonator with nonlinear labium jet excitation."""
     def __init__(self, sample_rate: int = 44100):
         self.sr = sample_rate
         self.bore_delay = DelayLine(int(sample_rate * 0.1))
         self.jet_delay = DelayLine(int(sample_rate * 0.05))
-        self.filter_state = 0.0
+        self.lp_filter = OnePoleLowpass(1400.0, sample_rate)
         self.dc_x = 0.0
         self.dc_y = 0.0
-        self.curr_delay = sample_rate / 440.0
-        self.target_delay = self.curr_delay
+        self.noise_state = 0.0
+        self.jet_ratio = 0.42
+        
+        self.target_freq = 440.0
+        self.curr_freq = 440.0
 
     def set_frequency(self, freq: float):
         if freq > 20.0:
-            self.target_delay = self.sr / freq
+            self.target_freq = freq
+            self.lp_filter.set_cutoff(min(self.sr * 0.45, freq * 2.8), self.sr)
 
-    def process(self, breath_pressure: float, noise_gain: float = 0.03, rng: Optional[random.Random] = None) -> float:
-        # Smooth portamento between target delays
-        self.curr_delay += (self.target_delay - self.curr_delay) * 0.015
+    def process(self, breath_pressure: float, noise_gain: float = 0.005, rng: Optional[random.Random] = None) -> float:
+        if breath_pressure <= 0.0001:
+            self.lp_filter.state *= 0.95
+            return 0.0
 
-        # 1. Breath pressure with aeroacoustic vorticity turbulence
-        noise = (rng.random() * 2.0 - 1.0) if rng else 0.0
-        p_in = breath_pressure + noise * noise_gain * math.sqrt(max(0.0, breath_pressure))
+        # Slew fundamental frequency smoothly
+        self.curr_freq += (self.target_freq - self.curr_freq) * 0.02
+        
+        # Calibrated delay loop
+        d_loop = (self.sr / self.curr_freq) * 0.5956
+        d_bore = max(2.0, d_loop * 0.70)
+        d_jet = max(2.0, d_loop * 0.30)
 
-        # 2. Bore feedback reflection with loss filter
-        bore_refl = self.bore_delay.read_fractional(self.curr_delay)
-        self.filter_state = self.filter_state * 0.30 + bore_refl * 0.70
-        bore_sig = self.filter_state
+        # 1. Warm pink breath turbulence
+        raw_n = (rng.random() * 2.0 - 1.0) if rng else 0.0
+        self.noise_state = self.noise_state * 0.90 + raw_n * 0.10
+        p_jet = breath_pressure + self.noise_state * noise_gain * math.sqrt(breath_pressure)
 
-        # 3. Jet delay (transit time across fipple sound window)
-        jet_delay_len = max(2.0, min(self.curr_delay * 0.40, self.curr_delay - 2.0))
-        jet_in = p_in + 0.35 * bore_sig
-        self.jet_delay.write(jet_in)
-        jet_out = self.jet_delay.read_fractional(jet_delay_len)
+        # 2. Read acoustic reflection from open end with fractional interpolation
+        bore_out = self.bore_delay.read_fractional(d_bore)
 
-        # 4. Symmetrical nonlinear vortex saturation at the labium blade
-        jet_dc = math.tanh(p_in - p_in**3) if p_in > 0 else 0.0
-        vortex_drive = math.tanh(jet_out - jet_out**3) - jet_dc
+        # Viscous reflection filter with open-end phase inversion (-0.98)
+        p_acoustic = -0.98 * self.lp_filter.tick(bore_out)
 
-        # 5. Acoustic injection back into resonator tube with open boundary phase inversion (-1)
-        inj = - (vortex_drive * 0.65 + bore_sig * 0.60)
-        self.bore_delay.write(inj)
+        # 3. Labium jet displacement
+        jet_disp = (p_acoustic + self.noise_state * noise_gain * 0.2) / (p_jet + 0.1)
+        self.jet_delay.write(jet_disp)
+        delayed_disp = self.jet_delay.read_fractional(d_jet)
+
+        # 4. Nonlinear volume injection at splitting edge
+        q_inj = p_jet * math.tanh((delayed_disp + 0.15) * 2.2) - p_jet * math.tanh(0.15 * 2.2)
+
+        # 5. Resonator excitation
+        bore_in = p_acoustic + q_inj * 0.65
+        self.bore_delay.write(bore_in)
 
         # 6. DC Blocker
-        dc_out = bore_sig - self.dc_x + 0.995 * self.dc_y
-        self.dc_x = bore_sig
+        dc_out = bore_in - self.dc_x + 0.995 * self.dc_y
+        self.dc_x = bore_in
         self.dc_y = dc_out
 
-        return dc_out * 1.5
+        return dc_out * 0.65
 
 
 def create_flute_midi(
@@ -287,7 +318,7 @@ def synthesize_flute_audio(
     reverb_wet: float = 0.32,
     reverb_dry: float = 0.85,
 ) -> Path:
-    """Synthesize authentic acoustic audio preview using physical waveguide modeling with stereo reverb."""
+    """Synthesize authentic acoustic audio preview using calibrated physical waveguide modeling."""
     seconds_per_beat = 60.0 / bpm
     total_beats = sum(e.duration_beats for e in melody_events)
     total_dur = total_beats * seconds_per_beat + 1.2
@@ -314,10 +345,9 @@ def synthesize_flute_audio(
     frames = []
     dt = 1.0 / sample_rate
 
-    # Aerodynamic drone pressure scaling based on CAD drone_air_ratio
     drone_p1 = (0.65 + 0.15 * dims.drone_air_ratio)
     drone_p2 = (0.60 + 0.15 * dims.drone_air_ratio)
-    noise_drone = 0.045 if dims.windway_texture == "ribbed" else 0.025
+    noise_drone = 0.008 if dims.windway_texture == "ribbed" else 0.004
 
     for i in range(total_samples):
         t = float(i) * dt
@@ -337,9 +367,9 @@ def synthesize_flute_audio(
             else:
                 vib = 1.0
             melody_pipe.set_frequency(active_f * vib)
-            att = min(1.0, elapsed / 0.015)
-            rel = min(1.0, (dur - elapsed) / 0.015)
-            breath_m = (0.65 + vel * 0.25) * att * rel
+            att = min(1.0, elapsed / 0.03)
+            rel = min(1.0, (dur - elapsed) / 0.03)
+            breath_m = (0.65 + vel * 0.20) * att * rel
         else:
             breath_m = 0.0
 
@@ -347,7 +377,7 @@ def synthesize_flute_audio(
         breath_d1 = drone_p1 * global_env
         breath_d2 = drone_p2 * global_env
 
-        s_m = melody_pipe.process(breath_m, noise_gain=0.035, rng=rng)
+        s_m = melody_pipe.process(breath_m, noise_gain=0.005, rng=rng)
         s_d1 = drone1_pipe.process(breath_d1, noise_gain=noise_drone, rng=rng)
         s_d2 = drone2_pipe.process(breath_d2, noise_gain=noise_drone, rng=rng)
 
