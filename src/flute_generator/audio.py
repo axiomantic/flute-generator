@@ -87,7 +87,7 @@ def create_flute_midi(
     melody_track.append(MetaMessage('track_name', name='Flute Melody', time=0))
 
     chan_m = 0
-    melody_track.append(Message('program_change', channel=chan_m, program=73, time=0))
+    melody_track.append(Message('program_change', channel=chan_m, program=0, time=0))
     melody_track.append(Message('control_change', channel=chan_m, control=10, value=64, time=0))  # Center Pan
     melody_track.append(Message('control_change', channel=chan_m, control=91, value=70, time=0))  # Natural Reverb
     melody_track.append(Message('control_change', channel=chan_m, control=11, value=85, time=0))  # Expression
@@ -154,7 +154,7 @@ def create_flute_midi(
     drone1_track.append(MetaMessage('track_name', name='Drone 1 (Root)', time=0))
 
     chan_d1 = 1
-    drone1_track.append(Message('program_change', channel=chan_d1, program=73, time=0))
+    drone1_track.append(Message('program_change', channel=chan_d1, program=0, time=0))
     drone1_track.append(Message('control_change', channel=chan_d1, control=10, value=38, time=0))  # Left pan
     drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=80, time=0))  # Reverb
     drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=70, time=0))
@@ -185,7 +185,7 @@ def create_flute_midi(
     drone2_track.append(MetaMessage('track_name', name='Drone 2 (Harmonic)', time=0))
 
     chan_d2 = 2
-    drone2_track.append(Message('program_change', channel=chan_d2, program=73, time=0))
+    drone2_track.append(Message('program_change', channel=chan_d2, program=0, time=0))
     drone2_track.append(Message('control_change', channel=chan_d2, control=10, value=90, time=0))  # Right pan
     drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=80, time=0))  # Reverb
     drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=60, time=0))
@@ -226,14 +226,13 @@ def render_soundfont_wav(
     # Modern FluidSynth requires options (-F, -r, -g) to precede positional soundfont/midi paths.
     cmd = [
         fluidsynth_bin,
-        "-ni",                                # Non-interactive, no shell
-        "-q",                                 # Quiet mode
-        "-g", "1.2",                          # Gain
-        "-r", str(sample_rate),               # Sample rate
-        "-o", "synth.drums-channel.active=0", # Disable GM drum channel warning
-        "-F", str(out_file),                  # Output audio file (must be before positional args)
-        str(sf2_path),                        # Soundfont file
-        str(midi_path),                       # MIDI input file
+        "-ni",                  # Non-interactive, no shell
+        "-q",                   # Quiet mode
+        "-g", "1.2",            # Gain
+        "-r", str(sample_rate), # Sample rate
+        "-F", str(out_file),    # Output audio file (must be before positional args)
+        str(sf2_path),          # Soundfont file (.sf2)
+        str(midi_path),         # MIDI input file (.mid)
     ]
 
     try:

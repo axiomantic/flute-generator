@@ -43,7 +43,7 @@ class TestMidiSequencing:
             melody_track = mid.tracks[1]
             program_msgs = [m for m in melody_track if m.type == 'program_change']
             assert len(program_msgs) == 1
-            assert program_msgs[0].program == 73
+            assert program_msgs[0].program == 0
 
             # Check CC1 (vibrato modulation), CC11 (expression breath), CC91 (reverb)
             cc_msgs = [m for m in melody_track if m.type == 'control_change']
