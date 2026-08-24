@@ -40,8 +40,8 @@ class OnePoleLowpass:
     """1-pole lowpass filter for mode locking and viscous reflection loss."""
     __slots__ = ('alpha', 'state')
 
-    def __init__(self, cutoff_freq: float = 1400.0, sample_rate: int = 44100):
-        costh = 2.0 - math.cos(2.0 * math.pi * cutoff_freq / sample_rate)
+    def __init__(self, cutoff_freq: float = 1200.0, sample_rate: int = 44100):
+        costh = 2.0 - math.cos(2.0 * math.pi * min(sample_rate * 0.45, cutoff_freq) / sample_rate)
         self.alpha = costh - math.sqrt(max(0.0, costh * costh - 1.0))
         self.state = 0.0
 
@@ -111,7 +111,7 @@ class StereoFreeverb:
     ) -> Tuple[float, float]:
         feedback = 0.65 + max(0.0, min(1.0, room_size)) * 0.25
         damp = max(0.0, min(1.0, damping))
-        in_mono = (in_l + in_r) * 0.012
+        in_mono = (in_l + in_r) * 0.010
 
         out_l = sum(c.process(in_mono, feedback, damp) for c in self.combs_l)
         out_r = sum(c.process(in_mono, feedback, damp) for c in self.combs_r)
@@ -130,16 +130,15 @@ class StereoFreeverb:
 
 
 class PhysicalWaveguidePipe:
-    """1D Digital Waveguide Acoustic Flute Resonator with nonlinear labium jet excitation."""
+    """1D Digital Waveguide Acoustic Flute Resonator with smooth cubic/tanh labium jet excitation."""
     def __init__(self, sample_rate: int = 44100):
         self.sr = sample_rate
         self.bore_delay = DelayLine(int(sample_rate * 0.1))
         self.jet_delay = DelayLine(int(sample_rate * 0.05))
-        self.lp_filter = OnePoleLowpass(1400.0, sample_rate)
+        self.lp_filter = OnePoleLowpass(1200.0, sample_rate)
         self.dc_x = 0.0
         self.dc_y = 0.0
         self.noise_state = 0.0
-        self.jet_ratio = 0.42
         
         self.target_freq = 440.0
         self.curr_freq = 440.0
@@ -147,50 +146,50 @@ class PhysicalWaveguidePipe:
     def set_frequency(self, freq: float):
         if freq > 20.0:
             self.target_freq = freq
-            self.lp_filter.set_cutoff(min(self.sr * 0.45, freq * 2.8), self.sr)
+            self.lp_filter.set_cutoff(freq * 2.5, self.sr)
 
-    def process(self, breath_pressure: float, noise_gain: float = 0.005, rng: Optional[random.Random] = None) -> float:
+    def process(self, breath_pressure: float, noise_gain: float = 0.003, rng: Optional[random.Random] = None) -> float:
         if breath_pressure <= 0.0001:
             self.lp_filter.state *= 0.95
             return 0.0
 
-        # Slew fundamental frequency smoothly
+        # Smooth fundamental frequency slew
         self.curr_freq += (self.target_freq - self.curr_freq) * 0.02
         
-        # Calibrated delay loop
+        # Calibrated acoustic delay matching
         d_loop = (self.sr / self.curr_freq) * 0.5956
         d_bore = max(2.0, d_loop * 0.70)
         d_jet = max(2.0, d_loop * 0.30)
 
-        # 1. Warm pink breath turbulence
+        # 1. Warm, gentle pink breath turbulence
         raw_n = (rng.random() * 2.0 - 1.0) if rng else 0.0
-        self.noise_state = self.noise_state * 0.90 + raw_n * 0.10
+        self.noise_state = self.noise_state * 0.92 + raw_n * 0.08
         p_jet = breath_pressure + self.noise_state * noise_gain * math.sqrt(breath_pressure)
 
         # 2. Read acoustic reflection from open end with fractional interpolation
         bore_out = self.bore_delay.read_fractional(d_bore)
 
-        # Viscous reflection filter with open-end phase inversion (-0.98)
-        p_acoustic = -0.98 * self.lp_filter.tick(bore_out)
+        # Viscous boundary reflection with lowpass damping & open-end phase inversion (-0.97)
+        p_acoustic = -0.97 * self.lp_filter.tick(bore_out)
 
         # 3. Labium jet displacement
-        jet_disp = (p_acoustic + self.noise_state * noise_gain * 0.2) / (p_jet + 0.1)
+        jet_disp = p_acoustic * 0.65 + self.noise_state * noise_gain * 0.15
         self.jet_delay.write(jet_disp)
         delayed_disp = self.jet_delay.read_fractional(d_jet)
 
-        # 4. Nonlinear volume injection at splitting edge
-        q_inj = p_jet * math.tanh((delayed_disp + 0.15) * 2.2) - p_jet * math.tanh(0.15 * 2.2)
+        # 4. Gentle sigmoid vortex injection with smooth asymmetry
+        q_inj = p_jet * math.tanh((delayed_disp + 0.08) * 1.8) - p_jet * math.tanh(0.08 * 1.8)
 
         # 5. Resonator excitation
-        bore_in = p_acoustic + q_inj * 0.65
+        bore_in = p_acoustic + q_inj * 0.52
         self.bore_delay.write(bore_in)
 
-        # 6. DC Blocker
+        # 6. Radiated acoustic output with DC blocker
         dc_out = bore_in - self.dc_x + 0.995 * self.dc_y
         self.dc_x = bore_in
         self.dc_y = dc_out
 
-        return dc_out * 0.65
+        return dc_out * 0.38
 
 
 def create_flute_midi(
@@ -205,21 +204,19 @@ def create_flute_midi(
     ticks_per_beat = mid.ticks_per_beat  # 480
     tempo_us = mido.bpm2tempo(bpm)
 
-    # Track 0: Conductor
     conductor_track = MidiTrack()
     mid.tracks.append(conductor_track)
     conductor_track.append(MetaMessage('set_tempo', tempo=tempo_us, time=0))
     conductor_track.append(MetaMessage('track_name', name='Conductor', time=0))
 
-    # Track 1: Melody Pipe (Channel 0)
     melody_track = MidiTrack()
     mid.tracks.append(melody_track)
     melody_track.append(MetaMessage('track_name', name='Melody Pipe', time=0))
 
     chan_m = 0
-    melody_track.append(Message('program_change', channel=chan_m, program=73, time=0))  # Flute
-    melody_track.append(Message('control_change', channel=chan_m, control=10, value=64, time=0))  # Center Pan
-    melody_track.append(Message('control_change', channel=chan_m, control=91, value=65, time=0))  # Reverb
+    melody_track.append(Message('program_change', channel=chan_m, program=73, time=0))
+    melody_track.append(Message('control_change', channel=chan_m, control=10, value=64, time=0))
+    melody_track.append(Message('control_change', channel=chan_m, control=91, value=65, time=0))
     melody_track.append(Message('control_change', channel=chan_m, control=11, value=90, time=0))
 
     pending_delta = 0
@@ -269,15 +266,14 @@ def create_flute_midi(
         else:
             melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=duration_ticks))
 
-    # Track 2: Drone 1 Pipe (Channel 1)
     drone1_track = MidiTrack()
     mid.tracks.append(drone1_track)
     drone1_track.append(MetaMessage('track_name', name='Drone 1 (Root)', time=0))
 
     chan_d1 = 1
     drone1_track.append(Message('program_change', channel=chan_d1, program=73, time=0))
-    drone1_track.append(Message('control_change', channel=chan_d1, control=10, value=38, time=0))  # Left pan
-    drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=75, time=0))  # Reverb
+    drone1_track.append(Message('control_change', channel=chan_d1, control=10, value=38, time=0))
+    drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=75, time=0))
     drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=76, time=0))
 
     drone1_midi = int(round(dims.root_midi + dims.scale_intervals[0]))
@@ -286,15 +282,14 @@ def create_flute_midi(
     drone1_track.append(Message('note_on', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=0))
     drone1_track.append(Message('note_off', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=total_piece_ticks))
 
-    # Track 3: Drone 2 Pipe (Channel 2)
     drone2_track = MidiTrack()
     mid.tracks.append(drone2_track)
     drone2_track.append(MetaMessage('track_name', name='Drone 2 (Harmonic)', time=0))
 
     chan_d2 = 2
     drone2_track.append(Message('program_change', channel=chan_d2, program=73, time=0))
-    drone2_track.append(Message('control_change', channel=chan_d2, control=10, value=90, time=0))  # Right pan
-    drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=75, time=0))  # Reverb
+    drone2_track.append(Message('control_change', channel=chan_d2, control=10, value=90, time=0))
+    drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=75, time=0))
     drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=68, time=0))
 
     drone2_midi = int(round(69 + 12 * math.log2(dims.drone2_frequency / 440.0)))
@@ -318,7 +313,7 @@ def synthesize_flute_audio(
     reverb_wet: float = 0.32,
     reverb_dry: float = 0.85,
 ) -> Path:
-    """Synthesize authentic acoustic audio preview using calibrated physical waveguide modeling."""
+    """Synthesize authentic, pure acoustic audio preview using calibrated physical waveguide modeling."""
     seconds_per_beat = 60.0 / bpm
     total_beats = sum(e.duration_beats for e in melody_events)
     total_dur = total_beats * seconds_per_beat + 1.2
@@ -345,9 +340,9 @@ def synthesize_flute_audio(
     frames = []
     dt = 1.0 / sample_rate
 
-    drone_p1 = (0.65 + 0.15 * dims.drone_air_ratio)
-    drone_p2 = (0.60 + 0.15 * dims.drone_air_ratio)
-    noise_drone = 0.008 if dims.windway_texture == "ribbed" else 0.004
+    drone_p1 = (0.55 + 0.15 * dims.drone_air_ratio)
+    drone_p2 = (0.50 + 0.15 * dims.drone_air_ratio)
+    noise_drone = 0.005 if dims.windway_texture == "ribbed" else 0.0025
 
     for i in range(total_samples):
         t = float(i) * dt
@@ -362,14 +357,14 @@ def synthesize_flute_audio(
                 break
 
         if active_f is not None:
-            if dur > 0.6 and elapsed > dur * 0.5:
-                vib = 1.0 + 0.0035 * math.sin(2.0 * math.pi * 5.2 * elapsed)
+            if dur > 0.6 and elapsed > dur * 0.45:
+                vib = 1.0 + 0.0030 * math.sin(2.0 * math.pi * 5.0 * elapsed)
             else:
                 vib = 1.0
             melody_pipe.set_frequency(active_f * vib)
-            att = min(1.0, elapsed / 0.03)
-            rel = min(1.0, (dur - elapsed) / 0.03)
-            breath_m = (0.65 + vel * 0.20) * att * rel
+            att = min(1.0, elapsed / 0.04)
+            rel = min(1.0, (dur - elapsed) / 0.04)
+            breath_m = (0.58 + vel * 0.18) * att * rel
         else:
             breath_m = 0.0
 
@@ -377,12 +372,13 @@ def synthesize_flute_audio(
         breath_d1 = drone_p1 * global_env
         breath_d2 = drone_p2 * global_env
 
-        s_m = melody_pipe.process(breath_m, noise_gain=0.005, rng=rng)
+        s_m = melody_pipe.process(breath_m, noise_gain=0.003, rng=rng)
         s_d1 = drone1_pipe.process(breath_d1, noise_gain=noise_drone, rng=rng)
         s_d2 = drone2_pipe.process(breath_d2, noise_gain=noise_drone, rng=rng)
 
-        dry_l = s_d1 * 0.50 + s_d2 * 0.20 + s_m * 0.65
-        dry_r = s_d1 * 0.20 + s_d2 * 0.50 + s_m * 0.65
+        # Balanced spatial stereo mix
+        dry_l = (s_d1 * 0.40 + s_d2 * 0.18 + s_m * 0.62) * 0.70
+        dry_r = (s_d1 * 0.18 + s_d2 * 0.40 + s_m * 0.62) * 0.70
 
         out_l, out_r = reverb.process(
             dry_l,
@@ -394,8 +390,9 @@ def synthesize_flute_audio(
             width=0.9,
         )
 
-        out_l_c = max(-1.0, min(1.0, out_l))
-        out_r_c = max(-1.0, min(1.0, out_r))
+        # Smooth soft-knee saturation to prevent harsh clipping
+        out_l_c = math.tanh(out_l * 0.85)
+        out_r_c = math.tanh(out_r * 0.85)
         frames.append(struct.pack('<hh', int(out_l_c * 32767.0), int(out_r_c * 32767.0)))
 
     out_wav = Path(wav_path)
