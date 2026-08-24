@@ -553,7 +553,8 @@
           <option value="1.0">1 Bar</option>
         </select>
 
-        <button class="btn-subtle" id="btn-add-note">➕ Add Note</button>
+        <button class="btn-subtle" id="btn-add-note">➕ Note</button>
+        <button class="btn-subtle" id="btn-reset-song" title="Reset melody notes & breath curve to original preset template">↺ Reset</button>
 
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:auto;">
           🎹 Drag note up/down to change hole • Drag right edge (↔) to stretch/overlap • Click row to insert
@@ -572,8 +573,9 @@
       <!-- Live Interactive Breath Intensity Wave Shaper -->
       <div class="shaper-wrapper">
         <div class="shaper-label">
-          <div style="display:flex; align-items:center; gap:4px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
             <span>🌬️ Breath Curve</span>
+            <button id="btn-reset-breath" style="background:none; border:none; color:var(--accent-cyan); font-size:0.65rem; cursor:pointer; padding:0 2px;" title="Reset breath curve to default">↺</button>
           </div>
           <span style="font-size:0.58rem; color:var(--text-muted); font-weight:normal;">Draw / Drag to Shape</span>
         </div>
@@ -1157,6 +1159,51 @@ function applyFlutePreset(key) {
 }
 
 
+
+
+function resetSongAndBreath() {
+  const all = getAllFlutePresets();
+  const selPreset = document.getElementById('sel-flute-preset');
+  const pKey = selPreset ? selPreset.value : 'desert_drone';
+  const p = all[pKey] || DEFAULT_FLUTE_PRESETS.desert_drone;
+
+  if (p && p.breathCurve && Array.isArray(p.breathCurve)) {
+    breathCurvePoints = JSON.parse(JSON.stringify(p.breathCurve));
+  } else {
+    breathCurvePoints = [
+      { t: 0.0, v: 0.65 },
+      { t: 0.25, v: 0.85 },
+      { t: 0.50, v: 0.70 },
+      { t: 0.75, v: 0.90 },
+      { t: 1.0, v: 0.65 }
+    ];
+  }
+
+  regenerateSongForCurrentAcoustics();
+  if (window.renderBreathShaper) window.renderBreathShaper();
+  persistCurrentStudioState();
+}
+
+function resetBreathCurveOnly() {
+  const all = getAllFlutePresets();
+  const selPreset = document.getElementById('sel-flute-preset');
+  const pKey = selPreset ? selPreset.value : 'desert_drone';
+  const p = all[pKey] || DEFAULT_FLUTE_PRESETS.desert_drone;
+
+  if (p && p.breathCurve && Array.isArray(p.breathCurve)) {
+    breathCurvePoints = JSON.parse(JSON.stringify(p.breathCurve));
+  } else {
+    breathCurvePoints = [
+      { t: 0.0, v: 0.65 },
+      { t: 0.25, v: 0.85 },
+      { t: 0.50, v: 0.70 },
+      { t: 0.75, v: 0.90 },
+      { t: 1.0, v: 0.65 }
+    ];
+  }
+  if (window.renderBreathShaper) window.renderBreathShaper();
+  persistCurrentStudioState();
+}
 
 function quantizeScore() {
   scoreNotes.forEach(s => {
@@ -2321,6 +2368,8 @@ window.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('btn-add-note').addEventListener('click', addNote);
+document.getElementById('btn-reset-song').addEventListener('click', resetSongAndBreath);
+document.getElementById('btn-reset-breath').addEventListener('click', resetBreathCurveOnly);
 document.getElementById('sel-roll-bars').addEventListener('change', () => { renderPianoRoll(); });
 document.getElementById('sel-roll-snap').addEventListener('change', () => { renderPianoRoll(); });
 window.addEventListener('resize', () => { if (document.getElementById('pianoroll-track')) renderPianoRoll(); if (window.renderBreathShaper) initBreathShaperCanvas(); });
