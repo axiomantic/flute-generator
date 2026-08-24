@@ -2060,31 +2060,29 @@ class WebPhysicalPipe {
     }
     this.updateCoeffs(this.currFreq, pBreath);
 
-    // 1. Turbulent Aeroacoustic Breath Noise (scales non-linearly with blowing velocity: noise ~ P^1.5)
+    // 1. Soft Organic Breath Air Turbulence (filtered pinkish edge noise)
     const whiteNoise = (Math.random() * 2.0 - 1.0);
-    // Pinkish/brownish turbulent filtering
-    this.noiseState = this.noiseState * 0.70 + whiteNoise * 0.30;
-    const breathTurbulence = this.noiseState * Math.pow(pBreath, 1.45) * 0.035;
+    this.noiseState = this.noiseState * 0.85 + whiteNoise * 0.15;
+    const breathTurbulence = this.noiseState * Math.pow(pBreath, 1.2) * 0.008;
 
-    // 2. Non-linear Vortex Jet Delay (Jet transit time is inversely proportional to jet velocity: v ~ sqrt(P))
-    const jetSpeedFactor = Math.sqrt(Math.max(0.2, pBreath));
-    const dJet = Math.max(2.0, (this.sr / this.currFreq) * (0.32 / jetSpeedFactor));
+    // 2. Continuous Jet Delay with subtle breath-speed scaling
+    const jetSpeedFactor = Math.sqrt(Math.max(0.3, pBreath));
+    const dJet = Math.max(2.0, (this.sr / this.currFreq) * (0.30 / jetSpeedFactor));
 
     let pAcoustic = 0;
     for (let m of this.modes) pAcoustic += m.y1 * m.gain;
 
-    this.jetDelay[this.writeJet] = pAcoustic * 0.55 + breathTurbulence * 0.30;
+    this.jetDelay[this.writeJet] = pAcoustic * 0.50 + breathTurbulence * 0.15;
     this.writeJet = (this.writeJet + 1) % this.jetDelay.length;
 
     // Read delayed jet acoustic feedback
     const readIdx = (this.writeJet - 1 - Math.floor(dJet) + this.jetDelay.length) % this.jetDelay.length;
     const delayedJet = this.jetDelay[readIdx];
 
-    // 3. Non-linear Labium Splitting Edge Vortex Clipping f(x) = tanh(x - x^3)
-    // Stronger blowing drives richer odd & even upper harmonics and breath rasp
-    const jetDrive = pBreath * 1.35;
-    const totalJetIn = (delayedJet * 1.55 + breathTurbulence);
-    const qVortex = jetDrive * Math.tanh(totalJetIn - 0.12 * Math.pow(totalJetIn, 3));
+    // 3. Smooth, musical non-linear vortex excitation (pure soft tanh saturation - zero cubic distortion spikes)
+    const jetDrive = pBreath * 1.10;
+    const totalJetIn = (delayedJet * 1.25 + breathTurbulence);
+    const qVortex = jetDrive * Math.tanh(totalJetIn);
 
     // 4. Modal Resonator Transmission Filter
     let totalOut = 0;
@@ -2095,9 +2093,9 @@ class WebPhysicalPipe {
       totalOut += y * m.gain;
     }
 
-    // Add acoustic chuff & edge hiss that naturally bleeds into the air
-    const directChuff = breathTurbulence * 0.40 * Math.sqrt(pBreath);
-    return (totalOut * 0.32 + directChuff);
+    // Gentle natural breath air bleed
+    const directChuff = breathTurbulence * 0.20 * Math.sqrt(pBreath);
+    return (totalOut * 0.26 + directChuff);
   }
 }
 
@@ -2169,8 +2167,8 @@ async function startAudio() {
       const dryL = (sD1 * 0.35 + sD2 * 0.18 + sM * 0.65) * 0.45;
       const dryR = (sD1 * 0.18 + sD2 * 0.35 + sM * 0.65) * 0.45;
 
-      outL[i] = Math.tanh(dryL * 0.85);
-      outR[i] = Math.tanh(dryR * 0.85);
+      outL[i] = Math.tanh(dryL * 0.70);
+      outR[i] = Math.tanh(dryR * 0.70);
     }
   };
 
