@@ -730,14 +730,13 @@ class WebPhysicalPipe {
     for (let m of this.modes) pAcoustic += m.y1 * m.gain;
 
     const dJet = Math.max(2.0, (this.sr / this.currFreq) * 0.25);
-    const jetDisp = pAcoustic * 0.42 + this.noiseState * actualNoise * 0.10;
+    const jetDisp = pAcoustic * 0.65 + this.noiseState * actualNoise * 0.35;
     this.jetDelay[this.writeJet] = jetDisp;
     this.writeJet = (this.writeJet + 1) % this.jetLen;
     const delayedDisp = this.readJetFractional(dJet);
 
     const jetGain = (this.windwayProfile === "arched") ? 1.6 : 1.35;
-    const offset = 0.02;
-    const qVortex = pJet * Math.tanh((delayedDisp + offset) * jetGain) - pJet * Math.tanh(offset * jetGain);
+    const qVortex = pJet * Math.tanh(delayedDisp * jetGain + this.noiseState * actualNoise);
 
     let totalOut = 0;
     for (let m of this.modes) {
@@ -749,7 +748,7 @@ class WebPhysicalPipe {
       totalOut += y * m.gain;
     }
 
-    return totalOut * 0.32;
+    return totalOut * 0.55;
   }
 }
 

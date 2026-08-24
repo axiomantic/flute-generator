@@ -229,7 +229,7 @@ class PhysicalWaveguidePipe:
             m['y1'] = y
             total_out += y * m['gain']
 
-        return total_out * 0.40
+        return total_out * 0.55
 
 
 def create_flute_midi(
