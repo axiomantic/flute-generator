@@ -1,8 +1,13 @@
 # Generated outputs
-*.wav
-*.mid
-*.scad
 output/
+!examples/**/*.wav
+!examples/**/*.mid
+!examples/**/*.scad
+!examples/**/*.stl
+!docs/**/*.wav
+!docs/**/*.mid
+!docs/**/*.scad
+!docs/**/*.stl
 
 # Python build & cache
 __pycache__/

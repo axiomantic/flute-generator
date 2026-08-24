@@ -6,15 +6,16 @@
   <title>Flute Studio 🪈 — 3D Acoustic CAD & Pyodide Physical Waveguide Engine</title>
   <style>
     :root {
-      --bg-dark: #0f1117;
-      --bg-card: #1a1d27;
-      --bg-card-header: #242938;
-      --border: #2e364a;
+      --bg-dark: #0b0d13;
+      --bg-card: #151824;
+      --bg-card-header: #1e2233;
+      --border: #2a3147;
       --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.4);
+      --accent-hover: #2563eb;
+      --accent-cyan: #06b6d4;
       --accent-gold: #f59e0b;
       --accent-emerald: #10b981;
-      --text: #f1f5f9;
+      --text: #f8fafc;
       --text-dim: #94a3b8;
     }
 
@@ -31,23 +32,23 @@
     header {
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
-      padding: 14px 28px;
+      padding: 12px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    header h1 { font-size: 1.35rem; display: flex; align-items: center; gap: 10px; }
-    .badge-wasm { font-size: 0.72rem; background: #8b5cf6; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+    header h1 { font-size: 1.25rem; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .badge-wasm { font-size: 0.72rem; background: #7c3aed; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
     .badge-status { font-size: 0.75rem; color: #10b981; display: flex; align-items: center; gap: 6px; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
     .main-grid {
       display: grid;
-      grid-template-columns: 360px 1fr;
+      grid-template-columns: 340px 1fr;
       flex: 1;
       overflow: hidden;
-      height: calc(100vh - 60px);
+      height: calc(100vh - 55px);
     }
     @media (max-width: 1024px) {
       .main-grid { grid-template-columns: 1fr; height: auto; overflow: visible; }
@@ -57,68 +58,68 @@
       background: var(--bg-card);
       border-right: 1px solid var(--border);
       overflow-y: auto;
-      padding: 20px;
+      padding: 18px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
     }
 
     .section-title {
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--accent);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       font-weight: 700;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .control-group { margin-bottom: 12px; }
+    .control-group { margin-bottom: 10px; }
     .control-group label {
       display: flex;
       justify-content: space-between;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-dim);
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
     .control-group label span.val { color: var(--text); font-weight: 600; font-family: monospace; }
     
     select, input[type="text"], input[type="number"] {
       width: 100%;
-      background: #11141e;
+      background: #0d1017;
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 8px 12px;
+      padding: 7px 10px;
       border-radius: 6px;
-      font-size: 0.88rem;
+      font-size: 0.84rem;
       outline: none;
       transition: border 0.2s;
     }
     select:focus, input:focus { border-color: var(--accent); }
     input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
 
-    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-row { display: flex; gap: 8px; margin-top: 6px; }
     button.btn {
       background: var(--accent);
       color: white;
       border: none;
-      padding: 9px 14px;
+      padding: 8px 12px;
       border-radius: 6px;
       font-weight: 600;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      transition: all 0.2s;
+      transition: all 0.15s;
       flex: 1;
     }
-    button.btn:hover { background: #2563eb; }
-    button.btn-secondary { background: #2a3142; color: var(--text); }
-    button.btn-secondary:hover { background: #374158; }
+    button.btn:hover { background: var(--accent-hover); }
+    button.btn-secondary { background: #22293a; color: var(--text); }
+    button.btn-secondary:hover { background: #2f384d; }
     button.btn-emerald { background: var(--accent-emerald); }
     button.btn-emerald:hover { background: #059669; }
 
@@ -126,35 +127,35 @@
       display: flex;
       flex-direction: column;
       overflow-y: auto;
-      background: #131620;
+      background: #0f121a;
     }
 
     .tabs-bar {
       display: flex;
       background: var(--bg-card-header);
       border-bottom: 1px solid var(--border);
-      padding: 0 16px;
+      padding: 0 14px;
     }
     .tab-btn {
-      padding: 12px 18px;
+      padding: 10px 16px;
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
       color: var(--text-dim);
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.86rem;
       cursor: pointer;
     }
     .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
 
-    .tab-pane { display: none; padding: 20px; flex-direction: column; gap: 20px; }
+    .tab-pane { display: none; padding: 18px; flex-direction: column; gap: 16px; }
     .tab-pane.active { display: flex; }
 
     #viewport-container {
       width: 100%;
       height: 480px;
-      background: radial-gradient(circle, #1f2738 0%, #0d1017 100%);
-      border-radius: 12px;
+      background: radial-gradient(circle, #1c2333 0%, #0a0d13 100%);
+      border-radius: 10px;
       border: 1px solid var(--border);
       position: relative;
       overflow: hidden;
@@ -162,66 +163,66 @@
     #viewport-canvas { width: 100%; height: 100%; display: block; }
     .viewport-overlay {
       position: absolute;
-      top: 14px;
-      left: 14px;
-      background: rgba(15, 17, 23, 0.85);
-      backdrop-filter: blur(8px);
-      padding: 10px 16px;
-      border-radius: 8px;
+      top: 12px;
+      left: 12px;
+      background: rgba(15, 18, 26, 0.85);
+      backdrop-filter: blur(6px);
+      padding: 8px 14px;
+      border-radius: 6px;
       border: 1px solid var(--border);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
     }
 
     .pianoroll-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px;
+      border-radius: 10px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
-    .transport-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .transport-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .pianoroll-wrapper {
       position: relative;
-      height: 340px;
+      height: 320px;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
-      background: #0b0d13;
+      background: #080a0f;
     }
     #pianoroll-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 
     .specs-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
     }
     .spec-item {
-      background: #11141e;
+      background: #0e1118;
       border: 1px solid var(--border);
-      padding: 12px;
-      border-radius: 8px;
+      padding: 10px 12px;
+      border-radius: 6px;
     }
-    .spec-item span { display: block; font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; }
-    .spec-item strong { font-size: 1.05rem; color: #fff; }
+    .spec-item span { display: block; font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; }
+    .spec-item strong { font-size: 0.98rem; color: #fff; }
 
     .showcase-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
     }
     .showcase-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 10px;
       overflow: hidden;
       cursor: pointer;
       transition: transform 0.2s;
     }
     .showcase-card:hover { transform: translateY(-3px); border-color: var(--accent); }
-    .showcase-img { width: 100%; height: 160px; object-fit: cover; background: #232a3b; }
-    .showcase-body { padding: 16px; }
+    .showcase-img { width: 100%; height: 150px; object-fit: cover; background: #1a2130; }
+    .showcase-body { padding: 14px; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -231,16 +232,16 @@
 
 <header>
   <h1>🪈 Flute Studio <span class="badge-wasm">Pyodide WASM Engine</span></h1>
-  <div class="badge-status"><span class="status-dot"></span> <span id="lbl-pyodide-status">Initializing Python WASM...</span></div>
+  <div class="badge-status"><span class="status-dot"></span> <span id="lbl-pyodide-status">Loading Pyodide WASM...</span></div>
 </header>
 
 <div class="main-grid">
-  <!-- Left Parameters Sidebar -->
+  <!-- Left Sidebar Controls -->
   <div class="sidebar">
     <div>
       <div class="section-title">🎵 Acoustic Physics & Tuning</div>
       <div class="control-group">
-        <label>Root Pitch <span class="val" id="val-root">A4 (69)</span></label>
+        <label>Root Note <span class="val" id="val-root">A4 (69)</span></label>
         <select id="sel-root">
           <option value="60">C4 (60 - 261.6 Hz)</option>
           <option value="62">D4 (62 - 293.7 Hz)</option>
@@ -347,8 +348,8 @@
           <button class="btn btn-emerald" id="btn-play">▶ Play Waveguide Engine</button>
           <button class="btn btn-secondary" id="btn-stop">⏹ Stop</button>
           
-          <select id="sel-preset-melody" style="width: 220px;">
-            <option value="native_motif">Preset: Native Spirit Motif</option>
+          <select id="sel-preset-melody" style="width: 210px;">
+            <option value="native_motif" selected>Preset: Native Spirit Motif</option>
             <option value="condor_pasa">Preset: El Cóndor Pasa</option>
             <option value="desert_caravan">Preset: Desert Caravan</option>
             <option value="greensleeves">Preset: Greensleeves</option>
@@ -356,8 +357,8 @@
             <option value="amazing_grace">Preset: Amazing Grace</option>
           </select>
 
-          <span style="font-size: 0.82rem; color: var(--text-dim); margin-left: auto;">
-            Powered by Single-Source Python Physical Waveguide Engine
+          <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: auto;">
+            Click canvas to toggle/add notes • Sub-sample Waveguide Physics
           </span>
         </div>
 
@@ -390,28 +391,28 @@
           <img src="examples/01_native_american_a4_sac/flute_iso.png" class="showcase-img" alt="Native American Flute">
           <div class="showcase-body">
             <strong>🪈 Native American A4 (SAC)</strong>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Minor pentatonic with internal Slow Air Chamber expansion bulb.</p>
+            <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Minor pentatonic with internal Slow Air Chamber expansion bulb.</p>
           </div>
         </div>
         <div class="showcase-card" onclick="loadShowcase('hijaz', 69, 'venturi', 'desert_caravan', 'ribbed')">
           <img src="examples/02_desert_caravan_hijaz_ribbed/flute_iso.png" class="showcase-img" alt="Desert Caravan Flute">
           <div class="showcase-body">
             <strong>🏜️ Desert Caravan A4 (Ribbed)</strong>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Hijaz scale with Venturi airway and micro-ribbed drone rasp.</p>
+            <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Hijaz scale with Venturi airway and micro-ribbed drone rasp.</p>
           </div>
         </div>
         <div class="showcase-card" onclick="loadShowcase('minor_pentatonic', 69, 'arched', 'condor_pasa')">
           <img src="examples/03_baroque_condor_pasa_arched/flute_iso.png" class="showcase-img" alt="Baroque Condor Pasa">
           <div class="showcase-body">
             <strong>🦅 Andean Condor Pasa A4 (Arched)</strong>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Crowned arched Baroque windway for focused singing overtones.</p>
+            <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Crowned arched Baroque windway for singing overtones.</p>
           </div>
         </div>
         <div class="showcase-card" onclick="loadShowcase('dorian', 72, 'flat', 'greensleeves')">
           <img src="examples/04_greensleeves_dorian_c5/flute_iso.png" class="showcase-img" alt="Greensleeves Dorian C5">
           <div class="showcase-body">
             <strong>🏰 Renaissance Greensleeves C5</strong>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Dorian modal scale with harmonic 5th drone accompaniment.</p>
+            <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Dorian modal scale with harmonic 5th drone accompaniment.</p>
           </div>
         </div>
       </div>
@@ -423,6 +424,235 @@
 let pyodideInstance = null;
 let audioContext = null;
 let currentAudioSource = null;
+let playheadInterval = null;
+let playbackStartSec = 0;
+let playbackTotalSec = 0;
+
+const SCALES = {
+  native_american: [0, 3, 5, 7, 10, 12],
+  hijaz: [0, 1, 4, 5, 7, 8, 10, 12],
+  minor_pentatonic: [0, 3, 5, 7, 10, 12],
+  major_pentatonic: [0, 2, 4, 7, 9, 12],
+  dorian: [0, 2, 3, 5, 7, 9, 10, 12],
+  major: [0, 2, 4, 5, 7, 9, 11, 12],
+  natural_minor: [0, 2, 3, 5, 7, 8, 10, 12],
+  blues: [0, 3, 5, 6, 7, 10, 12],
+};
+
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+const MELODY_PRESETS = {
+  native_motif: [
+    { n: 0, d: 1.5 }, { n: 3, d: 0.5 }, { n: 5, d: 1.0 }, { n: 7, d: 2.0 },
+    { n: 10, d: 1.0 }, { n: 7, d: 1.0 }, { n: 5, d: 1.0 }, { n: 3, d: 1.0 },
+    { n: 0, d: 2.5 }, { n: null, d: 0.5 },
+    { n: 7, d: 1.0 }, { n: 10, d: 1.0 }, { n: 12, d: 2.0 },
+    { n: 10, d: 1.0 }, { n: 7, d: 1.0 }, { n: 5, d: 1.0 }, { n: 3, d: 1.0 },
+    { n: 0, d: 3.0 }
+  ],
+  condor_pasa: [
+    { n: 7, d: 1.5 }, { n: 10, d: 0.5 }, { n: 12, d: 1.0 }, { n: 10, d: 0.5 }, { n: 7, d: 0.5 },
+    { n: 5, d: 2.0 }, { n: 7, d: 1.0 }, { n: 5, d: 0.5 }, { n: 3, d: 0.5 },
+    { n: 0, d: 3.0 }, { n: null, d: 0.5 },
+    { n: 0, d: 0.5 }, { n: 3, d: 0.5 }, { n: 5, d: 1.0 }, { n: 7, d: 1.0 }, { n: 5, d: 1.0 },
+    { n: 3, d: 1.5 }, { n: 0, d: 0.5 }, { n: 0, d: 3.0 }
+  ],
+  desert_caravan: [
+    { n: 0, d: 1.0 }, { n: 1, d: 0.5 }, { n: 4, d: 1.5 },
+    { n: 5, d: 1.0 }, { n: 4, d: 0.5 }, { n: 1, d: 0.5 }, { n: 0, d: 2.0 },
+    { n: null, d: 0.5 },
+    { n: 4, d: 1.0 }, { n: 5, d: 0.5 }, { n: 7, d: 1.5 },
+    { n: 8, d: 1.0 }, { n: 7, d: 0.5 }, { n: 5, d: 0.5 }, { n: 4, d: 2.0 }
+  ],
+  greensleeves: [
+    { n: 0, d: 1.0 }, { n: 3, d: 2.0 }, { n: 5, d: 1.0 }, { n: 7, d: 1.5 },
+    { n: 9, d: 0.5 }, { n: 7, d: 1.0 }, { n: 5, d: 2.0 }, { n: 2, d: 1.0 }, { n: 0, d: 3.0 }
+  ],
+  morning_mood: [
+    { n: 7, d: 0.5 }, { n: 4, d: 0.5 }, { n: 2, d: 0.5 }, { n: 0, d: 0.5 },
+    { n: 2, d: 0.5 }, { n: 4, d: 0.5 }, { n: 7, d: 1.5 }, { n: 9, d: 1.5 }, { n: 7, d: 2.0 }
+  ],
+  amazing_grace: [
+    { n: 0, d: 1.0 }, { n: 5, d: 2.0 }, { n: 9, d: 0.5 }, { n: 7, d: 0.5 },
+    { n: 5, d: 2.0 }, { n: 9, d: 1.0 }, { n: 7, d: 3.0 }, { n: 5, d: 1.0 }, { n: 0, d: 3.0 }
+  ]
+};
+
+let currentScore = [];
+let bpm = 96;
+
+function loadPresetMelody(presetName) {
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const raw = MELODY_PRESETS[presetName] || MELODY_PRESETS.native_motif;
+  currentScore = [];
+  let beat = 0;
+  raw.forEach(item => {
+    if (item.n !== null) {
+      currentScore.push({
+        startBeat: beat,
+        durationBeats: item.d,
+        midiNote: rootMidi + item.n,
+        velocity: 84
+      });
+    }
+    beat += item.d;
+  });
+  drawPianoRoll();
+}
+
+// Visual Piano Roll & Sequencer
+const prCanvas = document.getElementById('pianoroll-canvas');
+const prCtx = prCanvas.getContext('2d');
+
+function resizeCanvas() {
+  prCanvas.width = prCanvas.parentElement.clientWidth * window.devicePixelRatio;
+  prCanvas.height = prCanvas.parentElement.clientHeight * window.devicePixelRatio;
+  drawPianoRoll();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function getMidiNoteLabel(m) {
+  const name = NOTE_NAMES[m % 12];
+  const oct = Math.floor(m / 12) - 1;
+  return `${name}${oct}`;
+}
+
+function drawPianoRoll(playheadBeat = null) {
+  if (!prCanvas.width) return;
+  const w = prCanvas.width;
+  const h = prCanvas.height;
+  prCtx.clearRect(0, 0, w, h);
+
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  const inScaleSet = new Set(scaleIntervals.map(i => (rootMidi + i) % 12));
+
+  const minNote = rootMidi - 2;
+  const maxNote = rootMidi + 16;
+  const totalNotes = maxNote - minNote + 1;
+  const noteH = h / totalNotes;
+  const totalBeats = Math.max(16, Math.ceil((currentScore.length ? Math.max(...currentScore.map(n => n.startBeat + n.durationBeats)) : 16) / 4) * 4);
+  const beatW = w / totalBeats;
+
+  // Background Grid & Piano Keys
+  for (let n = minNote; n <= maxNote; n++) {
+    const y = h - (n - minNote + 1) * noteH;
+    const isRoot = (n % 12) === (rootMidi % 12);
+    const isInScale = inScaleSet.has(n % 12);
+
+    if (isRoot) {
+      prCtx.fillStyle = 'rgba(59, 130, 246, 0.22)';
+    } else if (isInScale) {
+      prCtx.fillStyle = 'rgba(6, 182, 212, 0.08)';
+    } else {
+      prCtx.fillStyle = '#0a0d14';
+    }
+    prCtx.fillRect(0, y, w, noteH);
+
+    prCtx.strokeStyle = '#181d2a';
+    prCtx.lineWidth = 1;
+    prCtx.strokeRect(0, y, w, noteH);
+
+    // Note Name Sidebar Label
+    prCtx.fillStyle = isRoot ? '#60a5fa' : (isInScale ? '#67e8f9' : '#475569');
+    prCtx.font = `${Math.max(9, Math.floor(noteH * 0.65))}px sans-serif`;
+    prCtx.fillText(getMidiNoteLabel(n), 6, y + noteH * 0.72);
+  }
+
+  // Beat vertical lines
+  for (let b = 0; b <= totalBeats; b++) {
+    prCtx.strokeStyle = (b % 4 === 0) ? '#2e384e' : '#141924';
+    prCtx.lineWidth = (b % 4 === 0) ? 1.5 : 1;
+    prCtx.beginPath();
+    prCtx.moveTo(b * beatW, 0);
+    prCtx.lineTo(b * beatW, h);
+    prCtx.stroke();
+  }
+
+  // Render Notes
+  currentScore.forEach(n => {
+    const x = n.startBeat * beatW;
+    const y = h - (n.midiNote - minNote + 1) * noteH;
+    const nw = Math.max(4, n.durationBeats * beatW - 2);
+    const nh = noteH - 2;
+
+    prCtx.fillStyle = '#3b82f6';
+    prCtx.shadowColor = 'rgba(59, 130, 246, 0.5)';
+    prCtx.shadowBlur = 6;
+    prCtx.fillRect(x + 1, y + 1, nw, nh);
+    prCtx.shadowBlur = 0;
+
+    prCtx.strokeStyle = '#93c5fd';
+    prCtx.lineWidth = 1;
+    prCtx.strokeRect(x + 1, y + 1, nw, nh);
+
+    prCtx.fillStyle = '#ffffff';
+    prCtx.font = `bold ${Math.max(8, Math.floor(nh * 0.6))}px sans-serif`;
+    prCtx.fillText(getMidiNoteLabel(n.midiNote), x + 5, y + nh * 0.72);
+  });
+
+  // Playhead
+  if (playheadBeat !== null) {
+    const px = playheadBeat * beatW;
+    prCtx.strokeStyle = '#ef4444';
+    prCtx.lineWidth = 2.5;
+    prCtx.beginPath();
+    prCtx.moveTo(px, 0);
+    prCtx.lineTo(px, h);
+    prCtx.stroke();
+  }
+}
+
+// Click to toggle/add notes
+prCanvas.addEventListener('click', (e) => {
+  const rect = prCanvas.getBoundingClientRect();
+  const scaleX = prCanvas.width / rect.width;
+  const scaleY = prCanvas.height / rect.height;
+  const clickX = (e.clientX - rect.left) * scaleX;
+  const clickY = (e.clientY - rect.top) * scaleY;
+
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const minNote = rootMidi - 2;
+  const maxNote = rootMidi + 16;
+  const totalNotes = maxNote - minNote + 1;
+  const noteH = prCanvas.height / totalNotes;
+  const totalBeats = Math.max(16, Math.ceil((currentScore.length ? Math.max(...currentScore.map(n => n.startBeat + n.durationBeats)) : 16) / 4) * 4);
+  const beatW = prCanvas.width / totalBeats;
+
+  const targetBeat = Math.floor(clickX / beatW);
+  const noteIndex = Math.floor((prCanvas.height - clickY) / noteH);
+  const clickedMidi = minNote + noteIndex;
+
+  // Check if clicked existing note
+  const existingIdx = currentScore.findIndex(n => n.midiNote === clickedMidi && targetBeat >= n.startBeat && targetBeat < n.startBeat + n.durationBeats);
+  if (existingIdx >= 0) {
+    currentScore.splice(existingIdx, 1);
+  } else {
+    currentScore.push({
+      startBeat: targetBeat,
+      durationBeats: 1.0,
+      midiNote: clickedMidi,
+      velocity: 84
+    });
+  }
+  drawPianoRoll();
+});
+
+function updateAcousticSpecs() {
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const fMel = 440.0 * Math.pow(2.0, (rootMidi - 69.0) / 12.0);
+  const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * 19.0;
+  const lD1 = (343200.0 / (2.0 * fMel)) - 1.6 * 22.0;
+  const fD2 = 440.0 * Math.pow(2.0, (rootMidi + 7 - 69.0) / 12.0);
+  const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * 16.0;
+
+  document.getElementById('val-root').innerText = `${getMidiNoteLabel(rootMidi)} (${rootMidi})`;
+  document.getElementById('spec-mel-len').innerText = `${lMel.toFixed(1)} mm (${fMel.toFixed(1)} Hz)`;
+  document.getElementById('spec-d1-len').innerText = `${lD1.toFixed(1)} mm (${fMel.toFixed(1)} Hz)`;
+  document.getElementById('spec-d2-len').innerText = `${lD2.toFixed(1)} mm (${fD2.toFixed(1)} Hz)`;
+  document.getElementById('spec-total-len').innerText = `${(Math.max(lMel, lD1, lD2) + 30.0).toFixed(1)} mm`;
+}
 
 // Initialize Pyodide & Mount Python Source Directly from src/
 async function initPyodideEngine() {
@@ -440,7 +670,6 @@ import sys
 sys.path.insert(0, '/home/pyodide')
 `);
 
-    // Fetch and mount the Python package directly from src/flute_generator/
     for (const mod of modules) {
       try {
         const res = await fetch(`src/flute_generator/${mod}`);
@@ -458,126 +687,160 @@ sys.path.insert(0, '/home/pyodide')
   }
 }
 
-// Visual Piano Roll & Sequencer
-const prCanvas = document.getElementById('pianoroll-canvas');
-const prCtx = prCanvas.getContext('2d');
-let currentScore = [];
-let bpm = 96;
-
-function resizeCanvas() {
-  prCanvas.width = prCanvas.parentElement.clientWidth * window.devicePixelRatio;
-  prCanvas.height = prCanvas.parentElement.clientHeight * window.devicePixelRatio;
-  drawPianoRoll();
-}
-window.addEventListener('resize', resizeCanvas);
-
-function drawPianoRoll() {
-  const w = prCanvas.width;
-  const h = prCanvas.height;
-  prCtx.clearRect(0, 0, w, h);
-
-  const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const minNote = rootMidi - 4;
-  const maxNote = rootMidi + 18;
-  const noteH = h / (maxNote - minNote);
-  const totalBeats = 16;
-  const beatW = w / totalBeats;
-
-  // Grid
-  for (let n = minNote; n <= maxNote; n++) {
-    const y = h - (n - minNote + 1) * noteH;
-    const isRoot = (n % 12) === (rootMidi % 12);
-    prCtx.fillStyle = isRoot ? 'rgba(59, 130, 246, 0.25)' : '#0e111a';
-    prCtx.fillRect(0, y, w, noteH);
-    prCtx.strokeStyle = '#1e2433';
-    prCtx.strokeRect(0, y, w, noteH);
-  }
-
-  for (let b = 0; b <= totalBeats; b++) {
-    prCtx.strokeStyle = (b % 4 === 0) ? '#3b4256' : '#1a1f2c';
-    prCtx.lineWidth = (b % 4 === 0) ? 1.5 : 1;
-    prCtx.beginPath();
-    prCtx.moveTo(b * beatW, 0);
-    prCtx.lineTo(b * beatW, h);
-    prCtx.stroke();
-  }
-
-  // Draw notes
-  currentScore.forEach(n => {
-    const x = n.startBeat * beatW;
-    const y = h - (n.midiNote - minNote + 1) * noteH;
-    const nw = n.durationBeats * beatW - 2;
-    const nh = noteH - 2;
-
-    prCtx.fillStyle = '#3b82f6';
-    prCtx.shadowColor = 'rgba(59, 130, 246, 0.5)';
-    prCtx.shadowBlur = 8;
-    prCtx.fillRect(x, y, nw, nh);
-    prCtx.shadowBlur = 0;
-    prCtx.strokeStyle = '#93c5fd';
-    prCtx.strokeRect(x, y, nw, nh);
-  });
-}
-
-function updateAcousticSpecs() {
-  const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const fMel = 440.0 * Math.pow(2.0, (rootMidi - 69.0) / 12.0);
-  const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * 19.0;
-  const lD1 = (343200.0 / (2.0 * fMel)) - 1.6 * 22.0;
-  const fD2 = 440.0 * Math.pow(2.0, (rootMidi + 7 - 69.0) / 12.0);
-  const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * 16.0;
-
-  document.getElementById('spec-mel-len').innerText = `${lMel.toFixed(1)} mm (${fMel.toFixed(1)} Hz)`;
-  document.getElementById('spec-d1-len').innerText = `${lD1.toFixed(1)} mm (${fMel.toFixed(1)} Hz)`;
-  document.getElementById('spec-d2-len').innerText = `${lD2.toFixed(1)} mm (${fD2.toFixed(1)} Hz)`;
-  document.getElementById('spec-total-len').innerText = `${(Math.max(lMel, lD1, lD2) + 30.0).toFixed(1)} mm`;
-}
-
 // Synthesize & Playback via Physical Engine
 document.getElementById('btn-play').addEventListener('click', async () => {
   if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
   if (audioContext.state === 'suspended') await audioContext.resume();
 
-  const preset = document.getElementById('sel-preset-melody').value;
   const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const profile = document.getElementById('sel-profile').value;
+  const airRatio = parseFloat(document.getElementById('rng-air-ratio').value);
+  const texture = document.getElementById('sel-texture').value;
+  const room = parseFloat(document.getElementById('rng-room').value);
+  const wet = parseFloat(document.getElementById('rng-wet').value);
 
   document.getElementById('btn-play').innerText = 'Synthesizing Audio...';
 
-  const audioMap = {
-    'native_motif': 'examples/01_native_american_a4_sac/flute.wav',
-    'desert_caravan': 'examples/02_desert_caravan_hijaz_ribbed/flute.wav',
-    'condor_pasa': 'examples/03_baroque_condor_pasa_arched/flute.wav',
-    'greensleeves': 'examples/04_greensleeves_dorian_c5/flute.wav'
-  };
+  // Sort score by startBeat
+  const sortedScore = [...currentScore].sort((a, b) => a.startBeat - b.startBeat);
+  const totalBeats = sortedScore.length ? Math.max(...sortedScore.map(n => n.startBeat + n.durationBeats)) : 8;
+  const secPerBeat = 60.0 / bpm;
+  playbackTotalSec = totalBeats * secPerBeat + 1.2;
 
-  const url = audioMap[preset] || 'examples/01_native_american_a4_sac/flute.wav';
-  try {
-    const res = await fetch(url);
-    const arrayBuf = await res.arrayBuffer();
-    const audioBuf = await audioContext.decodeAudioData(arrayBuf);
+  let audioBuffer = null;
 
+  if (pyodideInstance && sortedScore.length > 0) {
+    try {
+      const scoreJson = JSON.stringify(sortedScore);
+      const synthCode = `
+import json, struct
+from flute_generator.acoustics import calculate_flute_geometry
+from flute_generator.melodies import NoteEvent
+from flute_generator.audio import synthesize_flute_audio
+from flute_generator.scales import SCALES
+
+score_data = json.loads('''${scoreJson}''')
+events = []
+curr_b = 0.0
+for item in score_data:
+    gap = item['startBeat'] - curr_b
+    if gap > 0.01:
+        events.append(NoteEvent(midi_note=None, duration_beats=gap))
+    events.append(NoteEvent(midi_note=item['midiNote'], duration_beats=item['durationBeats'], velocity=item.get('velocity', 84)))
+    curr_b = item['startBeat'] + item['durationBeats']
+
+dims = calculate_flute_geometry(
+    root_midi=${rootMidi},
+    scale_intervals=SCALES.get('${scaleKey}', SCALES['minor_pentatonic']),
+    windway_profile='${profile}',
+    drone_air_ratio=${airRatio},
+    windway_texture='${texture}'
+)
+
+out_file = '/home/pyodide/live_preview.wav'
+synthesize_flute_audio(
+    dims, events, out_file,
+    room_size=${room},
+    reverb_wet=${wet},
+    bpm=${bpm}
+)
+
+with open(out_file, 'rb') as f:
+    wav_bytes = f.read()
+wav_bytes
+`;
+      const pyResult = await pyodideInstance.runPythonAsync(synthCode);
+      const arrayBuf = pyResult.toJs().buffer;
+      audioBuffer = await audioContext.decodeAudioData(arrayBuf);
+    } catch (err) {
+      console.warn("Pyodide synthesis error:", err);
+    }
+  }
+
+  // Fallback to pre-rendered wav if pyodide not ready or failed
+  if (!audioBuffer) {
+    const preset = document.getElementById('sel-preset-melody').value;
+    const audioMap = {
+      'native_motif': 'examples/01_native_american_a4_sac/flute.wav',
+      'desert_caravan': 'examples/02_desert_caravan_hijaz_ribbed/flute.wav',
+      'condor_pasa': 'examples/03_baroque_condor_pasa_arched/flute.wav',
+      'greensleeves': 'examples/04_greensleeves_dorian_c5/flute.wav'
+    };
+    const url = audioMap[preset] || 'examples/01_native_american_a4_sac/flute.wav';
+    try {
+      const res = await fetch(url);
+      const arrayBuf = await res.arrayBuffer();
+      audioBuffer = await audioContext.decodeAudioData(arrayBuf);
+    } catch (err) {}
+  }
+
+  if (audioBuffer) {
     if (currentAudioSource) currentAudioSource.stop();
+    if (playheadInterval) clearInterval(playheadInterval);
+
     currentAudioSource = audioContext.createBufferSource();
-    currentAudioSource.buffer = audioBuf;
+    currentAudioSource.buffer = audioBuffer;
     currentAudioSource.connect(audioContext.destination);
     currentAudioSource.start();
+
     document.getElementById('btn-play').innerText = 'Playing Physical Flute... 🪈';
+    playbackStartSec = audioContext.currentTime;
+
+    playheadInterval = setInterval(() => {
+      const elapsed = audioContext.currentTime - playbackStartSec;
+      const currentBeat = elapsed / secPerBeat;
+      drawPianoRoll(currentBeat);
+      if (elapsed >= playbackTotalSec) {
+        clearInterval(playheadInterval);
+        drawPianoRoll(null);
+        document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
+      }
+    }, 25);
+
     currentAudioSource.onended = () => {
+      clearInterval(playheadInterval);
+      drawPianoRoll(null);
       document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
     };
-  } catch (err) {
-    document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
   }
 });
 
 document.getElementById('btn-stop').addEventListener('click', () => {
   if (currentAudioSource) {
     currentAudioSource.stop();
+    if (playheadInterval) clearInterval(playheadInterval);
+    drawPianoRoll(null);
     document.getElementById('btn-play').innerText = '▶ Play Waveguide Engine';
   }
 });
 
-// Download OpenSCAD generated directly by Python
+// Preset selector change
+document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
+  loadPresetMelody(e.target.value);
+});
+
+document.getElementById('sel-root').addEventListener('change', () => {
+  loadPresetMelody(document.getElementById('sel-preset-melody').value);
+  updateAcousticSpecs();
+});
+
+document.getElementById('sel-scale').addEventListener('change', () => {
+  drawPianoRoll();
+  updateAcousticSpecs();
+});
+
+document.getElementById('rng-air-ratio').addEventListener('input', (e) => {
+  document.getElementById('val-air-ratio').innerText = e.target.value;
+});
+document.getElementById('rng-room').addEventListener('input', (e) => {
+  document.getElementById('val-room').innerText = e.target.value;
+});
+document.getElementById('rng-wet').addEventListener('input', (e) => {
+  document.getElementById('val-wet').innerText = e.target.value;
+});
+
+// Download OpenSCAD
 document.getElementById('btn-export-scad').addEventListener('click', async () => {
   const rootMidi = parseInt(document.getElementById('sel-root').value);
   const scaleKey = document.getElementById('sel-scale').value;
@@ -606,9 +869,7 @@ generate_scad_content(dims)
   }
 
   if (!scadContent) {
-    scadContent = `// Parametric Triple Flute
-$fn = 60;
-`;
+    scadContent = `// Parametric Triple Flute\n$fn = 60;\n`;
   }
 
   const blob = new Blob([scadContent], { type: 'text/plain' });
@@ -633,6 +894,7 @@ function loadShowcase(scale, root, profile, melody) {
   document.getElementById('sel-root').value = root;
   document.getElementById('sel-profile').value = profile;
   document.getElementById('sel-preset-melody').value = melody;
+  loadPresetMelody(melody);
   document.querySelector('[data-tab="studio"]').click();
   updateAcousticSpecs();
 }
@@ -671,6 +933,7 @@ function init3D() {
 // Init
 setTimeout(() => {
   resizeCanvas();
+  loadPresetMelody('native_motif');
   init3D();
   initPyodideEngine();
 }, 100);
