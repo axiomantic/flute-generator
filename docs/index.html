@@ -2612,9 +2612,13 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
 
   const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
   
-    // Compute smart, collision-free slice planes that NEVER cut through a tone hole, chimney, or fipple window!
-  const forbiddenZRanges = [
-    { min: fippleZ - winLen - 6, max: fippleZ + winLen + 8 } // Fipple labium & sound windows
+    // Full Socket Joint Exclusion Zone:
+  // A joint cut at Z_cut extends tenon [Z_cut, Z_cut + jointLen] and mortise [Z_cut - jointLen, Z_cut].
+  // To guarantee NO tone hole or chimney falls on either the male tenon or female socket:
+  // Any cut plane Z_cut must maintain a clearance of at least (jointLen + holeRadius + chimneyDepth + 4.0mm) from every tone hole!
+  const forbiddenCutZones = [
+    // Fipple sound window & labium exclusion (including full joint tenon depth)
+    { min: fippleZ - winLen - jointLen - 6, max: fippleZ + winLen + 8 }
   ];
 
   for (let hIdx = 0; hIdx < numHoles; hIdx++) {
@@ -2622,24 +2626,24 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
     const hFreq = midiToFreq(rootMidi + targetInterval);
     const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
     const absZ = fippleZ - hDist;
-    const padMargin = holeDiam / 2 + chimneyDepth + 6; // Safety clearance around chimney pad
-    forbiddenZRanges.push({ min: absZ - padMargin, max: absZ + padMargin });
+    // Clearance includes the full male/female socket length + chimney pad diameter + extra safety margin!
+    const fullJointClearance = jointLen + holeDiam / 2 + chimneyDepth + 4.0;
+    forbiddenCutZones.push({ min: absZ - fullJointClearance, max: absZ + fullJointClearance });
   }
 
   function findSafeCutZ(targetZ) {
     let safeZ = targetZ;
-    // Check if targetZ collides with any forbidden hole or fipple zone
-    for (let r of forbiddenZRanges) {
+    for (let r of forbiddenCutZones) {
       if (safeZ >= r.min && safeZ <= r.max) {
-        // Shift cut to the nearest safe clearance above or below the hole
+        // Relocate cut plane to clean, uninterrupted solid wall section
         if (Math.abs(safeZ - r.min) < Math.abs(safeZ - r.max)) {
-          safeZ = r.min - 1.0;
+          safeZ = r.min - 1.5;
         } else {
-          safeZ = r.max + 1.0;
+          safeZ = r.max + 1.5;
         }
       }
     }
-    return Math.max(jointLen + 5, Math.min(totalCadLen - headLen - jointLen - 5, safeZ));
+    return Math.max(jointLen + 4, Math.min(fippleZ - jointLen - 8, safeZ));
   }
 
   // Calculate safe cuts for 2, 3, or 4 segments
