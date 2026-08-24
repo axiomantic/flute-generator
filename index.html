@@ -1134,6 +1134,32 @@ function updateFluteMaterialOnly() {
   persistCurrentStudioState();
 }
 
+
+// Dynamically frame the flute so top and bottom fit comfortably within viewport window
+function fitCameraToFlute(totalHeight, outerDiameter) {
+  if (!camera || !controls) return;
+  const container = document.getElementById('viewport-container');
+  const aspect = container ? (container.clientWidth / container.clientHeight) : 1.5;
+  const fov = camera.fov * (Math.PI / 180);
+
+  // Vertical framing with comfortable padding margin (1.18x)
+  const verticalMargin = 1.18;
+  const distForHeight = (totalHeight * verticalMargin) / (2 * Math.tan(fov / 2));
+  
+  // Horizontal framing check
+  const horizontalMargin = 1.25;
+  const distForWidth = (Math.max(outerDiameter * 3.5, 120) * horizontalMargin) / (2 * Math.tan(fov / 2) * aspect);
+
+  const targetDist = Math.max(distForHeight, distForWidth, 220);
+  const targetCenterY = totalHeight / 2;
+
+  // Smoothly update controls target and camera position facing the front face (-Z)
+  controls.target.set(0, targetCenterY, 0);
+  camera.position.set(0, targetCenterY, -targetDist);
+  camera.lookAt(0, targetCenterY, 0);
+  controls.update();
+}
+
 // === OpenSCAD WASM renderer: single source of truth ===
 // generateScadJs() -> real OpenSCAD WASM -> STL -> Three.js
 // Zero hand-translation. Exact 1:1 fidelity with exported .scad
@@ -1300,6 +1326,9 @@ function rebuild3DFlute() {
       const cy  = (box.min.y + box.max.y) / 2;
       fluteMesh.position.set(-cx, 0, cy);
       fluteRootGroup.add(fluteMesh);
+
+      // Automatically frame camera so entire flute height fits in viewport
+      fitCameraToFlute(totalCadLen, outerD);
 
       // Tone Hole Indicators / Finger Pad system
       const indStyle = document.getElementById('sel-indicator-style') ? document.getElementById('sel-indicator-style').value : 'minimal_gem';
