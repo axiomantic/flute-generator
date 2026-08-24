@@ -1099,6 +1099,41 @@ function addNote() {
   insertNoteAtPitch(defaultPitch);
 }
 
+
+function updatePlayheadUI(activeIdx) {
+  const track = document.getElementById('pianoroll-track');
+  const ph = document.getElementById('pianoroll-playhead');
+  const totalScoreDur = scoreNotes.reduce((max, n) => Math.max(max, (n.startTime || 0) + n.duration), 0) || 4.0;
+  const pxPerSec = track ? (track.clientWidth / Math.max(2.0, totalScoreDur)) : 80;
+
+  if (ph) {
+    const px = currentPlaybackTime * pxPerSec;
+    ph.style.left = `${px}px`;
+
+    const scrollContainer = document.getElementById('pianoroll-grid-scroll');
+    if (scrollContainer && (px > scrollContainer.scrollLeft + scrollContainer.clientWidth - 80 || px < scrollContainer.scrollLeft)) {
+      scrollContainer.scrollLeft = Math.max(0, px - 60);
+    }
+  }
+
+  // Update active note block classes without destroying DOM
+  const noteBlocks = document.querySelectorAll('.piano-note-block');
+  noteBlocks.forEach((el, idx) => {
+    if (idx === activeIdx) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+
+  // Update active row label
+  const playable = getPlayablePitches();
+  const reversedPitches = [...playable].reverse();
+  const activePitch = (activeIdx >= 0 && scoreNotes[activeIdx]) ? scoreNotes[activeIdx].midi : null;
+  const rowLabels = document.querySelectorAll('.roll-row-label');
+  rowLabels.forEach((el, idx) => {
+    if (reversedPitches[idx] === activePitch) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+}
+
 function renderRibbon(activeIdx = -1) {
   renderPianoRoll(activeIdx);
 }
@@ -1841,17 +1876,7 @@ async function startAudio() {
     const totalScoreDur = scoreNotes.reduce((max, n) => Math.max(max, (n.startTime || 0) + n.duration), 0) || 4.0;
     const pxPerSec = track ? (track.clientWidth / Math.max(2.0, totalScoreDur)) : 80;
 
-    if (ph) {
-      const px = currentPlaybackTime * pxPerSec;
-      ph.style.left = `${px}px`;
-      
-      const scrollContainer = document.getElementById('pianoroll-grid-scroll');
-      if (scrollContainer && (px > scrollContainer.scrollLeft + scrollContainer.clientWidth - 80 || px < scrollContainer.scrollLeft)) {
-        scrollContainer.scrollLeft = Math.max(0, px - 60);
-      }
-    }
-
-    renderPianoRoll(activeIdx);
+    updatePlayheadUI(activeIdx);
     if (activeIdx >= 0) {
       update3DFingersPose(scoreNotes[activeIdx].holes);
     }
@@ -1863,7 +1888,7 @@ function stopAudio() {
   if (dummyOsc) { try { dummyOsc.stop(); dummyOsc.disconnect(); } catch(e){} }
   if (liveProcessorNode) liveProcessorNode.disconnect();
   if (window.playheadTimer) clearInterval(window.playheadTimer);
-  renderRibbon(-1);
+  updatePlayheadUI(-1);
   update3DFingersPose([]);
   document.getElementById('btn-play').innerText = '▶ Play';
 }
