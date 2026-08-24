@@ -2825,45 +2825,47 @@ z_cut1 = ${zCut1.toFixed(2)};
 z_cut2 = ${zCut2.toFixed(2)};
 z_cut3 = ${zCut3.toFixed(2)};
 
-module hybrid_male_tenon(z_pos) {
-    // 1. Outer Body Structural Tenon (stepped hexagonal perimeter)
-    translate([0, 0, z_pos - 0.1])
+module male_spigot_joint(z_pos) {
+    // Protruding Male Spigot Tenon (extends downward from z_pos to z_pos - joint_len)
+    // 1. Outer Body Interlocking Step
+    translate([0, 0, z_pos - joint_len])
         difference() {
-            linear_extrude(height = joint_len + 0.1)
+            linear_extrude(height = joint_len)
                 offset(r = -(wall * 0.40 + joint_tol/2))
                     hex_profile_2d();
-            // Clear through bores for the 3 acoustic pipes
-            translate([-spacing, 0, -0.5]) cylinder(d = bore_drone1, h = joint_len + 1.2, $fn = 24);
-            translate([0, 0, -0.5]) cylinder(d = bore_melody, h = joint_len + 1.2, $fn = 24);
-            translate([spacing, 0, -0.5]) cylinder(d = bore_drone2, h = joint_len + 1.2, $fn = 24);
+            // Clear bores through tenon
+            translate([-spacing, 0, -0.5]) cylinder(d = bore_drone1, h = joint_len + 1.0, $fn = 24);
+            translate([0, 0, -0.5]) cylinder(d = bore_melody, h = joint_len + 1.0, $fn = 24);
+            translate([spacing, 0, -0.5]) cylinder(d = bore_drone2, h = joint_len + 1.0, $fn = 24);
         }
 
-    // 2. Individual Extended Acoustic Tube Spigots (internal airtight sleeve)
+    // 2. Individual Protruding Cylindrical Acoustic Spigots
     for (pipe = [[-spacing, bore_drone1], [0, bore_melody], [spacing, bore_drone2]]) {
         xp = pipe[0];
         bd = pipe[1];
-        spigot_od = bd + (wall * 0.50 - joint_tol);
-        translate([xp, 0, z_pos - 0.1])
+        spigot_od = bd + (wall * 0.48 - joint_tol);
+        translate([xp, 0, z_pos - joint_len])
             difference() {
-                cylinder(d = spigot_od, h = joint_len + 0.1, $fn = 24);
-                translate([0, 0, -0.5]) cylinder(d = bd, h = joint_len + 1.2, $fn = 24);
+                cylinder(d = spigot_od, h = joint_len, $fn = 24);
+                translate([0, 0, -0.5]) cylinder(d = bd, h = joint_len + 1.0, $fn = 24);
             }
     }
 }
 
-module hybrid_female_mortise(z_pos) {
+module female_socket_joint(z_pos) {
+    // Female Socket / Counterbore Cavity (pockets downward from z_pos to z_pos - joint_len)
     // 1. Outer Body Mortise Pocket
-    translate([0, 0, z_pos - 0.1])
+    translate([0, 0, z_pos - joint_len - 0.1])
         linear_extrude(height = joint_len + 0.2)
             offset(r = -(wall * 0.40 - joint_tol/2))
                 hex_profile_2d();
 
-    // 2. Individual Tube Mortise Counterbores
+    // 2. Individual Cylindrical Tube Mortise Sleeves
     for (pipe = [[-spacing, bore_drone1], [0, bore_melody], [spacing, bore_drone2]]) {
         xp = pipe[0];
         bd = pipe[1];
-        mortise_od = bd + (wall * 0.50 + joint_tol);
-        translate([xp, 0, z_pos - 0.1])
+        mortise_od = bd + (wall * 0.48 + joint_tol);
+        translate([xp, 0, z_pos - joint_len - 0.1])
             cylinder(d = mortise_od, h = joint_len + 0.2, $fn = 24);
     }
 }
@@ -2871,17 +2873,20 @@ module hybrid_female_mortise(z_pos) {
 module slice_part(z_bottom, z_top, has_male_bottom, has_female_top) {
     difference() {
         union() {
+            // Main solid slice body between [z_bottom, z_top]
             intersection() {
                 complete_flute();
                 translate([0, 0, (z_bottom + z_top) / 2])
-                    cube([outer_d * 6, outer_d * 6, z_top - z_bottom], center=true);
+                    cube([outer_d * 6, outer_d * 6, z_top - z_bottom], center = true);
             }
+            // Protruding Male Tenon at bottom (plugs into lower piece)
             if (has_male_bottom) {
-                hybrid_male_tenon(z_bottom);
+                male_spigot_joint(z_bottom);
             }
         }
+        // Recessed Female Mortise at top (receives upper piece's male tenon)
         if (has_female_top) {
-            hybrid_female_mortise(z_top - joint_len);
+            female_socket_joint(z_top);
         }
     }
 }
