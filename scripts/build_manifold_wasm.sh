@@ -9,29 +9,42 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_DIR="${ROOT_DIR}/build_wasm"
 DIST_DIR="${ROOT_DIR}"
 OPENSCAD_SRC="${ROOT_DIR}/vendor/openscad"
+CCACHE_DIR="${HOME}/.ccache"
+mkdir -p "${CCACHE_DIR}"
 
 echo "======================================================================"
 echo "🏗️  OpenSCAD WebAssembly Build (Fast Manifold CSG Engine)"
 echo "======================================================================"
 
-# 1. Initialize git submodules if needed
-if [ ! -f "${OPENSCAD_SRC}/CMakeLists.txt" ]; then
-    echo "📦 Initializing vendor/openscad git submodule..."
-    cd "${ROOT_DIR}"
-    git submodule update --init --recursive vendor/openscad
-fi
+# 1. Initialize git submodules recursively (including Clipper2, manifold, mimalloc)
+echo "📦 Verifying recursive git submodules..."
+cd "${ROOT_DIR}"
+git submodule update --init --recursive
 
 # 2. Check for Docker
 if command -v docker &> /dev/null; then
     echo "🐳 Using OpenSCAD official wasm-base container for reproducible build..."
-    # Clean any stale host CMakeCache to prevent path mismatch
-    rm -rf "${BUILD_DIR}/CMakeCache.txt" "${BUILD_DIR}/CMakeFiles"
+    rm -rf "${BUILD_DIR}"
     mkdir -p "${BUILD_DIR}"
-    
-    # Configure via official OpenSCAD docker environment
-    echo "⚙️  Configuring CMake with ENABLE_MANIFOLD=ON..."
-    cd "${ROOT_DIR}"
-    "${OPENSCAD_SRC}/scripts/wasm-base-docker-run.sh" emcmake cmake -B /src/build_wasm -S /src/vendor/openscad \
+
+    # Build local ccache image if not already present
+    echo "FROM openscad/wasm-base:latest
+    RUN apt update && apt install -y ccache && apt clean
+    " | docker build --platform=linux/amd64 -t openscad-wasm-ccache:local -f - . > /dev/null 2>&1 || true
+
+    # Helper function to run commands inside docker container without -it
+    run_docker() {
+        docker run --rm \
+            --platform=linux/amd64 \
+            -w /src \
+            -v "${ROOT_DIR}:/src:rw" \
+            -v "${CCACHE_DIR}:/root/.ccache:rw" \
+            openscad-wasm-ccache:local \
+            "$@"
+    }
+
+    echo "⚙️  Configuring CMake with ENABLE_MANIFOLD=ON in container..."
+    run_docker emcmake cmake -B /src/build_wasm -S /src/vendor/openscad \
         -DWASM_BUILD_TYPE=web \
         -DCMAKE_BUILD_TYPE=Release \
         -DHEADLESS=ON \
@@ -45,7 +58,7 @@ if command -v docker &> /dev/null; then
     # Compile
     NCPU=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
     echo "🔨 Building with ${NCPU} threads..."
-    "${OPENSCAD_SRC}/scripts/wasm-base-docker-run.sh" cmake --build /src/build_wasm -j"${NCPU}"
+    run_docker cmake --build /src/build_wasm -j"${NCPU}"
 else
     echo "⚙️  Docker not detected. Attempting native Emscripten build..."
     EMSDK_DIR="${ROOT_DIR}/vendor/emsdk"
@@ -59,6 +72,7 @@ else
     fi
     source "${EMSDK_DIR}/emsdk_env.sh"
 
+    rm -rf "${BUILD_DIR}"
     mkdir -p "${BUILD_DIR}"
     cd "${BUILD_DIR}"
     emcmake cmake "${OPENSCAD_SRC}" \
