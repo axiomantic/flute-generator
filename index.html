@@ -2236,8 +2236,14 @@ function rebuild3DFlute() {
           }
 
           // Align indicator position directly with the mesh center offset (-cx, 0, cy)
-          const posX = -cx;
-          const posY = absZ;
+          const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
+          const clusterTopZ = fippleZ - 75.0;
+          const keyPitch = 22.0;
+          const padZ = isKeyed ? (clusterTopZ - hIdx * keyPitch) : absZ;
+          const sideOffset = isKeyed ? ((hIdx < Math.floor(numHoles / 2)) ? -14.0 : 14.0) : 0;
+
+          const posX = -cx + sideOffset;
+          const posY = padZ;
           const posZ = chimneySurfaceZ + cy;
 
           fingerGroup.position.set(posX, posY, posZ - 2.5);
@@ -2796,9 +2802,14 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
   const zCut2 = (numSegments >= 3) ? findSafeCutZ(totalCadLen * (2.0 / numSegments)) : totalCadLen;
   const zCut3 = (numSegments >= 4) ? findSafeCutZ(totalCadLen * (3.0 / numSegments)) : totalCadLen;
   
-    // Keywork mechanism generation for tone holes
+        // Ergonomic Clustered Touchpad Keywork (Boehm / Saxophone Remote Linkage)
+    // Tone holes are physically far apart (absZ), but all touchpads are grouped in a compact 22mm-spaced hand cluster!
     let keysScad = [];
     let tpuGasketsScad = [];
+
+    // Calculate ergonomic hand cluster center (anchored comfortably below fipple)
+    const clusterTopZ = fippleZ - 75.0;
+    const keyPitch = 22.0; // 22mm spacing between adjacent fingertip touchpads
 
     for (let hIdx = 0; hIdx < numHoles; hIdx++) {
       const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
@@ -2809,33 +2820,39 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
 
       if (isKeyed) {
         const cupD = holeDiam + rimThickness * 2 + 2.4;
-        const leverLen = Math.max(22.0, Math.min(48.0, 32.0 + (hIdx % 2) * 8.0));
-        const touchOffset = (hIdx % 2 === 0) ? -14.0 : 14.0;
+        // The finger touchpad Z position in the compact stationary hand cluster
+        const padZ = clusterTopZ - hIdx * keyPitch;
+        // Longitudinal travel distance from touchpad to hole cup
+        const deltaZ = padZ - absZ;
+        const sideOffset = (hIdx < Math.floor(numHoles / 2)) ? -14.0 : 14.0;
 
-        keysScad.push(`        // Articulated Print-in-Place Keywork Lever for Hole ${hIdx + 1}
+        keysScad.push(`        // Ergonomic Clustered Key Lever for Hole ${hIdx + 1} (Hole Z=${absZ.toFixed(1)}, Touchpad Z=${padZ.toFixed(1)})
         translate([0, ${(outerD * 0.433 + chimneyDepth + 0.6).toFixed(2)}, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
-            // 1. Pivot Hinge Stanchion Pillar attached to Body
-            translate([${touchOffset * 0.45}, 0, -${(chimneyDepth + 0.8).toFixed(2)}]) {
+            // 1. Pivot Hinge Stanchion Pillar attached to Body at hole location
+            translate([${sideOffset * 0.45}, 0, -${(chimneyDepth + 0.8).toFixed(2)}]) {
                 cube([5.0, 6.0, ${(chimneyDepth + 1.2).toFixed(2)}], center=true);
-                // Cylindrical Axle Boss
                 translate([0, 0, ${(chimneyDepth/2).toFixed(2)}]) rotate([0, 90, 0]) cylinder(d=4.2, h=5.0, center=true, $fn=16);
             }
 
-            // 2. Articulated Key Lever Arm with 0.35mm Print-in-Place Clearance Gap
+            // 2. Articulated Key Lever Arm with Longitudinal Linkage Beam
             difference() {
                 union() {
-                    // Key Cup over Chimney Lip
+                    // Key Cup sealing over Chimney Lip
                     cylinder(d=${cupD.toFixed(2)}, h=2.8, $fn=24);
-                    // Ergonomic Touch Pad on offset side
-                    translate([${touchOffset.toFixed(2)}, ${(leverLen * 0.45).toFixed(2)}, 1.0])
-                        cylinder(d=15.0, h=2.5, $fn=24);
-                    // Rocker Beam linking Cup to Touchpad
+                    
+                    // Stationary Ergonomic Touchpad in the hand cluster
+                    translate([${sideOffset.toFixed(2)}, 0, ${deltaZ.toFixed(2)}])
+                        cylinder(d=16.0, h=2.8, $fn=24);
+
+                    // Longitudinal Connecting Rod linking remote hole cup to compact fingertip touchpad
                     hull() {
-                        translate([0, 0, 1.4]) cylinder(d=6.0, h=1.4, center=true, $fn=16);
-                        translate([${touchOffset.toFixed(2)}, ${(leverLen * 0.45).toFixed(2)}, 1.4]) cylinder(d=6.0, h=1.4, center=true, $fn=16);
+                        translate([0, 0, 1.4]) cylinder(d=5.0, h=1.4, center=true, $fn=16);
+                        translate([${sideOffset.toFixed(2)}, 0, ${(deltaZ * 0.5).toFixed(2)}]) cylinder(d=4.5, h=1.4, center=true, $fn=16);
+                        translate([${sideOffset.toFixed(2)}, 0, ${deltaZ.toFixed(2)}]) cylinder(d=5.0, h=1.4, center=true, $fn=16);
                     }
+
                     // Compliant Leaf Spring Beam
-                    translate([${touchOffset * 0.45}, -4.0, 0])
+                    translate([${sideOffset * 0.45}, -4.0, 0])
                         cube([1.2, 8.0, 1.8], center=true);
                 }
                 // Recessed TPU Pad / O-Ring Gasket Groove underneath Key Cup
@@ -2847,7 +2864,7 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
             }
         }`);
 
-        tpuGasketsScad.push(`    // Separate / Multi-Material TPU Pad Gasket Ring for Hole ${hIdx + 1}
+        tpuGasketsScad.push(`    // TPU Soft Key Gasket Ring for Hole ${hIdx + 1}
     translate([${(hIdx * 25 - (numHoles * 12)).toFixed(2)}, 0, 0])
         difference() {
             cylinder(d=${(cupD - 1.4).toFixed(2)}, h=1.8, $fn=32);
@@ -2858,6 +2875,7 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
 
     const keysStr = keysScad.join('\n');
     const tpuGasketsStr = tpuGasketsScad.join('\n');
+
     let chimneysScad = [];
   let holesScad = [];
 
