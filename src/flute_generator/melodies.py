@@ -86,12 +86,23 @@ MELODY_PRESETS: Dict[str, List[Tuple[Optional[int], float, Optional[str]]]] = {
 }
 
 
-def get_available_flute_notes(root_midi: int, scale_intervals: List[int], octaves: int = 2) -> List[int]:
-    """Generate all available playable pitches on this flute across multiple octaves."""
+def get_available_flute_notes(
+    root_midi: int,
+    scale_intervals: List[int],
+    num_holes: Optional[int] = None,
+    octaves: int = 2
+) -> List[int]:
+    """Generate all available playable pitches on this flute based on scale and hole count."""
+    effective_intervals = scale_intervals
+    if num_holes is not None and num_holes > 0:
+        # A flute with N holes can produce (N + 1) distinct fundamental scale pitches in the lower octave
+        max_fundamental_notes = min(len(scale_intervals), num_holes + 1)
+        effective_intervals = scale_intervals[:max_fundamental_notes]
+
     notes = set()
     for oct_idx in range(octaves):
         octave_offset = oct_idx * 12
-        for interval in scale_intervals:
+        for interval in effective_intervals:
             note = root_midi + octave_offset + interval
             if 0 <= note <= 127:
                 notes.add(note)
@@ -109,17 +120,18 @@ def build_quantized_melody(
     melody_name: str,
     root_midi: int,
     scale_intervals: List[int],
+    num_holes: Optional[int] = None,
     octaves: int = 2,
     base_velocity: int = 84,
 ) -> List[NoteEvent]:
-    """Load a melody preset, transpose relative to root_midi, and quantize each note with smooth, even dynamics."""
+    """Load a melody preset, transpose relative to root_midi, and quantize to valid scale & hole count."""
     if melody_name not in MELODY_PRESETS:
         raise ValueError(
             f"Unknown melody '{melody_name}'. Available: {list(MELODY_PRESETS.keys())}"
         )
 
     raw_melody = MELODY_PRESETS[melody_name]
-    available_notes = get_available_flute_notes(root_midi, scale_intervals, octaves=octaves)
+    available_notes = get_available_flute_notes(root_midi, scale_intervals, num_holes=num_holes, octaves=octaves)
 
     events: List[NoteEvent] = []
 
