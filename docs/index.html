@@ -523,6 +523,32 @@
       </div>
     </div>
 
+        <div>
+      <div class="section-label">Articulated Keywork & TPU Gaskets</div>
+      <div class="field-group">
+        <label>Key Mechanism</label>
+        <select id="sel-keywork-mode">
+          <option value="none" selected>Direct Finger Holes (Traditional Touch)</option>
+          <option value="keys_all">Full Articulated Sax Keywork (All Holes)</option>
+          <option value="keys_low">Low-Hole Reach Keys (Bass Ergonomics)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Pad / Gasket Material</label>
+        <select id="sel-pad-material">
+          <option value="tpu" selected>3D-Printed Soft TPU (AMS Multi-Material)</option>
+          <option value="silicone">Separate TPU/Silicone Gasket Rings</option>
+          <option value="pla_rigid">100% Solid PLA Print-in-Place</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Key Slap / Clack Volume <span class="val" id="val-key-slap">65%</span></label>
+        <input type="range" id="rng-key-slap" min="0" max="100" step="5" value="65">
+      </div>
+    </div>
+
     <div>
       <div class="section-label">3D Printable Donut Chimneys</div>
       <div class="field-group">
@@ -1895,6 +1921,9 @@ function persistCurrentStudioState() {
       drone1Interval: document.getElementById('sel-drone1-interval') ? document.getElementById('sel-drone1-interval').value : '0',
       drone2Interval: document.getElementById('sel-drone2-interval') ? document.getElementById('sel-drone2-interval').value : '7',
       tubeShellMode: document.getElementById('sel-tube-shell-mode') ? document.getElementById('sel-tube-shell-mode').value : 'staggered',
+      keyworkMode: document.getElementById('sel-keywork-mode') ? document.getElementById('sel-keywork-mode').value : 'none',
+      padMaterial: document.getElementById('sel-pad-material') ? document.getElementById('sel-pad-material').value : 'tpu',
+      keySlap: document.getElementById('rng-key-slap') ? document.getElementById('rng-key-slap').value : '65',
       segments: document.getElementById('sel-print-segments') ? document.getElementById('sel-print-segments').value : '1',
       printPart: document.getElementById('sel-print-part') ? document.getElementById('sel-print-part').value : 'assembled',
       jointTol: document.getElementById('rng-joint-tol') ? document.getElementById('rng-joint-tol').value : '0.18',
@@ -1940,6 +1969,12 @@ function restoreStudioState() {
       if (state.drone1Interval && document.getElementById('sel-drone1-interval')) document.getElementById('sel-drone1-interval').value = state.drone1Interval;
       if (state.drone2Interval && document.getElementById('sel-drone2-interval')) document.getElementById('sel-drone2-interval').value = state.drone2Interval;
       if (state.tubeShellMode && document.getElementById('sel-tube-shell-mode')) document.getElementById('sel-tube-shell-mode').value = state.tubeShellMode;
+      if (state.keyworkMode && document.getElementById('sel-keywork-mode')) document.getElementById('sel-keywork-mode').value = state.keyworkMode;
+      if (state.padMaterial && document.getElementById('sel-pad-material')) document.getElementById('sel-pad-material').value = state.padMaterial;
+      if (state.keySlap && document.getElementById('rng-key-slap')) {
+        document.getElementById('rng-key-slap').value = state.keySlap;
+        document.getElementById('val-key-slap').innerText = `${state.keySlap}%`;
+      }
       if (state.segments && document.getElementById('sel-print-segments')) document.getElementById('sel-print-segments').value = state.segments;
       if (state.printPart && document.getElementById('sel-print-part')) document.getElementById('sel-print-part').value = state.printPart;
       if (state.jointTol && document.getElementById('rng-joint-tol')) {
@@ -2046,8 +2081,10 @@ function rebuild3DFlute() {
   const drone1Int     = parseInt(document.getElementById('sel-drone1-interval') ? document.getElementById('sel-drone1-interval').value : '0');
   const drone2Int     = parseInt(document.getElementById('sel-drone2-interval') ? document.getElementById('sel-drone2-interval').value : '7');
   const tubeShellMode = document.getElementById('sel-tube-shell-mode') ? document.getElementById('sel-tube-shell-mode').value : 'staggered';
+  const keyworkMode   = document.getElementById('sel-keywork-mode') ? document.getElementById('sel-keywork-mode').value : 'none';
+  const padMaterial   = document.getElementById('sel-pad-material') ? document.getElementById('sel-pad-material').value : 'tpu';
 
-  const scadStr = generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, printPart, jointTol, jointLen, drone1Int, drone2Int, tubeShellMode);
+  const scadStr = generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, printPart, jointTol, jointLen, drone1Int, drone2Int, tubeShellMode, keyworkMode, padMaterial);
   document.getElementById('lbl-status').innerText = 'Compiling OpenSCAD WASM...';
 
   getOpenSCAD()
@@ -2249,6 +2286,8 @@ class WebPhysicalPipe {
     // Slow Air Chamber (SAC) internal pneumatic pressure state
     this.sacPressure = 0.0;
     this.airNoise = 0.0;
+    this.lastKeyMidi = -1;
+    this.keySlapTimer = 0;
     this.currFreq = 440.0;
     this.targetFreq = 440.0;
     this.updateCoeffs(440.0);
@@ -2271,6 +2310,22 @@ class WebPhysicalPipe {
 
   process(breathP) {
     if (breathP <= 0.001 && this.sacPressure <= 0.001) return 0.0;
+
+    // Detect Note Pitch Transition -> Trigger Acoustic Key Pad Snap / Slap Transient
+    if (this.lastKeyMidi !== -1 && this.lastKeyMidi !== this.targetFreq) {
+      this.keySlapTimer = Math.floor(this.sr * 0.018); // 18ms transient impulse
+    }
+    this.lastKeyMidi = this.targetFreq;
+
+    let keySlapTransient = 0.0;
+    if (this.keySlapTimer > 0) {
+      const slapSlp = this.keySlapTimer / (this.sr * 0.018);
+      // Dual-component transient: soft low wooden thud + sharp pad closure click
+      const click = (Math.random() * 2.0 - 1.0) * Math.exp(-6.0 * (1.0 - slapSlp));
+      const thud = Math.sin(2.0 * Math.PI * 180.0 * (1.0 - slapSlp)) * Math.exp(-4.0 * (1.0 - slapSlp));
+      keySlapTransient = (click * 0.025 + thud * 0.045) * this.keySlapGain;
+      this.keySlapTimer--;
+    }
 
     // 1. Pneumatic Airflow Dynamics in the Slow Air Chamber (P_sac)
     // Simulates the physical air volume reservoir filling and releasing breath
@@ -2325,7 +2380,7 @@ class WebPhysicalPipe {
 
     // Direct airy breath rush audible around the sound window
     const windowAirRush = labiumTurbulence * 0.35;
-    return (totalAcousticOut * 0.28 + windowAirRush);
+    return (totalAcousticOut * 0.28 + windowAirRush + keySlapTransient);
   }
 }
 
@@ -2581,6 +2636,21 @@ document.getElementById('sel-flute-preset').addEventListener('change', (e) => {
 });
 
 
+
+document.getElementById('sel-keywork-mode').addEventListener('change', () => {
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+document.getElementById('sel-pad-material').addEventListener('change', () => {
+  persistCurrentStudioState();
+  rebuild3DFlute();
+});
+document.getElementById('rng-key-slap').addEventListener('input', (e) => {
+  document.getElementById('val-key-slap').innerText = `${e.target.value}%`;
+  if (liveMelPipe) liveMelPipe.keySlapGain = parseInt(e.target.value) / 100.0;
+  persistCurrentStudioState();
+});
+
 document.getElementById('sel-print-segments').addEventListener('change', () => {
   persistCurrentStudioState();
   rebuild3DFlute();
@@ -2632,7 +2702,7 @@ document.getElementById('rng-chim-rim').addEventListener('input', (e) => {
 });
 
 // Complete Standalone OpenSCAD Generator in JS (matches cad.py 100%)
-function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.8, rimThickness = 3.2, numSegments = 1, printPart = 'assembled', jointTol = 0.18, jointLen = 14.0, drone1Interval = 0, drone2Interval = 7, tubeShellMode = 'staggered') {
+function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.8, rimThickness = 3.2, numSegments = 1, printPart = 'assembled', jointTol = 0.18, jointLen = 14.0, drone1Interval = 0, drone2Interval = 7, tubeShellMode = 'staggered', keyworkMode = 'none', padMaterial = 'tpu') {
   let boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0;
   if (rootMidi >= 74) { boreM = 12.0; boreD1 = 14.0; boreD2 = 10.0; }
   else if (rootMidi >= 67) { boreM = 16.0; boreD1 = 18.0; boreD2 = 14.0; }
@@ -2701,7 +2771,70 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
   const zCut1 = findSafeCutZ(totalCadLen * (1.0 / numSegments));
   const zCut2 = (numSegments >= 3) ? findSafeCutZ(totalCadLen * (2.0 / numSegments)) : totalCadLen;
   const zCut3 = (numSegments >= 4) ? findSafeCutZ(totalCadLen * (3.0 / numSegments)) : totalCadLen;
-  let chimneysScad = [];
+  
+    // Keywork mechanism generation for tone holes
+    let keysScad = [];
+    let tpuGasketsScad = [];
+
+    for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+      const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
+      const hFreq = midiToFreq(rootMidi + targetInterval);
+      const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
+      const absZ = fippleZ - hDist;
+      const isKeyed = (keyworkMode === 'keys_all') || (keyworkMode === 'keys_low' && hIdx >= Math.floor(numHoles / 2));
+
+      if (isKeyed) {
+        const cupD = holeDiam + rimThickness * 2 + 2.4;
+        const leverLen = Math.max(22.0, Math.min(48.0, 32.0 + (hIdx % 2) * 8.0));
+        const touchOffset = (hIdx % 2 === 0) ? -14.0 : 14.0;
+
+        keysScad.push(`        // Articulated Print-in-Place Keywork Lever for Hole ${hIdx + 1}
+        translate([0, ${(outerD * 0.433 + chimneyDepth + 0.6).toFixed(2)}, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
+            // 1. Pivot Hinge Stanchion Pillar attached to Body
+            translate([${touchOffset * 0.45}, 0, -${(chimneyDepth + 0.8).toFixed(2)}]) {
+                cube([5.0, 6.0, ${(chimneyDepth + 1.2).toFixed(2)}], center=true);
+                // Cylindrical Axle Boss
+                translate([0, 0, ${(chimneyDepth/2).toFixed(2)}]) rotate([0, 90, 0]) cylinder(d=4.2, h=5.0, center=true, $fn=16);
+            }
+
+            // 2. Articulated Key Lever Arm with 0.35mm Print-in-Place Clearance Gap
+            difference() {
+                union() {
+                    // Key Cup over Chimney Lip
+                    cylinder(d=${cupD.toFixed(2)}, h=2.8, $fn=24);
+                    // Ergonomic Touch Pad on offset side
+                    translate([${touchOffset.toFixed(2)}, ${(leverLen * 0.45).toFixed(2)}, 1.0])
+                        cylinder(d=15.0, h=2.5, $fn=24);
+                    // Rocker Beam linking Cup to Touchpad
+                    hull() {
+                        translate([0, 0, 1.4]) cylinder(d=6.0, h=1.4, center=true, $fn=16);
+                        translate([${touchOffset.toFixed(2)}, ${(leverLen * 0.45).toFixed(2)}, 1.4]) cylinder(d=6.0, h=1.4, center=true, $fn=16);
+                    }
+                    // Compliant Leaf Spring Beam
+                    translate([${touchOffset * 0.45}, -4.0, 0])
+                        cube([1.2, 8.0, 1.8], center=true);
+                }
+                // Recessed TPU Pad / O-Ring Gasket Groove underneath Key Cup
+                translate([0, 0, -0.2])
+                    difference() {
+                        cylinder(d=${(cupD - 1.2).toFixed(2)}, h=1.6, $fn=24);
+                        cylinder(d=${(holeDiam + 0.8).toFixed(2)}, h=2.0, center=true, $fn=24);
+                    }
+            }
+        }`);
+
+        tpuGasketsScad.push(`    // Separate / Multi-Material TPU Pad Gasket Ring for Hole ${hIdx + 1}
+    translate([${(hIdx * 25 - (numHoles * 12)).toFixed(2)}, 0, 0])
+        difference() {
+            cylinder(d=${(cupD - 1.4).toFixed(2)}, h=1.8, $fn=32);
+            translate([0, 0, -0.5]) cylinder(d=${(holeDiam + 1.0).toFixed(2)}, h=3.0, $fn=32);
+        }`);
+      }
+    }
+
+    const keysStr = keysScad.join('\n');
+    const tpuGasketsStr = tpuGasketsScad.join('\n');
+    let chimneysScad = [];
   let holesScad = [];
 
   for (let hIdx = 0; hIdx < numHoles; hIdx++) {
@@ -2837,6 +2970,9 @@ module complete_flute() {
 
             // Chimneys
 ${chimneysStr}
+
+            // Articulated Print-in-Place Keywork
+${keysStr}
         }
 
         // Resonator bores (fipple_z downwards to bottom)
@@ -3099,6 +3235,16 @@ document.getElementById('btn-export-stl-zip').addEventListener('click', async ()
     // Include the complete parametric OpenSCAD source file in the zip
     const masterScad = generateScadJs(root, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, 'assembled', jointTol, jointLen);
     zip.file(`${fluteName}_master_cad.scad`, masterScad);
+
+    // Export Separate TPU Pad Gasket Rings STL if TPU/Silicone mode selected
+    if (document.getElementById('sel-keywork-mode').value !== 'none') {
+      document.getElementById('lbl-status').innerText = 'Generating TPU Gasket STLs...';
+      const tpuScad = `// TPU Soft Key Gasket Rings for ${fluteName}\n$fn = 48;\n${tpuGasketsStr}\n`;
+      try {
+        const tpuStl = await scad.renderToStl(tpuScad);
+        zip.file(`${fluteName}_TPU_key_gaskets_set.stl`, tpuStl);
+      } catch(e){}
+    }
 
     document.getElementById('lbl-status').innerText = 'Packaging ZIP archive...';
     const zipBlob = await zip.generateAsync({ type: 'blob' });
