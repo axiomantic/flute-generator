@@ -511,7 +511,7 @@
         <button class="btn-subtle" id="btn-add-note">➕ Add Note</button>
 
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:auto;">
-          🎹 Drag note vertically to change hole pitch • Drag sides to resize duration • Click grid to insert
+          🎹 Continuous Note Sequence • Drag note up/down to change hole • Drag right edge to adjust boundary • Click row to append
         </span>
       </div>
 
@@ -667,7 +667,9 @@ function renderPianoRoll(activeIdx = -1) {
   let timeCursor = 0;
   scoreNotes.forEach((note, idx) => {
     const leftPx = timeCursor * pxPerSec;
-    const widthPx = Math.max(20, note.duration * pxPerSec - 3);
+    // Contiguous space fill: Note always fills cleanly to the start of the next note (or end of track)
+    const nextLeftPx = (timeCursor + note.duration) * pxPerSec;
+    const widthPx = Math.max(16, nextLeftPx - leftPx - 2);
     const pitchRowIdx = reversedPitches.indexOf(note.midi);
     const rowHeightPct = 100 / reversedPitches.length;
     const topPct = (pitchRowIdx >= 0 ? pitchRowIdx : 0) * rowHeightPct;
