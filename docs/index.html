@@ -1693,38 +1693,43 @@ const WOOD_PROFILES = {
 
 
 // Atmospheric lighting & backgrounds
+// High-contrast, studio-grade atmospheric lighting & backgrounds
 const ENV_PROFILES = {
   canyon: {
-    bg: 'radial-gradient(circle at 50% 30%, #3e1b24 0%, #150912 60%, #060205 100%)',
-    ambient: 0xffeedd, ambientInt: 0.85,
-    keyLight: 0xffaa55, keyInt: 1.3,
-    fillLight: 0x6644aa, fillInt: 0.5,
-    gridColor: 0x552233
+    bg: 'radial-gradient(circle at 50% 35%, #4a212b 0%, #200c19 55%, #0a0308 100%)',
+    ambient: 0xfff1e6, ambientInt: 1.15,
+    keyLight: 0xffc48c, keyInt: 1.45,
+    fillLight: 0x9d71e8, fillInt: 0.75,
+    rimLight: 0xffedd5, rimInt: 1.10,
+    gridColor: 0x662940
   },
   studio: {
-    bg: 'radial-gradient(circle at 50% 40%, #1a2233 0%, #0a0e17 65%, #03050a 100%)',
-    ambient: 0xffffff, ambientInt: 0.85,
-    keyLight: 0xffedd5, keyInt: 1.1,
-    fillLight: 0x93c5fd, fillInt: 0.55,
-    gridColor: 0x1e293b
+    bg: 'radial-gradient(circle at 50% 40%, #1e293b 0%, #0f172a 60%, #030712 100%)',
+    ambient: 0xffffff, ambientInt: 1.20,
+    keyLight: 0xfff7ed, keyInt: 1.40,
+    fillLight: 0x60a5fa, fillInt: 0.80,
+    rimLight: 0x38bdf8, rimInt: 1.20,
+    gridColor: 0x334155
   },
   forest: {
-    bg: 'radial-gradient(circle at 50% 30%, #0d2b22 0%, #051410 65%, #020806 100%)',
-    ambient: 0xddffea, ambientInt: 0.80,
-    keyLight: 0xa7f3d0, keyInt: 1.2,
-    fillLight: 0x1e3a8a, fillInt: 0.45,
-    gridColor: 0x064e3b
+    bg: 'radial-gradient(circle at 50% 30%, #143d32 0%, #071f18 60%, #020b08 100%)',
+    ambient: 0xf0fdf4, ambientInt: 1.15,
+    keyLight: 0xdcfce7, keyInt: 1.35,
+    fillLight: 0x38bdf8, fillInt: 0.70,
+    rimLight: 0x34d399, rimInt: 1.15,
+    gridColor: 0x065f46
   },
   cad_dark: {
-    bg: 'radial-gradient(circle at 50% 50%, #0f172a 0%, #050811 75%, #000000 100%)',
-    ambient: 0xe2e8f0, ambientInt: 0.90,
-    keyLight: 0x38bdf8, keyInt: 1.2,
-    fillLight: 0x818cf8, fillInt: 0.40,
-    gridColor: 0x334155
+    bg: 'radial-gradient(circle at 50% 50%, #1e1e38 0%, #0c0c1a 70%, #020208 100%)',
+    ambient: 0xf8fafc, ambientInt: 1.25,
+    keyLight: 0x38bdf8, keyInt: 1.50,
+    fillLight: 0xa78bfa, fillInt: 0.85,
+    rimLight: 0xf472b6, rimInt: 1.30,
+    gridColor: 0x475569
   }
 };
 
-let mainLight = null, sideLight = null, ambientLight = null, groundGrid = null;
+let mainLight = null, sideLight = null, rimLight = null, ambientLight = null, groundGrid = null;
 
 function applyEnvironment(envKey) {
   const env = ENV_PROFILES[envKey] || ENV_PROFILES.canyon;
@@ -1742,6 +1747,10 @@ function applyEnvironment(envKey) {
   if (sideLight) {
     sideLight.color.setHex(env.fillLight);
     sideLight.intensity = env.fillInt;
+  }
+  if (rimLight) {
+    rimLight.color.setHex(env.rimLight || 0xffffff);
+    rimLight.intensity = env.rimInt || 1.0;
   }
   if (groundGrid && scene) {
     scene.remove(groundGrid);
@@ -1764,16 +1773,23 @@ function init3D() {
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+  ambientLight = new THREE.AmbientLight(0xffffff, 1.15);
   scene.add(ambientLight);
 
-  mainLight = new THREE.DirectionalLight(0xffedd5, 1.1);
-  mainLight.position.set(150, 200, -350);
+  // Key Light (Front-Right high)
+  mainLight = new THREE.DirectionalLight(0xffedd5, 1.4);
+  mainLight.position.set(160, 220, -380);
   scene.add(mainLight);
 
-  sideLight = new THREE.DirectionalLight(0x93c5fd, 0.45);
-  sideLight.position.set(-180, 100, 250);
+  // Fill Light (Front-Left soft)
+  sideLight = new THREE.DirectionalLight(0x93c5fd, 0.75);
+  sideLight.position.set(-200, 120, -300);
   scene.add(sideLight);
+
+  // Back Rim Light (Behind flute for crisp silhouette edge separation)
+  rimLight = new THREE.DirectionalLight(0xffffff, 1.15);
+  rimLight.position.set(0, 150, 400);
+  scene.add(rimLight);
 
   groundGrid = new THREE.GridHelper(600, 20, 0x1e293b, 0x1e293b);
   groundGrid.position.y = -10;
@@ -1781,17 +1797,23 @@ function init3D() {
   groundGrid.material.transparent = true;
   scene.add(groundGrid);
 
-  // Pick random background and random wood finish on startup
-  const envKeys = Object.keys(ENV_PROFILES);
-  const randomEnv = envKeys[Math.floor(Math.random() * envKeys.length)];
-  const envSel = document.getElementById('sel-environment');
-  if (envSel) envSel.value = randomEnv;
-  applyEnvironment(randomEnv);
+  // Paired High-Contrast Selection (Guarantees strong visual pop and readability)
+  const CONTRAST_PAIRS = [
+    { wood: 'ebony', env: 'studio' },       // Jet black flute against bright studio highlight
+    { wood: 'bamboo', env: 'canyon' },      // Bright golden bamboo against rich crimson canyon
+    { wood: 'cedar', env: 'forest' },       // Warm reddish cedar against deep emerald forest
+    { wood: 'walnut', env: 'cad_dark' },     // Rich dark walnut against cyan-rimmed studio
+    { wood: 'cherry', env: 'studio' },      // Rich wild cherry against neutral studio lighting
+    { wood: 'bamboo', env: 'forest' }       // Golden bamboo against forest background
+  ];
+  const chosenPair = CONTRAST_PAIRS[Math.floor(Math.random() * CONTRAST_PAIRS.length)];
 
-  const woodKeys = Object.keys(WOOD_PROFILES);
-  const randomWood = woodKeys[Math.floor(Math.random() * woodKeys.length)];
+  const envSel = document.getElementById('sel-environment');
+  if (envSel) envSel.value = chosenPair.env;
+  applyEnvironment(chosenPair.env);
+
   const woodSel = document.getElementById('sel-wood-finish');
-  if (woodSel) woodSel.value = randomWood;
+  if (woodSel) woodSel.value = chosenPair.wood;
 
   fluteRootGroup = new THREE.Group();
   scene.add(fluteRootGroup);
