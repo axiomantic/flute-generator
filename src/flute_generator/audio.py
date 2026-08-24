@@ -202,7 +202,7 @@ def render_soundfont_wav(
     wav_path: Union[str, Path],
     sample_rate: int = 44100,
 ) -> bool:
-    """Render a multi-track MIDI file to WAV using FluidSynth with correct CLI argument ordering."""
+    """Render a multi-track MIDI file to WAV using FluidSynth with full error reporting."""
     fluidsynth_bin = shutil.which("fluidsynth")
     if not fluidsynth_bin:
         return False
@@ -223,9 +223,31 @@ def render_soundfont_wav(
     ]
 
     try:
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-        return res.returncode == 0 and out_file.is_file() and out_file.stat().st_size > 0
-    except Exception:
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+        
+        # Report any errors or warnings from FluidSynth
+        stderr_msgs = res.stderr.strip() if res.stderr else ""
+        if stderr_msgs:
+            # Filter out cosmetic GM drum bank 128 notice if present
+            err_lines = [
+                line for line in stderr_msgs.splitlines()
+                if "No preset found on channel 9" not in line
+            ]
+            if err_lines:
+                import sys
+                print("\n[!] SoundFont / FluidSynth Messages:", file=sys.stderr)
+                for line in err_lines:
+                    print(f"    {line}", file=sys.stderr)
+
+        if res.returncode != 0:
+            import sys
+            print(f"[!] FluidSynth failed with exit code {res.returncode}", file=sys.stderr)
+            return False
+
+        return out_file.is_file() and out_file.stat().st_size > 0
+    except Exception as exc:
+        import sys
+        print(f"[!] Error running FluidSynth: {exc}", file=sys.stderr)
         return False
 
 
