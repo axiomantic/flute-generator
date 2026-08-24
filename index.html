@@ -2309,13 +2309,31 @@ function rebuild3DFlute() {
             bossMesh.rotation.z = Math.PI / 2;
             keyRockerGroup.add(bossMesh);
 
-            // C. Longitudinal Side Rod (Running along Y-axis in Three.js / Z-axis in OpenSCAD)
+            // C. Longitudinal Side Rod with Segmented Socket Glue Joints (Crossing cut planes)
             const deltaScadZ = absZ - padZ;
             const sideRodLen = Math.abs(deltaScadZ);
             if (sideRodLen > 1.0) {
               const sideRod = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, sideRodLen, 12), matConnectRod);
               sideRod.position.set(0, deltaScadZ / 2, 0);
               keyRockerGroup.add(sideRod);
+
+              // Segmented Key Rod Socket Sleeves (for multi-segment builds)
+              if (numSegments > 1) {
+                const minZ = Math.min(padZ, absZ);
+                const maxZ = Math.max(padZ, absZ);
+                [zCut1, zCut2, zCut3].forEach(cutZ => {
+                  if (cutZ > minZ + 5.0 && cutZ < maxZ - 5.0) {
+                    const localCutY = cutZ - padZ;
+                    // Interlocking Glue Socket Collar Sleeve on the Rod
+                    const socketCollar = new THREE.Mesh(
+                      new THREE.CylinderGeometry(2.4, 2.4, 6.0, 16),
+                      matAxlePin // High-contrast chrome sleeve
+                    );
+                    socketCollar.position.set(0, localCutY, 0);
+                    keyRockerGroup.add(socketCollar);
+                  }
+                });
+              }
             }
 
             // D. S-Curved Dogleg Arm Reaching Inward from Side Rod to Center Hole (X=0)
@@ -2897,7 +2915,7 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
   const zCut2 = (numSegments >= 3) ? findSafeCutZ(totalCadLen * (2.0 / numSegments)) : totalCadLen;
   const zCut3 = (numSegments >= 4) ? findSafeCutZ(totalCadLen * (3.0 / numSegments)) : totalCadLen;
   
-                // Keywork Mounting Posts & Side Rails (OpenSCAD static body)
+                    // Keywork Mounting Posts & Segmented Side Rail Sockets (OpenSCAD CAD)
     let keysScad = [];
     let tpuGasketsScad = [];
 
@@ -2910,7 +2928,7 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
       const railLen = Math.max(lMel, lD1, lD2) * 0.85;
       const railZ = fippleZ - railLen / 2 - 20.0;
 
-      keysScad.push(`        // Static Key Mounting Rails on Left & Right Flute Sides (Clears center tone holes!)
+      keysScad.push(`        // Static Key Mounting Rails on Left & Right Flute Sides
         translate([-spacing * 0.75, ${(frontY + 1.0).toFixed(2)}, ${railZ.toFixed(2)}])
             cube([4.0, 3.5, ${railLen.toFixed(2)}], center=true);
         translate([spacing * 0.75, ${(frontY + 1.0).toFixed(2)}, ${railZ.toFixed(2)}])
