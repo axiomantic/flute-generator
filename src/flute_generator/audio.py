@@ -154,7 +154,7 @@ def create_flute_midi(
             melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=duration_ticks))
 
     # -------------------------------------------------------------
-    # Track 2: Drone 1 Tube - Root Resonator (Channel 1 - Continuous Resonator)
+    # Track 2: Drone 1 Tube - Root Resonator (Channel 1 - Continuous Sustain)
     # -------------------------------------------------------------
     drone1_track = MidiTrack()
     mid.tracks.append(drone1_track)
@@ -164,17 +164,23 @@ def create_flute_midi(
     drone1_track.append(Message('program_change', channel=chan_d1, program=0, time=0))
     drone1_track.append(Message('control_change', channel=chan_d1, control=10, value=38, time=0))   # Left pan
     drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=75, time=0))   # Reverb
-    drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=75, time=0))
+    drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=78, time=0))
 
     drone1_midi = int(round(dims.root_midi + dims.scale_intervals[0]))
     total_piece_ticks = sum(int(round(e.duration_beats * ticks_per_beat)) for e in melody_events)
 
-    # Continuous uninterrupted resonant hum throughout performance
-    drone1_track.append(Message('note_on', channel=chan_d1, note=drone1_midi, velocity=66, time=0))
-    drone1_track.append(Message('note_off', channel=chan_d1, note=drone1_midi, velocity=66, time=total_piece_ticks))
+    # Acoustic SoundFont samples (like ixox_flute.sf2) naturally decay after ~3.2s without looping.
+    # To maintain unbroken continuous sustain across the piece, cycle smooth 4-beat (~2.5s) tied breath notes.
+    drone_cycle_ticks = int(4.0 * ticks_per_beat)
+    curr_d1_ticks = 0
+    while curr_d1_ticks < total_piece_ticks:
+        dur = min(drone_cycle_ticks, total_piece_ticks - curr_d1_ticks)
+        drone1_track.append(Message('note_on', channel=chan_d1, note=drone1_midi, velocity=66, time=0))
+        drone1_track.append(Message('note_off', channel=chan_d1, note=drone1_midi, velocity=66, time=dur))
+        curr_d1_ticks += dur
 
     # -------------------------------------------------------------
-    # Track 3: Drone 2 Tube - Harmonic Resonator (Channel 2 - Continuous Resonator)
+    # Track 3: Drone 2 Tube - Harmonic Resonator (Channel 2 - Continuous Sustain)
     # -------------------------------------------------------------
     drone2_track = MidiTrack()
     mid.tracks.append(drone2_track)
@@ -184,11 +190,21 @@ def create_flute_midi(
     drone2_track.append(Message('program_change', channel=chan_d2, program=0, time=0))
     drone2_track.append(Message('control_change', channel=chan_d2, control=10, value=90, time=0))   # Right pan
     drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=75, time=0))   # Reverb
-    drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=65, time=0))
+    drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=72, time=0))
 
     drone2_midi = int(round(69 + 12 * math.log2(dims.drone2_frequency / 440.0)))
+    
+    # Stagger Drone 2 by 2 beats so both drone tubes never cycle simultaneously (creates unbroken wall of sound)
+    stagger_ticks = min(int(2.0 * ticks_per_beat), total_piece_ticks)
     drone2_track.append(Message('note_on', channel=chan_d2, note=drone2_midi, velocity=60, time=0))
-    drone2_track.append(Message('note_off', channel=chan_d2, note=drone2_midi, velocity=60, time=total_piece_ticks))
+    drone2_track.append(Message('note_off', channel=chan_d2, note=drone2_midi, velocity=60, time=stagger_ticks))
+    
+    curr_d2_ticks = stagger_ticks
+    while curr_d2_ticks < total_piece_ticks:
+        dur = min(drone_cycle_ticks, total_piece_ticks - curr_d2_ticks)
+        drone2_track.append(Message('note_on', channel=chan_d2, note=drone2_midi, velocity=60, time=0))
+        drone2_track.append(Message('note_off', channel=chan_d2, note=drone2_midi, velocity=60, time=dur))
+        curr_d2_ticks += dur
 
     out_file = Path(output_path)
     out_file.parent.mkdir(parents=True, exist_ok=True)
