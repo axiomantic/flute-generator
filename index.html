@@ -371,13 +371,30 @@
 <header>
   <h1>🪈 Flute Studio <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">1:1 Physical CAD & 3D Printable Geometry</span></h1>
   
-  <!-- Global Flute Preset Manager (Instrument + Tuning + Aesthetics + Song) -->
-  <div style="display:flex; align-items:center; gap:8px; margin-left:auto; margin-right:16px;">
-    <span style="font-size:0.72rem; color:var(--accent-cyan); font-weight:600; text-transform:uppercase;">Flute Preset:</span>
-    <select id="sel-flute-preset" style="width: 210px; font-size:0.75rem; padding:4px 8px;"></select>
-    <button class="btn-subtle" onclick="saveCurrentFlutePreset()" title="Save all flute parameters & song to LocalStorage">💾 Save</button>
-    <button class="btn-subtle" onclick="duplicateCurrentFlutePreset()" title="Duplicate as new custom flute preset">📋 Dup</button>
-    <button class="btn-subtle" onclick="deleteCurrentFlutePreset()" title="Delete custom flute preset">🗑️</button>
+  <div style="display:flex; align-items:center; gap:12px; margin-left:auto; margin-right:16px;">
+    <!-- Visual Theme Selector (Streamlined High-Contrast Material + Lighting Pairs) -->
+    <div style="display:flex; align-items:center; gap:6px;">
+      <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Theme:</span>
+      <select id="sel-theme" style="width: 175px; font-size:0.75rem; padding:4px 8px;">
+        <option value="cedar_canyon" selected>Warm Cedar & Canyon</option>
+        <option value="ebony_studio">African Ebony & Studio</option>
+        <option value="bamboo_forest">Golden Bamboo & Forest</option>
+        <option value="walnut_dark">Black Walnut & Obsidian</option>
+        <option value="cherry_studio">Wild Cherry & Luthier</option>
+        <option value="xray_cad">X-Ray Airway & Blueprint</option>
+      </select>
+    </div>
+
+    <div style="height:18px; width:1px; background:var(--border);"></div>
+
+    <!-- Acoustic Preset Manager -->
+    <div style="display:flex; align-items:center; gap:6px;">
+      <span style="font-size:0.72rem; color:var(--accent-cyan); font-weight:600; text-transform:uppercase;">Preset:</span>
+      <select id="sel-flute-preset" style="width: 190px; font-size:0.75rem; padding:4px 8px;"></select>
+      <button class="btn-subtle" onclick="saveCurrentFlutePreset()" title="Save preset">💾</button>
+      <button class="btn-subtle" onclick="duplicateCurrentFlutePreset()" title="Duplicate preset">📋</button>
+      <button class="btn-subtle" onclick="deleteCurrentFlutePreset()" title="Delete preset">🗑️</button>
+    </div>
   </div>
 
   <div class="status-pill"><span class="status-dot"></span> <span id="lbl-status">Engine Ready</span></div>
@@ -450,76 +467,6 @@
           <option value="staggered" selected>Staggered Tubes (Acoustic Length Trim)</option>
           <option value="unified">Unified Foot (Enclosed Flush Base)</option>
         </select>
-      </div>
-    </div>
-
-        <div>
-      <div class="section-label">Appearance & Lighting</div>
-      <div class="field-group">
-        <label>Wood / Material Finish</label>
-        <select id="sel-wood-finish">
-          <option value="cedar" selected>Western Red Cedar (Warm Satin)</option>
-          <option value="walnut">Black Walnut (Deep Lustre)</option>
-          <option value="cherry">Wild Cherry (Amber Tone)</option>
-          <option value="ebony">African Ebony (Polished Darkwood)</option>
-          <option value="bamboo">Golden Bamboo (Smooth Cane)</option>
-        </select>
-      </div>
-            <div class="field-group">
-        <label>Finger / Note Indicator</label>
-        <select id="sel-indicator-style">
-          <option value="minimal_gem" selected>Acoustic Gem Rings (Minimal & Clean)</option>
-          <option value="floating_orbs">Luminescent Orbs (Ethereal)</option>
-          <option value="spirit_pads">Spirit Wood Blocks (Carved Totems)</option>
-          <option value="hidden">Hidden (Pure Instrument View)</option>
-        </select>
-      </div>
-            <div class="field-group">
-        <label>Body Transparency (X-Ray Internal Airway) <span class="val" id="val-flute-opacity">100%</span></label>
-        <input type="range" id="rng-flute-opacity" min="15" max="100" step="5" value="100">
-      </div>
-      <div class="field-group">
-        <label>Atmospheric Environment</label>
-        <select id="sel-environment">
-          <option value="canyon">Mesa Canyon Sunset (Warm Embers)</option>
-          <option value="studio">Luthier Acoustic Studio</option>
-          <option value="forest">Sacred Forest (Emerald Mist)</option>
-          <option value="cad_dark">Obsidian CAD Darkroom</option>
-        </select>
-      </div>
-    </div>
-
-        <div>
-      <div class="section-label">3D Print Slicing & Socket Joints</div>
-      <div class="field-group">
-        <label>Printable Segments</label>
-        <select id="sel-print-segments">
-          <option value="1" selected>1 Piece (Full Monolithic Body)</option>
-          <option value="2">2 Segments (Mouthpiece / Body Foot)</option>
-          <option value="3">3 Segments (Head / Mid Tone-Holes / Foot)</option>
-          <option value="4">4 Segments (Compact 3D Bed Slices)</option>
-        </select>
-      </div>
-
-      <div class="field-group">
-        <label>Segment View / Export Part</label>
-        <select id="sel-print-part">
-          <option value="assembled" selected>Full Assembled Preview</option>
-          <option value="part_1">Segment 1 (Mouthpiece / Head)</option>
-          <option value="part_2">Segment 2 (Upper Mid)</option>
-          <option value="part_3">Segment 3 (Lower Tone Holes)</option>
-          <option value="part_4">Segment 4 (Foot Bell Base)</option>
-        </select>
-      </div>
-
-      <div class="field-group">
-        <label>Socket Joint Tolerance <span class="val" id="val-joint-tol">0.18 mm</span></label>
-        <input type="range" id="rng-joint-tol" min="0.05" max="0.45" step="0.01" value="0.18">
-      </div>
-
-      <div class="field-group">
-        <label>Tenon / Socket Length <span class="val" id="val-joint-len">14.0 mm</span></label>
-        <input type="range" id="rng-joint-len" min="8.0" max="24.0" step="1.0" value="14.0">
       </div>
     </div>
 
@@ -1842,6 +1789,51 @@ function init3D() {
 
 
 let fluteMesh = null;
+
+
+// Streamlined Visual Theme Presets (Material Finish + Atmospheric Lighting + Contrast Pairing)
+const THEME_PRESETS = {
+  cedar_canyon: { wood: 'cedar', env: 'canyon', opacity: 100, indicator: 'minimal_gem' },
+  ebony_studio: { wood: 'ebony', env: 'studio', opacity: 100, indicator: 'minimal_gem' },
+  bamboo_forest: { wood: 'bamboo', env: 'forest', opacity: 100, indicator: 'floating_orbs' },
+  walnut_dark:   { wood: 'walnut', env: 'cad_dark', opacity: 100, indicator: 'minimal_gem' },
+  cherry_studio: { wood: 'cherry', env: 'studio', opacity: 100, indicator: 'minimal_gem' },
+  xray_cad:      { wood: 'bamboo', env: 'cad_dark', opacity: 35, indicator: 'minimal_gem' }
+};
+
+let currentThemeKey = 'cedar_canyon';
+
+function applyTheme(themeKey) {
+  const theme = THEME_PRESETS[themeKey] || THEME_PRESETS.cedar_canyon;
+  currentThemeKey = themeKey;
+
+  applyEnvironment(theme.env);
+  updateRoomAcoustics(theme.env);
+
+  const finish = WOOD_PROFILES[theme.wood] || WOOD_PROFILES.cedar;
+  const woodMap = createWoodGrainTexture(finish.color, finish.dark, finish.grain, finish.isBamboo);
+  const opacityVal = theme.opacity / 100.0;
+
+  if (fluteMesh) {
+    fluteMesh.material.color.setHex(finish.color);
+    fluteMesh.material.map = woodMap;
+    fluteMesh.material.roughness = finish.roughness;
+    fluteMesh.material.metalness = finish.metalness;
+    fluteMesh.material.transparent = (opacityVal < 0.99);
+    fluteMesh.material.opacity = opacityVal;
+    fluteMesh.material.depthWrite = (opacityVal > 0.6);
+    fluteMesh.material.needsUpdate = true;
+  }
+
+  const themeSel = document.getElementById('sel-theme');
+  if (themeSel) themeSel.value = themeKey;
+
+  persistCurrentStudioState();
+}
+
+document.getElementById('sel-theme').addEventListener('change', (e) => {
+  applyTheme(e.target.value);
+});
 
 function updateFluteMaterialOnly() {
   if (!fluteMesh) return;
