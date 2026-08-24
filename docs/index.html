@@ -364,6 +364,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 
@@ -540,8 +541,9 @@
       </div>
     </div>
 
-    <div style="margin-top:auto;">
-      <button class="btn-subtle" style="width:100%;" id="btn-export-scad">💾 Export OpenSCAD .SCAD</button>
+    <div style="margin-top:auto; display:flex; flex-direction:column; gap:8px;">
+      <button class="btn-primary" style="width:100%; font-size:0.80rem;" id="btn-export-stl-zip">📦 Export Printable STLs (.ZIP)</button>
+      <button class="btn-subtle" style="width:100%; font-size:0.75rem;" id="btn-export-scad">💾 Export OpenSCAD .SCAD</button>
     </div>
   </div>
 
@@ -2790,6 +2792,70 @@ if (num_segments == 1 || print_part == "assembled") {
 }
 
 // Download OpenSCAD
+
+// Batch STL Export (Generates and bundles all printable segments into a ready-to-print ZIP)
+document.getElementById('btn-export-stl-zip').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-export-stl-zip');
+  const origText = btn.innerText;
+  btn.innerText = '⏳ Slicing STLs in WASM...';
+  btn.disabled = true;
+
+  try {
+    const root = parseInt(document.getElementById('sel-root').value);
+    const scaleKey = document.getElementById('sel-scale').value;
+    const numHoles = parseInt(document.getElementById('sel-holes').value);
+    const profile = document.getElementById('sel-profile').value;
+    const chimneyDepth = parseFloat(document.getElementById('rng-chim-depth').value);
+    const rimThickness = parseFloat(document.getElementById('rng-chim-rim').value);
+    const numSegments = parseInt(document.getElementById('sel-print-segments') ? document.getElementById('sel-print-segments').value : '1');
+    const jointTol = parseFloat(document.getElementById('rng-joint-tol') ? document.getElementById('rng-joint-tol').value : '0.18');
+    const jointLen = parseFloat(document.getElementById('rng-joint-len') ? document.getElementById('rng-joint-len').value : '14.0');
+
+    const zip = new JSZip();
+    const scad = await getOpenSCAD();
+    const fluteName = `${getMidiName(root)}_${scaleKey}_${numHoles}hole`;
+
+    if (numSegments === 1) {
+      document.getElementById('lbl-status').innerText = 'Rendering Monolithic STL...';
+      const code = generateScadJs(root, scaleKey, numHoles, profile, chimneyDepth, rimThickness, 1, 'assembled', jointTol, jointLen);
+      const stl = await scad.renderToStl(code);
+      zip.file(`${fluteName}_full_monolithic.stl`, stl);
+    } else {
+      for (let s = 1; s <= numSegments; s++) {
+        document.getElementById('lbl-status').innerText = `Rendering Segment ${s}/${numSegments} with socket joints...`;
+        const partKey = `part_${s}`;
+        const code = generateScadJs(root, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, partKey, jointTol, jointLen);
+        const stl = await scad.renderToStl(code);
+        let partLabel = 'head';
+        if (s === numSegments) partLabel = 'foot_bell';
+        else if (s > 1) partLabel = `mid_section_${s-1}`;
+        zip.file(`${fluteName}_segment_${s}_of_${numSegments}_${partLabel}.stl`, stl);
+      }
+    }
+
+    // Include the complete parametric OpenSCAD source file in the zip
+    const masterScad = generateScadJs(root, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, 'assembled', jointTol, jointLen);
+    zip.file(`${fluteName}_master_cad.scad`, masterScad);
+
+    document.getElementById('lbl-status').innerText = 'Packaging ZIP archive...';
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fluteName}_printable_segments_${numSegments}pcs_tol_${jointTol.toFixed(2)}mm.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    document.getElementById('lbl-status').innerText = 'STLs Exported Successfully!';
+  } catch(err) {
+    console.error('STL Export Error:', err);
+    alert('Error generating STL files: ' + err.message);
+    document.getElementById('lbl-status').innerText = 'Export error';
+  } finally {
+    btn.innerText = origText;
+    btn.disabled = false;
+  }
+});
+
 document.getElementById('btn-export-scad').addEventListener('click', async () => {
   const root = parseInt(document.getElementById('sel-root').value);
   const scaleKey = document.getElementById('sel-scale').value;
