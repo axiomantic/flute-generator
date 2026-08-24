@@ -5,6 +5,7 @@ from pathlib import Path
 import random
 import shutil
 import struct
+import subprocess
 from typing import List, Optional, Tuple, Union
 import wave
 
@@ -212,16 +213,32 @@ def render_soundfont_wav(
     midi_path: Union[str, Path],
     sf2_path: Union[str, Path],
     wav_path: Union[str, Path],
+    sample_rate: int = 44100,
 ) -> bool:
-    """Render a multi-track MIDI file to WAV using FluidSynth and a SoundFont (.sf2)."""
+    """Render a multi-track MIDI file to WAV using FluidSynth with correct CLI argument ordering."""
     fluidsynth_bin = shutil.which("fluidsynth")
     if not fluidsynth_bin:
         return False
 
+    out_file = Path(wav_path)
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Modern FluidSynth requires options (-F, -r, -g) to precede positional soundfont/midi paths.
+    cmd = [
+        fluidsynth_bin,
+        "-ni",                                # Non-interactive, no shell
+        "-q",                                 # Quiet mode
+        "-g", "1.2",                          # Gain
+        "-r", str(sample_rate),               # Sample rate
+        "-o", "synth.drums-channel.active=0", # Disable GM drum channel warning
+        "-F", str(out_file),                  # Output audio file (must be before positional args)
+        str(sf2_path),                        # Soundfont file
+        str(midi_path),                       # MIDI input file
+    ]
+
     try:
-        fs = FluidSynth(sound_font=str(sf2_path))
-        fs.midi_to_audio(str(midi_path), str(wav_path))
-        return True
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        return res.returncode == 0 and out_file.is_file() and out_file.stat().st_size > 0
     except Exception:
         return False
 
