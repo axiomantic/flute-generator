@@ -1951,13 +1951,13 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rim
     const outerRim = holeDiam + rimThickness * 2;
     const baseFlange = outerRim + chimneyDepth * 2;
 
-    chimneysScad.push(`        // Solid fused donut chimney pad (fused 2.0mm into cylindrical body - zero seam gap)
-        translate([0, (outer_d/2 - 2.0).toFixed(2), ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
+    chimneysScad.push(`        // Solid self-supporting donut chimney pad
+        translate([0, ${(outerD/2 - 0.5).toFixed(2)}, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) {
             hull() {
-                cylinder(d=${(baseFlange + 2.0).toFixed(2)}, h=2.0, $fn=24);
-                translate([0, 0, ${(chimneyDepth + 1.2).toFixed(2)}]) cylinder(d=${outerRim.toFixed(2)}, h=0.8, $fn=24);
+                cylinder(d=${baseFlange.toFixed(2)}, h=0.5, $fn=24);
+                translate([0, 0, ${(chimneyDepth - 0.8).toFixed(2)}]) cylinder(d=${outerRim.toFixed(2)}, h=0.8, $fn=24);
             }
-            translate([0, 0, ${(chimneyDepth + 2.0).toFixed(2)}]) rotate_extrude($fn=24) translate([${((holeDiam + rimThickness)/2).toFixed(2)}, 0]) circle(d=${(rimThickness * 0.8).toFixed(2)}, $fn=12);
+            translate([0, 0, ${chimneyDepth.toFixed(2)}]) rotate_extrude($fn=24) translate([${((holeDiam + rimThickness)/2).toFixed(2)}, 0]) circle(d=${(rimThickness * 0.8).toFixed(2)}, $fn=16);
         }`);
 
     holesScad.push(`        translate([0, 0, ${absZ.toFixed(2)}]) rotate([-90, 0, 0]) cylinder(d=${holeDiam.toFixed(2)}, h=${(outerD + chimneyDepth * 2 + 5).toFixed(2)}, center=false, $fn=24);`);
