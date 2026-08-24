@@ -558,14 +558,14 @@ function getPlayablePitches() {
   const numHoles = parseInt(document.getElementById('sel-holes').value);
   const intervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
 
-  const maxFund = Math.min(intervals.length, numHoles + 1);
-  const fundIntervals = intervals.slice(0, maxFund);
-
-  const pitches = [];
-  for (let oct = 0; oct < 2; oct++) {
-    for (let i of fundIntervals) pitches.push(root + oct * 12 + i);
+  const pitches = [root]; // Index 0: Bell Fundamental (all closed)
+  for (let h = 0; h < numHoles; h++) {
+    const targetInterval = intervals[h + 1] !== undefined ? intervals[h + 1] : Math.round(12 * (h + 1) / (numHoles + 1));
+    pitches.push(root + targetInterval); // Index 1..N: Hole 1..N open
   }
-  return [...new Set(pitches)].sort((a, b) => a - b);
+  // Optional 1st harmonic overblow (Octave of root)
+  pitches.push(root + 12);
+  return pitches;
 }
 
 function quantizeMidi(target) {
@@ -922,8 +922,12 @@ function renderPianoRoll(activeIdx = -1) {
     const isCurrentActiveRow = (activeIdx >= 0 && scoreNotes[activeIdx] && scoreNotes[activeIdx].midi === pitch);
     labelRow.className = `roll-row-label ${isCurrentActiveRow ? 'active' : ''}`;
     
-    let holeName = (origIdx === 0) ? 'Bell (All Closed)' : `Hole ${origIdx} Open`;
-    if (origIdx === playable.length - 1 && origIdx > numHoles) holeName = 'Overblow +8';
+    let holeName = 'Bell (All Closed)';
+    if (origIdx > 0 && origIdx <= numHoles) {
+      holeName = `Hole ${origIdx} Open`;
+    } else if (origIdx > numHoles) {
+      holeName = 'Overblow (+Octave)';
+    }
 
     labelRow.innerHTML = `
       <span>${getMidiName(pitch)}</span>
