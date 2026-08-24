@@ -600,31 +600,42 @@ class WebWaveguidePipe {
     if (freq > 20.0) this.targetDelay = this.sr / freq;
   }
 
+  readBoreFractional(delay) {
+    delay = Math.max(1.0, Math.min(this.boreLen - 2.0, delay));
+    const intD = Math.floor(delay);
+    const frac = delay - intD;
+    const idx1 = (this.writeBore - 1 - intD + this.boreLen) % this.boreLen;
+    const idx2 = (idx1 - 1 + this.boreLen) % this.boreLen;
+    return (1.0 - frac) * this.boreDelay[idx1] + frac * this.boreDelay[idx2];
+  }
+
+  readJetFractional(delay) {
+    delay = Math.max(1.0, Math.min(this.jetLen - 2.0, delay));
+    const intD = Math.floor(delay);
+    const frac = delay - intD;
+    const idx1 = (this.writeJet - 1 - intD + this.jetLen) % this.jetLen;
+    const idx2 = (idx1 - 1 + this.jetLen) % this.jetLen;
+    return (1.0 - frac) * this.jetDelay[idx1] + frac * this.jetDelay[idx2];
+  }
+
   process(breathP, noiseGain = 0.03) {
-    if (breathP <= 0.001) {
-      this.filterState *= 0.95;
-      return 0.0;
-    }
     this.currDelay += (this.targetDelay - this.currDelay) * 0.015;
 
-    const noise = (Math.random() * 2.0 - 1.0) * noiseGain * Math.sqrt(breathP);
+    const noise = (Math.random() * 2.0 - 1.0) * noiseGain * Math.sqrt(Math.max(0.0, breathP));
     const pIn = breathP + noise;
 
-    const idxBore = (this.writeBore - 1 - Math.floor(this.currDelay) + this.boreLen) % this.boreLen;
-    const boreRefl = this.boreDelay[idxBore];
-
+    const boreRefl = this.readBoreFractional(this.currDelay);
     this.filterState = this.filterState * 0.30 + boreRefl * 0.70;
     const boreSig = this.filterState;
 
-    const jetDelayLen = Math.max(2, Math.min(Math.floor(this.currDelay * 0.40), this.currDelay - 2));
+    const jetDelayLen = Math.max(2.0, Math.min(this.currDelay * 0.40, this.currDelay - 2.0));
     const jetIn = pIn + 0.35 * boreSig;
     this.jetDelay[this.writeJet] = jetIn;
     this.writeJet = (this.writeJet + 1) % this.jetLen;
 
-    const idxJet = (this.writeJet - 1 - jetDelayLen + this.jetLen) % this.jetLen;
-    const jetOut = this.jetDelay[idxJet];
+    const jetOut = this.readJetFractional(jetDelayLen);
 
-    const jetDc = Math.tanh(pIn - pIn * pIn * pIn);
+    const jetDc = pIn > 0 ? Math.tanh(pIn - pIn * pIn * pIn) : 0.0;
     const vortexDrive = Math.tanh(jetOut - jetOut * jetOut * jetOut) - jetDc;
 
     const inj = -(vortexDrive * 0.65 + boreSig * 0.60);

@@ -128,16 +128,12 @@ class PhysicalWaveguidePipe:
             self.target_delay = self.sr / freq
 
     def process(self, breath_pressure: float, noise_gain: float = 0.03, rng: Optional[random.Random] = None) -> float:
-        if breath_pressure <= 0.001:
-            self.filter_state *= 0.95
-            return 0.0
-
         # Smooth portamento between target delays
         self.curr_delay += (self.target_delay - self.curr_delay) * 0.015
 
         # 1. Breath pressure with aeroacoustic vorticity turbulence
         noise = (rng.random() * 2.0 - 1.0) if rng else 0.0
-        p_in = breath_pressure + noise * noise_gain * math.sqrt(max(0.001, breath_pressure))
+        p_in = breath_pressure + noise * noise_gain * math.sqrt(max(0.0, breath_pressure))
 
         # 2. Bore feedback reflection with loss filter
         bore_refl = self.bore_delay.read_fractional(self.curr_delay)
@@ -151,7 +147,7 @@ class PhysicalWaveguidePipe:
         jet_out = self.jet_delay.read_fractional(jet_delay_len)
 
         # 4. Symmetrical nonlinear vortex saturation at the labium blade
-        jet_dc = math.tanh(p_in - p_in**3)
+        jet_dc = math.tanh(p_in - p_in**3) if p_in > 0 else 0.0
         vortex_drive = math.tanh(jet_out - jet_out**3) - jet_dc
 
         # 5. Acoustic injection back into resonator tube with open boundary phase inversion (-1)
