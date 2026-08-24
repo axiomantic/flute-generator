@@ -2006,29 +2006,33 @@ function update3DFingersPose(activeHoles) {
   });
 }
 
-// True Bio-Acoustic Aeroacoustic Waveguide Model (Physical Blowing Dynamics)
+// Physically-Modeled Air-Jet Labium Waveguide (Verge / Fletcher Aeroacoustic Model)
 class WebPhysicalPipe {
   constructor(sampleRate, boreDiameter = 19.0) {
     this.sr = sampleRate;
     this.bore = boreDiameter;
-    const baseQ = 24.0 + (boreDiameter / 25.0) * 16.0;
+    // Acoustic resonant modes of the cylindrical air column (fundamental + overtones)
+    const baseQ = 32.0 + (boreDiameter / 25.0) * 12.0;
     this.modes = [
       { freqMult: 1.0, gain: 1.00, q: baseQ, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: 2.0, gain: 0.28, q: baseQ * 0.90, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: 3.0, gain: 0.12, q: baseQ * 0.75, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: 4.0, gain: 0.04, q: baseQ * 0.60, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
+      { freqMult: 2.0, gain: 0.35, q: baseQ * 0.85, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 3.0, gain: 0.15, q: baseQ * 0.70, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 4.0, gain: 0.06, q: baseQ * 0.55, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
     ];
-    this.jetDelay = new Float32Array(Math.floor(sampleRate * 0.05));
+
+    // Jet transit delay line (distance from windway exit to splitting labium blade)
+    this.jetDelay = new Float32Array(Math.floor(sampleRate * 0.04));
     this.writeJet = 0;
-    this.noiseState = 0;
-    this.sacState = 0;
+
+    // Slow Air Chamber (SAC) internal pneumatic pressure state
+    this.sacPressure = 0.0;
+    this.airNoise = 0.0;
     this.currFreq = 440.0;
     this.targetFreq = 440.0;
-    this.updateCoeffs(440.0, 0.7);
+    this.updateCoeffs(440.0);
   }
 
-  updateCoeffs(freq, breathP) {
-    // Exact pitch lock (Zero detuning from breath modulation)
+  updateCoeffs(freq) {
     for (let m of this.modes) {
       const f = Math.min(this.sr * 0.46, freq * m.freqMult);
       const w0 = 2.0 * Math.PI * f / this.sr;
@@ -2039,58 +2043,67 @@ class WebPhysicalPipe {
     }
   }
 
-  setFreq(freq) { if (freq > 20.0) this.targetFreq = freq; }
+  setFreq(freq) {
+    if (freq > 20.0) this.targetFreq = freq;
+  }
 
   process(breathP) {
-    if (breathP <= 0.001) {
-      this.sacState *= 0.90;
-      return 0.0;
+    if (breathP <= 0.001 && this.sacPressure <= 0.001) return 0.0;
+
+    // 1. Pneumatic Airflow Dynamics in the Slow Air Chamber (P_sac)
+    // Simulates the physical air volume reservoir filling and releasing breath
+    this.sacPressure += (breathP - this.sacPressure) * 0.08;
+    const P = this.sacPressure;
+
+    // Smooth frequency tracking
+    if (Math.abs(this.targetFreq - this.currFreq) > 0.02) {
+      this.currFreq += (this.targetFreq - this.currFreq) * 0.05;
+      this.updateCoeffs(this.currFreq);
     }
 
-    // Smooth breath through the Slow Air Chamber (SAC)
-    this.sacState = this.sacState * 0.88 + breathP * 0.12;
-    const pBreath = this.sacState;
+    // 2. Jet DC Velocity from Bernoulli's Principle: v_jet ~ sqrt(2 * P / rho)
+    const jetVelocity = Math.sqrt(Math.max(0.01, P));
 
-    if (Math.abs(this.targetFreq - this.currFreq) > 0.05) {
-      this.currFreq += (this.targetFreq - this.currFreq) * 0.04;
+    // 3. Turbulent Airflow Noise generated inside the windway duct
+    const white = (Math.random() * 2.0 - 1.0);
+    this.airNoise = this.airNoise * 0.75 + white * 0.25;
+    // Fluid turbulence at the labium blade
+    const labiumTurbulence = this.airNoise * 0.012 * jetVelocity;
+
+    // 4. Acoustic Feedback from Bore Resonator
+    // Read the acoustic pressure at the labium window
+    let boreAcousticPressure = 0.0;
+    for (let m of this.modes) {
+      boreAcousticPressure += m.y1 * m.gain;
     }
-    this.updateCoeffs(this.currFreq, pBreath);
 
-    // 1. Soft Organic Breath Air Turbulence (filtered pinkish edge noise)
-    const whiteNoise = (Math.random() * 2.0 - 1.0);
-    this.noiseState = this.noiseState * 0.85 + whiteNoise * 0.15;
-    const breathTurbulence = this.noiseState * Math.pow(pBreath, 1.2) * 0.008;
-
-    // 2. Phase-locked acoustic jet delay
-    const dJet = Math.max(2.0, (this.sr / this.currFreq) * 0.30);
-
-    let pAcoustic = 0;
-    for (let m of this.modes) pAcoustic += m.y1 * m.gain;
-
-    this.jetDelay[this.writeJet] = pAcoustic * 0.50 + breathTurbulence * 0.15;
+    // 5. Air Jet Deflection & Transit Time across the Sound Window (W/v_jet)
+    // The acoustic pressure at the window deflects the emerging air sheet
+    const jetTransitSamples = Math.max(2.0, (this.sr / this.currFreq) * 0.28);
+    this.jetDelay[this.writeJet] = boreAcousticPressure * 0.48 + labiumTurbulence;
     this.writeJet = (this.writeJet + 1) % this.jetDelay.length;
 
-    // Read delayed jet acoustic feedback
-    const readIdx = (this.writeJet - 1 - Math.floor(dJet) + this.jetDelay.length) % this.jetDelay.length;
-    const delayedJet = this.jetDelay[readIdx];
+    const readIdx = (this.writeJet - 1 - Math.floor(jetTransitSamples) + this.jetDelay.length) % this.jetDelay.length;
+    const delayedJetDeflection = this.jetDelay[readIdx];
 
-    // 3. Smooth, musical non-linear vortex excitation (pure soft tanh saturation - zero cubic distortion spikes)
-    const jetDrive = pBreath * 1.10;
-    const totalJetIn = (delayedJet * 1.25 + breathTurbulence);
-    const qVortex = jetDrive * Math.tanh(totalJetIn);
+    // 6. Non-linear Labium Splitting Flow Non-linearity
+    // The jet splits above and below the knife-edge labium (Fletcher non-linear jet model)
+    // Flow into bore Q_in = b * h * v_jet * tanh(eta / h)
+    const eta = (delayedJetDeflection * 1.4 + labiumTurbulence);
+    const flowInjection = jetVelocity * Math.tanh(eta);
 
-    // 4. Modal Resonator Transmission Filter
-    let totalOut = 0;
+    // 7. Resonator Modal Acoustic Filter
+    let totalAcousticOut = 0.0;
     for (let m of this.modes) {
-      const y = m.b0 * (qVortex - m.x2) - m.a1 * m.y1 - m.a2 * m.y2;
-      m.x2 = m.x1; m.x1 = qVortex;
+      const y = m.b0 * (flowInjection - m.x2) - m.a1 * m.y1 - m.a2 * m.y2;
+      m.x2 = m.x1; m.x1 = flowInjection;
       m.y2 = m.y1; m.y1 = y;
-      totalOut += y * m.gain;
+      totalAcousticOut += y * m.gain;
     }
 
-    // Gentle natural breath air bleed
-    const directChuff = breathTurbulence * 0.20 * Math.sqrt(pBreath);
-    return (totalOut * 0.26 + directChuff);
+    // Direct airy breath rush audible around the sound window
+    const windowAirRush = labiumTurbulence * 0.35;
+    return (totalAcousticOut * 0.28 + windowAirRush);
   }
 }
 
