@@ -2875,70 +2875,122 @@ z_cut1 = ${zCut1.toFixed(2)};
 z_cut2 = ${zCut2.toFixed(2)};
 z_cut3 = ${zCut3.toFixed(2)};
 
-module male_spigot_joint(z_pos) {
-    // 4 Distinct Sockets: 1 Outer Body Tenon + 3 Extended Cylindrical Tube Spigots
+module top_upward_joint(z_pos) {
+    // TOP JOINT (Facing UPWARD):
+    // Outer Body = Female Pocket Collar
+    // 3 Inner Pipes = Male Spigot Cylinders (grow straight up with zero overhangs)
 
-    // 1. Outer Hexagonal Body Shoulder Tenon (Steps down by joint_len * 0.50)
+    // 1. Recessed Outer Body Pocket Shelf
     translate([0, 0, z_pos - joint_len * 0.50])
         difference() {
-            linear_extrude(height = joint_len * 0.50)
-                offset(r = -(wall * 0.35 + joint_tol/2))
+            linear_extrude(height = joint_len * 0.50 + 0.1)
+                offset(r = 1.0) hex_profile_2d();
+            linear_extrude(height = joint_len * 0.50 + 0.2)
+                offset(r = -(wall * 0.38 - joint_tol/2))
                     hex_profile_2d();
-            // Clear bores through outer tenon
-            translate([-spacing, 0, -0.5]) cylinder(d = bore_drone1 + wall * 0.8, h = joint_len + 1.0, $fn = 24);
-            translate([0, 0, -0.5]) cylinder(d = bore_melody + wall * 0.8, h = joint_len + 1.0, $fn = 24);
-            translate([spacing, 0, -0.5]) cylinder(d = bore_drone2 + wall * 0.8, h = joint_len + 1.0, $fn = 24);
         }
 
-    // 2. Three Distinct Extended Cylindrical Tube Spigots (Protrude full joint_len past the outer shoulder)
+    // 2. Three Internal Cylindrical Male Spigots (Protrude UPWARD by joint_len with 45° lead-in chamfer)
     for (pipe = [[-spacing, bore_drone1], [0, bore_melody], [spacing, bore_drone2]]) {
         xp = pipe[0];
         bd = pipe[1];
-        spigot_od = bd + (wall * 0.70 - joint_tol);
-        translate([xp, 0, z_pos - joint_len])
+        spigot_od = bd + (wall * 0.65 - joint_tol);
+        translate([xp, 0, z_pos]) {
             difference() {
-                cylinder(d = spigot_od, h = joint_len, $fn = 32);
-                translate([0, 0, -0.5]) cylinder(d = bd, h = joint_len + 1.0, $fn = 32);
+                union() {
+                    cylinder(d = spigot_od, h = joint_len - 1.2, $fn = 32);
+                    // 45° self-aligning lead-in cone tip
+                    translate([0, 0, joint_len - 1.2])
+                        cylinder(d1 = spigot_od, d2 = spigot_od - 1.8, h = 1.2, $fn = 32);
+                }
+                translate([0, 0, -1.0]) cylinder(d = bd, h = joint_len + 3.0, $fn = 32);
             }
+        }
     }
 }
 
-module female_socket_joint(z_pos) {
-    // 4 Matching Female Receptors: 1 Outer Body Shelf + 3 Deep Tube Counterbores
+module bottom_downward_socket(z_pos) {
+    // BOTTOM JOINT (Facing DOWNWARD):
+    // Outer Body = Male Tenon
+    // 3 Inner Pipes = Female Counterbores (with 45° self-supporting ceiling tapers)
 
-    // 1. Outer Body Pocket Shelf (recessed joint_len * 0.50)
-    translate([0, 0, z_pos - joint_len * 0.50 - 0.1])
-        linear_extrude(height = joint_len * 0.50 + 0.2)
-            offset(r = -(wall * 0.35 - joint_tol/2))
-                hex_profile_2d();
+    // 1. Male Outer Body Tenon (extends down by joint_len * 0.50)
+    translate([0, 0, z_pos - joint_len * 0.50])
+        difference() {
+            linear_extrude(height = joint_len * 0.50 + 0.1)
+                offset(r = -(wall * 0.38 + joint_tol/2))
+                    hex_profile_2d();
+            // Clear through bores
+            translate([-spacing, 0, -0.5]) cylinder(d = bore_drone1 + wall * 0.7, h = joint_len + 1.0, $fn = 24);
+            translate([0, 0, -0.5]) cylinder(d = bore_melody + wall * 0.7, h = joint_len + 1.0, $fn = 24);
+            translate([spacing, 0, -0.5]) cylinder(d = bore_drone2 + wall * 0.7, h = joint_len + 1.0, $fn = 24);
+        }
 
-    // 2. Three Deep Cylindrical Tube Counterbores (recessed full joint_len deep)
+    // 2. Three Internal Female Counterbores (with 45° self-supporting internal roof chamfers)
     for (pipe = [[-spacing, bore_drone1], [0, bore_melody], [spacing, bore_drone2]]) {
         xp = pipe[0];
         bd = pipe[1];
-        mortise_od = bd + (wall * 0.70 + joint_tol);
-        translate([xp, 0, z_pos - joint_len - 0.1])
-            cylinder(d = mortise_od, h = joint_len + 0.2, $fn = 32);
+        mortise_od = bd + (wall * 0.65 + joint_tol);
+        translate([xp, 0, z_pos]) {
+            // Main cylindrical mortise sleeve
+            cylinder(d = mortise_od, h = joint_len + 0.1, $fn = 32);
+            // 45° self-supporting transition into main bore
+            translate([0, 0, joint_len])
+                cylinder(d1 = mortise_od, d2 = bd, h = (mortise_od - bd)/2, $fn = 32);
+        }
     }
 }
 
-module slice_part(z_bottom, z_top, has_male_bottom, has_female_top) {
+module slice_part(z_bottom, z_top, has_bottom_joint, has_top_joint) {
     difference() {
         union() {
-            // Main solid slice body between [z_bottom, z_top]
+            // Main body between [z_bottom, z_top]
             intersection() {
                 complete_flute();
                 translate([0, 0, (z_bottom + z_top) / 2])
                     cube([outer_d * 6, outer_d * 6, z_top - z_bottom], center = true);
             }
-            // Protruding Male Tenon at bottom (plugs into lower piece)
-            if (has_male_bottom) {
-                male_spigot_joint(z_bottom);
+            // Add top upward-growing male cylinder spigots
+            if (has_top_joint) {
+                top_upward_joint(z_top);
+            }
+            // Add bottom male outer body tenon
+            if (has_bottom_joint) {
+                translate([0, 0, z_bottom - joint_len * 0.50])
+                    difference() {
+                        linear_extrude(height = joint_len * 0.50)
+                            offset(r = -(wall * 0.38 + joint_tol/2))
+                                hex_profile_2d();
+                        // Clear internal bores
+                        translate([-spacing, 0, -0.5]) cylinder(d = bore_drone1, h = joint_len + 1.0, $fn = 24);
+                        translate([0, 0, -0.5]) cylinder(d = bore_melody, h = joint_len + 1.0, $fn = 24);
+                        translate([spacing, 0, -0.5]) cylinder(d = bore_drone2, h = joint_len + 1.0, $fn = 24);
+                    }
             }
         }
-        // Recessed Female Mortise at top (receives upper piece's male tenon)
-        if (has_female_top) {
-            female_socket_joint(z_top);
+        // Subtract top female outer body collar shelf
+        if (has_top_joint) {
+            translate([0, 0, z_top - joint_len * 0.50 - 0.1])
+                difference() {
+                    linear_extrude(height = joint_len * 0.50 + 0.2)
+                        offset(r = 2.0) hex_profile_2d();
+                    linear_extrude(height = joint_len * 0.50 + 0.3)
+                        offset(r = -(wall * 0.38 - joint_tol/2))
+                            hex_profile_2d();
+                }
+        }
+        // Subtract bottom internal female cylindrical counterbores (with 45° self-supporting roofs)
+        if (has_bottom_joint) {
+            for (pipe = [[-spacing, bore_drone1], [0, bore_melody], [spacing, bore_drone2]]) {
+                xp = pipe[0];
+                bd = pipe[1];
+                mortise_od = bd + (wall * 0.65 + joint_tol);
+                translate([xp, 0, z_bottom - 0.1]) {
+                    cylinder(d = mortise_od, h = joint_len + 0.2, $fn = 32);
+                    translate([0, 0, joint_len + 0.2])
+                        cylinder(d1 = mortise_od, d2 = bd, h = (mortise_od - bd)/2, $fn = 32);
+                }
+            }
         }
     }
 }
@@ -2976,9 +3028,9 @@ if (num_segments == 1) {
     }
 } else if (num_segments == 2) {
     if (print_part == "part_1" || print_part == "head") {
-        slice_part(z_cut1, total_L, true, false);
+        slice_part(z_cut1, total_L, true, false); // Bottom joint into lower piece
     } else {
-        slice_part(0, z_cut1, false, true);
+        slice_part(0, z_cut1, false, true);       // Top joint receives upper piece
     }
 } else if (num_segments == 3) {
     if (print_part == "part_1" || print_part == "head") {
