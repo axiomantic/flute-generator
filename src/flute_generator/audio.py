@@ -90,7 +90,6 @@ def create_flute_midi(
 
     chan_m = 0
     melody_track.append(Message('program_change', channel=chan_m, program=0, time=0))
-    melody_track.append(Message('control_change', channel=chan_m, control=126, value=1, time=0)) # Mono Mode On (Exclusive Voice Cut)
     melody_track.append(Message('control_change', channel=chan_m, control=10, value=64, time=0))   # Center Pan
     melody_track.append(Message('control_change', channel=chan_m, control=91, value=65, time=0))   # Natural Reverb
     melody_track.append(Message('control_change', channel=chan_m, control=11, value=90, time=0))   # Steady Expression
@@ -163,7 +162,6 @@ def create_flute_midi(
 
     chan_d1 = 1
     drone1_track.append(Message('program_change', channel=chan_d1, program=0, time=0))
-    drone1_track.append(Message('control_change', channel=chan_d1, control=126, value=1, time=0)) # Mono Mode
     drone1_track.append(Message('control_change', channel=chan_d1, control=10, value=38, time=0))   # Left pan
     drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=75, time=0))   # Reverb
     drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=82, time=0))
@@ -189,7 +187,6 @@ def create_flute_midi(
 
     chan_d2 = 2
     drone2_track.append(Message('program_change', channel=chan_d2, program=0, time=0))
-    drone2_track.append(Message('control_change', channel=chan_d2, control=126, value=1, time=0)) # Mono Mode
     drone2_track.append(Message('control_change', channel=chan_d2, control=10, value=90, time=0))   # Right pan
     drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=75, time=0))   # Reverb
     drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=76, time=0))
