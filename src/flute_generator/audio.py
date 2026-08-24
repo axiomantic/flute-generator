@@ -155,7 +155,7 @@ def create_flute_midi(
             melody_track.append(Message('note_off', channel=chan_m, note=note, velocity=vel, time=duration_ticks))
 
     # -------------------------------------------------------------
-    # Track 2: Drone 1 Tube - Root Resonator (Channel 1 - Monophonic)
+    # Track 2: Drone 1 Tube - Root Resonator (Channel 1 - Continuous Pedal)
     # -------------------------------------------------------------
     drone1_track = MidiTrack()
     mid.tracks.append(drone1_track)
@@ -165,17 +165,23 @@ def create_flute_midi(
     drone1_track.append(Message('program_change', channel=chan_d1, program=0, time=0))
     drone1_track.append(Message('control_change', channel=chan_d1, control=126, value=1, time=0)) # Mono Mode
     drone1_track.append(Message('control_change', channel=chan_d1, control=10, value=38, time=0))   # Left pan
-    drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=80, time=0))   # Reverb
-    drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=65, time=0))
+    drone1_track.append(Message('control_change', channel=chan_d1, control=91, value=75, time=0))   # Reverb
+    drone1_track.append(Message('control_change', channel=chan_d1, control=11, value=82, time=0))
 
     drone1_midi = int(round(dims.root_midi + dims.scale_intervals[0]))
     total_piece_ticks = sum(int(round(e.duration_beats * ticks_per_beat)) for e in melody_events)
 
-    drone1_track.append(Message('note_on', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=0))
-    drone1_track.append(Message('note_off', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=total_piece_ticks))
+    # Re-sound drone notes in smooth 2-beat legato pedal waves so SoundFont sample never expires
+    drone_step_ticks = int(2.0 * ticks_per_beat) # 2 beats per pedal breath
+    curr_ticks = 0
+    while curr_ticks < total_piece_ticks:
+        dur = min(drone_step_ticks, total_piece_ticks - curr_ticks)
+        drone1_track.append(Message('note_on', channel=chan_d1, note=drone1_midi, velocity=max(60, drone_velocity + 6), time=0))
+        drone1_track.append(Message('note_off', channel=chan_d1, note=drone1_midi, velocity=drone_velocity, time=dur))
+        curr_ticks += dur
 
     # -------------------------------------------------------------
-    # Track 3: Drone 2 Tube - Harmonic Resonator (Channel 2 - Monophonic)
+    # Track 3: Drone 2 Tube - Harmonic Resonator (Channel 2 - Continuous Pedal)
     # -------------------------------------------------------------
     drone2_track = MidiTrack()
     mid.tracks.append(drone2_track)
@@ -185,12 +191,22 @@ def create_flute_midi(
     drone2_track.append(Message('program_change', channel=chan_d2, program=0, time=0))
     drone2_track.append(Message('control_change', channel=chan_d2, control=126, value=1, time=0)) # Mono Mode
     drone2_track.append(Message('control_change', channel=chan_d2, control=10, value=90, time=0))   # Right pan
-    drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=80, time=0))   # Reverb
-    drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=58, time=0))
+    drone2_track.append(Message('control_change', channel=chan_d2, control=91, value=75, time=0))   # Reverb
+    drone2_track.append(Message('control_change', channel=chan_d2, control=11, value=76, time=0))
 
     drone2_midi = int(round(69 + 12 * math.log2(dims.drone2_frequency / 440.0)))
-    drone2_track.append(Message('note_on', channel=chan_d2, note=drone2_midi, velocity=max(40, drone_velocity - 8), time=0))
-    drone2_track.append(Message('note_off', channel=chan_d2, note=drone2_midi, velocity=drone_velocity, time=total_piece_ticks))
+    curr_ticks = 0
+    # Stagger drone 2 slightly (offset by 1 beat) for rich natural antiphony
+    offset_d2 = min(ticks_per_beat, total_piece_ticks)
+    drone2_track.append(Message('note_on', channel=chan_d2, note=drone2_midi, velocity=max(55, drone_velocity), time=0))
+    drone2_track.append(Message('note_off', channel=chan_d2, note=drone2_midi, velocity=drone_velocity, time=offset_d2))
+    curr_ticks += offset_d2
+
+    while curr_ticks < total_piece_ticks:
+        dur = min(drone_step_ticks, total_piece_ticks - curr_ticks)
+        drone2_track.append(Message('note_on', channel=chan_d2, note=drone2_midi, velocity=max(55, drone_velocity), time=0))
+        drone2_track.append(Message('note_off', channel=chan_d2, note=drone2_midi, velocity=drone_velocity, time=dur))
+        curr_ticks += dur
 
     out_file = Path(output_path)
     out_file.parent.mkdir(parents=True, exist_ok=True)
