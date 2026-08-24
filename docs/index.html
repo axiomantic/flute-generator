@@ -2775,24 +2775,7 @@ document.getElementById('rng-chim-depth').addEventListener('input', (e) => {
   rebuild3DFlute();
 });
 
-document.getElementById('sel-wood-finish').addEventListener('change', () => {
-  updateFluteMaterialOnly();
-});
 
-document.getElementById('rng-flute-opacity').addEventListener('input', (e) => {
-  document.getElementById('val-flute-opacity').innerText = `${e.target.value}%`;
-  updateFluteMaterialOnly();
-});
-
-document.getElementById('sel-indicator-style').addEventListener('change', () => {
-  persistCurrentStudioState();
-  rebuild3DFlute();
-});
-document.getElementById('sel-environment').addEventListener('change', (e) => {
-  updateRoomAcoustics(e.target.value);
-  persistCurrentStudioState();
-  applyEnvironment(e.target.value);
-});
 
 document.getElementById('rng-chim-rim').addEventListener('input', (e) => {
   document.getElementById('val-chim-rim').innerText = `${parseFloat(e.target.value).toFixed(1)} mm`;
