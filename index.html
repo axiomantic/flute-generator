@@ -1970,6 +1970,56 @@ function restoreStudioState() {
   applyFlutePreset('desert_drone');
 }
 
+function computeSmartJointCuts(rootMidi, scaleKey, numHoles, numSegments, jointLen) {
+  let boreM = 19.0;
+  if (rootMidi >= 74) boreM = 12.0;
+  else if (rootMidi >= 67) boreM = 16.0;
+  else if (rootMidi >= 58) boreM = 19.0;
+  else if (rootMidi >= 46) boreM = 28.0;
+  else boreM = 40.0;
+
+  const fMel = midiToFreq(rootMidi);
+  const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
+  const totalBodyLen = lMel + 30.0;
+  const headLen = 42.0;
+  const totalCadLen = totalBodyLen + headLen;
+  const fippleZ = totalCadLen - headLen;
+  const winLen = 5.2;
+  const holeDiam = Math.max(5.0, Math.min(9.5, boreM * 0.38));
+  const chimneyDepth = 2.8;
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+
+  const forbiddenCutZones = [
+    { min: fippleZ - winLen - jointLen - 6, max: fippleZ + winLen + 8 }
+  ];
+
+  for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+    const targetInterval = scaleIntervals[hIdx + 1] !== undefined ? scaleIntervals[hIdx + 1] : Math.round(12 * (hIdx + 1) / (numHoles + 1));
+    const hFreq = midiToFreq(rootMidi + targetInterval);
+    const hDist = Math.max(15, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
+    const absZ = fippleZ - hDist;
+    const fullJointClearance = jointLen + holeDiam / 2 + chimneyDepth + 4.0;
+    forbiddenCutZones.push({ min: absZ - fullJointClearance, max: absZ + fullJointClearance });
+  }
+
+  function findSafeCutZ(targetZ) {
+    let safeZ = targetZ;
+    for (let r of forbiddenCutZones) {
+      if (safeZ >= r.min && safeZ <= r.max) {
+        if (Math.abs(safeZ - r.min) < Math.abs(safeZ - r.max)) safeZ = r.min - 1.5;
+        else safeZ = r.max + 1.5;
+      }
+    }
+    return Math.max(jointLen + 4, Math.min(fippleZ - jointLen - 8, safeZ));
+  }
+
+  const zCut1 = findSafeCutZ(totalCadLen * (1.0 / numSegments));
+  const zCut2 = (numSegments >= 3) ? findSafeCutZ(totalCadLen * (2.0 / numSegments)) : totalCadLen;
+  const zCut3 = (numSegments >= 4) ? findSafeCutZ(totalCadLen * (3.0 / numSegments)) : totalCadLen;
+
+  return { zCut1, zCut2, zCut3 };
+}
+
 function rebuild3DFlute() {
   if (!fluteRootGroup) return;
   if (renderPending) { renderQueued = true; return; }
@@ -2066,6 +2116,7 @@ function rebuild3DFlute() {
       const holeDiam = Math.max(5.0, Math.min(9.5, boreM * 0.38));
 
       const chimneySurfaceZ = -(outerD * 0.433 + chimneyDepth);
+      const { zCut1, zCut2, zCut3 } = computeSmartJointCuts(rootMidi, scaleKey, numHoles, numSegments, jointLen);
 
       if (indStyle !== 'hidden') {
         for (let hIdx = 0; hIdx < numHoles; hIdx++) {
@@ -2142,7 +2193,6 @@ function rebuild3DFlute() {
         }
       }
 
-      
       const facets = (stl.match(/facet normal/g) || []).length;
       document.getElementById('lbl-status').innerText = 'Engine Ready';
       document.getElementById('lbl-viewport-title').innerText =
