@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flute Studio 🪈 — 3D Anatomical Player & Minimalist Breath Ribbon</title>
+  <title>Flute Studio 🪈 — Authentic SCAD 3D Flute & Clean Breath Ribbon</title>
   <style>
     :root {
       --bg-dark: #07090e;
-      --bg-panel: #0f131d;
-      --border: #1e2638;
+      --bg-panel: #0e121c;
+      --border: #1c2436;
       --accent: #3b82f6;
       --accent-cyan: #06b6d4;
       --accent-emerald: #10b981;
@@ -27,7 +27,6 @@
       overflow: hidden;
     }
 
-    /* Minimal Header */
     header {
       background: var(--bg-panel);
       border-bottom: 1px solid var(--border);
@@ -41,23 +40,21 @@
     .status-pill { font-size: 0.72rem; color: #10b981; display: flex; align-items: center; gap: 6px; }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; }
 
-    /* Clean Workspace Layout */
     .workspace {
       display: grid;
-      grid-template-columns: 260px 1fr;
+      grid-template-columns: 270px 1fr;
       flex: 1;
       height: calc(100vh - 45px);
       overflow: hidden;
     }
 
-    /* Minimalist Sidebar */
     .sidebar {
       background: var(--bg-panel);
       border-right: 1px solid var(--border);
       padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
       overflow-y: auto;
     }
 
@@ -81,10 +78,10 @@
     
     select, input[type="range"] {
       width: 100%;
-      background: #090c13;
+      background: #080a10;
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 5px 8px;
+      padding: 6px 8px;
       border-radius: 5px;
       font-size: 0.78rem;
       outline: none;
@@ -109,7 +106,7 @@
     button.btn-primary:hover { background: #059669; }
 
     button.btn-subtle {
-      background: #171d2b;
+      background: #141a27;
       color: var(--text);
       border: 1px solid var(--border);
       padding: 6px 10px;
@@ -117,22 +114,20 @@
       font-size: 0.75rem;
       cursor: pointer;
     }
-    button.btn-subtle:hover { background: #232c3f; }
+    button.btn-subtle:hover { background: #1f283d; }
 
-    /* Main Stage */
     .stage {
       display: flex;
       flex-direction: column;
       height: 100%;
       overflow: hidden;
-      background: #05070b;
+      background: #04060a;
     }
 
-    /* 3D Viewport Box */
     #viewport-container {
       flex: 1;
       position: relative;
-      background: radial-gradient(circle at center, #111726 0%, #05070b 100%);
+      background: radial-gradient(circle at center, #101626 0%, #04060a 100%);
       overflow: hidden;
     }
     #viewport-canvas { width: 100%; height: 100%; display: block; }
@@ -141,7 +136,7 @@
       position: absolute;
       top: 12px;
       left: 14px;
-      background: rgba(10, 14, 23, 0.85);
+      background: rgba(10, 14, 23, 0.88);
       backdrop-filter: blur(8px);
       padding: 8px 12px;
       border-radius: 6px;
@@ -150,7 +145,7 @@
       pointer-events: none;
     }
 
-    /* Clean, Elegant Breath Timeline Dock */
+    /* Minimalist Proportional Breath Ribbon */
     .timeline-dock {
       height: 175px;
       background: var(--bg-panel);
@@ -162,7 +157,7 @@
 
     .transport-bar {
       padding: 6px 14px;
-      background: #0b0f18;
+      background: #0a0d15;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
@@ -177,28 +172,26 @@
       padding: 10px 14px;
       display: flex;
       align-items: center;
-      background: #07090e;
+      background: #06080d;
     }
 
-    /* The Minimalist Ribbon Track */
     .breath-ribbon {
       position: relative;
       height: 96px;
       display: flex;
       align-items: center;
       gap: 6px;
-      background: #0a0e17;
-      border: 1px solid #161e2e;
+      background: #090c14;
+      border: 1px solid #141b2b;
       border-radius: 8px;
       padding: 6px 10px;
       min-width: 100%;
     }
 
-    /* Clean Musical Note Pill */
     .note-pill {
       height: 80px;
-      background: #131a29;
-      border: 1px solid #25334d;
+      background: #111724;
+      border: 1px solid #222e44;
       border-radius: 6px;
       display: flex;
       flex-direction: column;
@@ -213,7 +206,7 @@
     .note-pill:hover { border-color: var(--accent); transform: translateY(-1px); }
     .note-pill.active {
       border-color: #10b981;
-      background: #0e231e;
+      background: #0b201a;
       box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
     }
 
@@ -223,12 +216,11 @@
       color: #60a5fa;
     }
 
-    /* Minimal Nakai Dots */
     .pill-dots {
       display: flex;
       flex-direction: column;
       gap: 2px;
-      background: #070a10;
+      background: #06080e;
       padding: 3px 5px;
       border-radius: 4px;
     }
@@ -247,7 +239,6 @@
       font-family: monospace;
     }
 
-    /* Playhead */
     #ribbon-playhead {
       position: absolute;
       top: 0;
@@ -267,12 +258,11 @@
 <body>
 
 <header>
-  <h1>🪈 Flute Studio <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">3D Physical Simulation</span></h1>
+  <h1>🪈 Flute Studio <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">Parametric CAD & Bio-Acoustics</span></h1>
   <div class="status-pill"><span class="status-dot"></span> <span id="lbl-status">Engine Ready</span></div>
 </header>
 
 <div class="workspace">
-  <!-- Left Sidebar Controls -->
   <div class="sidebar">
     <div>
       <div class="section-label">Acoustics & Tuning</div>
@@ -287,7 +277,7 @@
       </div>
 
       <div class="field-group">
-        <label>Size / Pitch</label>
+        <label>Size / Pitch Range</label>
         <select id="sel-root">
           <option value="36">C2 (Contrabass - 65 Hz)</option>
           <option value="50">D3 (Bass - 146 Hz)</option>
@@ -313,11 +303,11 @@
     </div>
 
     <div>
-      <div class="section-label">Player Breath & Mouth</div>
+      <div class="section-label">Player Breath & Vocal Tract</div>
       <div class="field-group">
         <label>Throat Vowel</label>
         <select id="sel-vowel">
-          <option value="tu" selected>Tu (Native Resonant)</option>
+          <option value="tu" selected>Tu (Native Spirit)</option>
           <option value="ooh">Ooh (Deep Throat)</option>
           <option value="ta">Ta (Open Crown)</option>
           <option value="kee">Kee (Bright Overblow)</option>
@@ -328,7 +318,7 @@
         <label>Tongue Articulation</label>
         <select id="sel-articulation">
           <option value="none" selected>Legato Breath Flow</option>
-          <option value="t_attack">T-Tonguing (Vortex Attack)</option>
+          <option value="t_attack">T-Tonguing (Vortex Burst)</option>
           <option value="d_soft">D-Tonguing (Gentle)</option>
           <option value="flutter">Flutter-Tongue (24 Hz Rasp)</option>
         </select>
@@ -349,22 +339,21 @@
     </div>
 
     <div style="margin-top:auto;">
-      <button class="btn-subtle" style="width:100%;" id="btn-export-scad">💾 Export OpenSCAD 3D</button>
+      <button class="btn-subtle" style="width:100%;" id="btn-export-scad">💾 Export OpenSCAD .SCAD</button>
     </div>
   </div>
 
-  <!-- Stage: 3D GPU Viewport + Clean Breath Ribbon -->
   <div class="stage">
-    <!-- 3D GPU Viewport: Flute + Moving Hands + Lungs/Mouth -->
+    <!-- 3D GPU Viewport: Exact SCAD Triple Flute & Moving 3D Fingers -->
     <div id="viewport-container">
       <canvas id="viewport-canvas"></canvas>
       <div class="viewport-overlay">
-        <strong id="lbl-viewport-title">3D Flute Simulation</strong><br>
-        <span style="color:var(--text-muted);" id="lbl-viewport-sub">GPU 3D: Moving Fingers, Expanding Lungs & Acoustic Radiance</span>
+        <strong id="lbl-viewport-title">Parametric CAD Triple Flute</strong><br>
+        <span style="color:var(--text-muted);" id="lbl-viewport-sub">Exact CAD Geometry: Converged Mouthpiece Beak, Fipples & Chimneys</span>
       </div>
     </div>
 
-    <!-- Intuitive Minimalist Breath Ribbon -->
+    <!-- Minimalist Breath Ribbon -->
     <div class="timeline-dock">
       <div class="transport-bar">
         <button class="btn-primary" id="btn-play">▶ Play Physical Engine</button>
@@ -382,14 +371,13 @@
         <button class="btn-subtle" onclick="addNote()">➕ Add Note</button>
 
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:auto;">
-          Click note to cycle scale fingering • Time-proportional breath ribbon
+          Click note card to cycle scale fingering • Right-click to remove
         </span>
       </div>
 
       <div class="ribbon-scroll-container">
         <div class="breath-ribbon" id="breath-ribbon-track">
           <div id="ribbon-playhead"></div>
-          <!-- Note pills dynamically rendered here -->
         </div>
       </div>
     </div>
@@ -427,7 +415,6 @@ function midiToFreq(m) {
   return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
 }
 
-// Compute Playable Pitches for current Scale & Hole Count
 function getPlayablePitches() {
   const root = parseInt(document.getElementById('sel-root').value);
   const scaleKey = document.getElementById('sel-scale').value;
@@ -464,13 +451,12 @@ function midiToHoles(midi) {
   const holes = Array(numHoles).fill(true);
   if (intervalIdx > 0) {
     for (let h = 0; h < Math.min(numHoles, intervalIdx); h++) {
-      holes[h] = false; // open from top down
+      holes[h] = false;
     }
   }
   return holes;
 }
 
-// Melody State
 let scoreNotes = [];
 
 const PRESETS = {
@@ -496,7 +482,7 @@ function loadPreset(name) {
     });
   });
   renderRibbon();
-  update3DHolesAndFingers();
+  rebuild3DFlute();
 }
 
 function quantizeScore() {
@@ -505,10 +491,9 @@ function quantizeScore() {
     s.holes = midiToHoles(s.midi);
   });
   renderRibbon();
-  update3DHolesAndFingers();
+  rebuild3DFlute();
 }
 
-// Render Ribbon Pills
 const PX_PER_SEC = 80;
 
 function renderRibbon(activeIdx = -1) {
@@ -564,70 +549,35 @@ function addNote() {
   renderRibbon();
 }
 
-// 3D GPU Engine (Compatible with Three.js r128)
+// 3D GPU Engine — Authentic SCAD Model Rendering
 let scene, camera, renderer, controls;
-let fluteGroup, tubeMelody, tubeDrone1, tubeDrone2;
-let toneHolesGroup, fingersGroup;
-let toneHoles = [], fingerMeshes = [];
-let lungsMesh, mouthMesh, tongueMesh;
+let fluteRootGroup = null;
+let toneHoleMeshes = [], fingerMeshes = [];
 
 function init3D() {
   const container = document.getElementById('viewport-container');
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
-  camera.position.set(0, -300, 260);
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 4000);
+  camera.position.set(0, -220, 480);
 
   renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport-canvas'), antialias: true, alpha: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-  const light = new THREE.DirectionalLight(0xffedd5, 0.9);
-  light.position.set(200, -200, 400);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+  const light = new THREE.DirectionalLight(0xffedd5, 0.95);
+  light.position.set(150, -150, 400);
   scene.add(light);
 
-  fluteGroup = new THREE.Group();
-  scene.add(fluteGroup);
+  const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.4);
+  fillLight.position.set(-150, 150, -200);
+  scene.add(fillLight);
 
-  const matFlute = new THREE.MeshStandardMaterial({ color: 0xc49a6c, roughness: 0.35, metalness: 0.15 });
+  fluteRootGroup = new THREE.Group();
+  scene.add(fluteRootGroup);
 
-  // Triple Flute Body
-  tubeMelody = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 9.5, 360, 24), matFlute);
-  tubeDrone1 = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 355, 24), matFlute);
-  tubeDrone2 = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 235, 24), matFlute);
-
-  tubeDrone1.position.x = -26;
-  tubeDrone2.position.x = 26;
-  fluteGroup.add(tubeMelody);
-  fluteGroup.add(tubeDrone1);
-  fluteGroup.add(tubeDrone2);
-
-  toneHolesGroup = new THREE.Group();
-  fingersGroup = new THREE.Group();
-  fluteGroup.add(toneHolesGroup);
-  fluteGroup.add(fingersGroup);
-
-  // Anatomical Player (Lungs, Trachea, Mouth)
-  const matAnatomy = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, roughness: 0.2 });
-  lungsMesh = new THREE.Mesh(new THREE.SphereGeometry(24, 20, 20), matAnatomy);
-  lungsMesh.position.set(0, 75, 20);
-  lungsMesh.scale.set(1.5, 1.0, 0.8);
-  fluteGroup.add(lungsMesh);
-
-  const trachea = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 40, 16), matAnatomy);
-  trachea.position.set(0, 42, 12);
-  fluteGroup.add(trachea);
-
-  mouthMesh = new THREE.Mesh(new THREE.SphereGeometry(14, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.55 }));
-  mouthMesh.position.set(0, 15, 8);
-  fluteGroup.add(mouthMesh);
-
-  tongueMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 14, 4), new THREE.MeshStandardMaterial({ color: 0xe11d48 }));
-  tongueMesh.position.set(0, 12, 6);
-  fluteGroup.add(tongueMesh);
-
-  update3DHolesAndFingers();
+  rebuild3DFlute();
 
   function animate() {
     requestAnimationFrame(animate);
@@ -637,54 +587,136 @@ function init3D() {
   animate();
 }
 
-function update3DHolesAndFingers() {
-  if (!toneHolesGroup) return;
+// Rebuild authentic OpenSCAD flute geometry
+function rebuild3DFlute() {
+  if (!fluteRootGroup) return;
 
-  while(toneHolesGroup.children.length > 0) toneHolesGroup.remove(toneHolesGroup.children[0]);
-  while(fingersGroup.children.length > 0) fingersGroup.remove(fingersGroup.children[0]);
-  toneHoles = [];
+  // Clear previous geometry
+  while (fluteRootGroup.children.length > 0) {
+    fluteRootGroup.remove(fluteRootGroup.children[0]);
+  }
+  toneHoleMeshes = [];
   fingerMeshes = [];
 
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
   const numHoles = parseInt(document.getElementById('sel-holes').value);
-  const holeGeom = new THREE.CylinderGeometry(3.5, 3.5, 3, 16);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+
+  // Calculate actual acoustic lengths & bore dimensions matching acoustics.py
+  const fMel = midiToFreq(rootMidi);
+  const fD1 = midiToFreq(rootMidi);
+  const fD2 = midiToFreq(rootMidi + 7);
+
+  let boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0;
+  if (rootMidi <= 46) { boreM = 40.0; boreD1 = 46.0; boreD2 = 34.0; }
+  else if (rootMidi <= 58) { boreM = 28.0; boreD1 = 32.0; boreD2 = 24.0; }
+  else if (rootMidi >= 74) { boreM = 12.0; boreD1 = 14.0; boreD2 = 10.0; }
+
+  const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
+  const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * boreD1;
+  const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * boreD2;
+
+  const totalBodyLen = Math.max(lMel, lD1, lD2);
+  const headLen = 42.0;
+  const outerD = Math.max(boreM, boreD1, boreD2) + 8.0;
+  const spacing = outerD * 0.95;
+
+  const matWood = new THREE.MeshStandardMaterial({ color: 0xc49a6c, roughness: 0.35, metalness: 0.12 });
+  const matMouthpiece = new THREE.MeshStandardMaterial({ color: 0x8a633f, roughness: 0.4 });
+  const matChimney = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.3 });
+
+  // Center coordinate: Fipple sound windows at Z = 0
+  // Flute body extends downward along -Y, Head joint extends upward along +Y
+  const bodyGroup = new THREE.Group();
+  bodyGroup.position.set(0, totalBodyLen / 2, 0); // Center in view
+  fluteRootGroup.add(bodyGroup);
+
+  // 1. Triple Drone Body Tubes (Melody Center, Drone 1 Left, Drone 2 Right)
+  // Melody Tube (Center)
+  const geomMel = new THREE.CylinderGeometry(outerD/2, outerD/2, lMel, 6);
+  const meshMel = new THREE.Mesh(geomMel, matWood);
+  meshMel.position.set(0, -lMel/2, 0);
+  bodyGroup.add(meshMel);
+
+  // Drone 1 Tube (Left)
+  const geomD1 = new THREE.CylinderGeometry(outerD/2, outerD/2, lD1, 6);
+  const meshD1 = new THREE.Mesh(geomD1, matWood);
+  meshD1.position.set(-spacing, -lD1/2, 0);
+  bodyGroup.add(meshD1);
+
+  // Drone 2 Tube (Right)
+  const geomD2 = new THREE.CylinderGeometry(outerD/2, outerD/2, lD2, 6);
+  const meshD2 = new THREE.Mesh(geomD2, matWood);
+  meshD2.position.set(spacing, -lD2/2, 0);
+  bodyGroup.add(meshD2);
+
+  // 2. Converging Mouthpiece Beak (Top Head Joint)
+  const geomBeak = new THREE.CylinderGeometry(spacing * 0.8, spacing * 1.3, headLen, 6);
+  const meshBeak = new THREE.Mesh(geomBeak, matMouthpiece);
+  meshBeak.position.set(0, headLen/2, 0);
+  bodyGroup.add(meshBeak);
+
+  // 3. Fipple Sound Windows & Labium Wedges at Z = 0
+  const matWindow = new THREE.MeshStandardMaterial({ color: 0x111622, roughness: 0.8 });
+  [-spacing, 0, spacing].forEach(xPos => {
+    const geomWin = new THREE.BoxGeometry(boreM * 0.45, 5.5, 3.5);
+    const winMesh = new THREE.Mesh(geomWin, matWindow);
+    winMesh.position.set(xPos, -2.5, outerD/2 - 0.5);
+    bodyGroup.add(winMesh);
+  });
+
+  // 4. Exact Acoustic Tone Holes & Raised Chimney Pads (on Melody Tube)
+  // Distance from fipple = c / (2 * freq) - 1.6 * bore
   const matHand = new THREE.MeshStandardMaterial({ color: 0xe2a77f, roughness: 0.5 });
-  const fingerGeom = new THREE.CylinderGeometry(4.5, 4.5, 16, 16); // Fully compatible with Three.js r128
+  const fingerGeom = new THREE.CylinderGeometry(4.5, 4.5, 16, 16);
 
-  for (let i = 0; i < numHoles; i++) {
-    const matH = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.4 });
-    const hMesh = new THREE.Mesh(holeGeom, matH);
-    hMesh.rotation.x = Math.PI / 2;
-    hMesh.position.set(0, -110 - i * 28, 9.5);
-    toneHolesGroup.add(hMesh);
-    toneHoles.push(hMesh);
+  const numFund = Math.min(scaleIntervals.length, numHoles + 1);
+  for (let hIdx = 0; hIdx < numHoles; hIdx++) {
+    const targetInterval = scaleIntervals[hIdx + 1] || (12 * (hIdx + 1) / (numHoles + 1));
+    const hFreq = midiToFreq(rootMidi + targetInterval);
+    const hDist = Math.max(25, (343200.0 / (2.0 * hFreq)) - 1.6 * boreM);
 
+    const holeY = -hDist; // Relative to fipple at Y = 0
+
+    // Raised Chimney Pad
+    const geomChimney = new THREE.CylinderGeometry(5.5, 6.5, 2.5, 6);
+    const chimneyMesh = new THREE.Mesh(geomChimney, matChimney);
+    chimneyMesh.rotation.x = Math.PI / 2;
+    chimneyMesh.position.set(0, holeY, outerD/2);
+    bodyGroup.add(chimneyMesh);
+
+    // Tone Hole Sound Core (Radiates Cyan when open)
+    const matHole = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.0 });
+    const geomHole = new THREE.CylinderGeometry(3.2, 3.2, 3.0, 16);
+    const holeMesh = new THREE.Mesh(geomHole, matHole);
+    holeMesh.rotation.x = Math.PI / 2;
+    holeMesh.position.set(0, holeY, outerD/2 + 0.8);
+    bodyGroup.add(holeMesh);
+    toneHoleMeshes.push(holeMesh);
+
+    // Articulated 3D Finger Mesh Hovering Over Tone Hole
     const fMesh = new THREE.Mesh(fingerGeom, matHand);
     fMesh.rotation.x = Math.PI / 3;
-    fMesh.position.set((i < Math.ceil(numHoles/2) ? -12 : 12), -110 - i * 28, 22);
-    fingersGroup.add(fMesh);
+    fMesh.position.set((hIdx < Math.ceil(numHoles/2) ? -10 : 10), holeY, outerD/2 + 14);
+    bodyGroup.add(fMesh);
     fingerMeshes.push(fMesh);
   }
 
-  const scaleKey = document.getElementById('sel-scale').value;
-  document.getElementById('lbl-viewport-title').innerText = `3D ${numHoles}-Hole Flute & Anatomical Player`;
-  document.getElementById('lbl-viewport-sub').innerText = `Scale: ${scaleKey.replace('_', ' ').toUpperCase()} • Active Holes: ${numHoles}`;
+  document.getElementById('lbl-viewport-title').innerText = `Parametric ${numHoles}-Hole Triple Flute (${rootMidi} Root)`;
+  document.getElementById('lbl-viewport-sub').innerText = `Height: ${(totalBodyLen + headLen).toFixed(1)} mm • Melody Bore: ${boreM.toFixed(1)} mm • Exact SCAD Chimneys`;
 }
 
-function update3DFingersPose(activeHoles, breath) {
-  if (lungsMesh) {
-    const scale = 1.0 + (breath || 0.6) * 0.35;
-    lungsMesh.scale.set(1.5 * scale, 1.0 * scale, 0.8 * scale);
-  }
-
+function update3DFingersPose(activeHoles) {
   fingerMeshes.forEach((fMesh, idx) => {
     const isCovered = (activeHoles && idx < activeHoles.length) ? activeHoles[idx] : true;
-    const targetZ = isCovered ? 13.0 : 24.0;
-    fMesh.position.z += (targetZ - fMesh.position.z) * 0.3;
+    const targetZ = isCovered ? 6.0 : 16.0;
+    fMesh.position.z += (targetZ - fMesh.position.z) * 0.35;
 
-    if (toneHoles[idx]) {
-      toneHoles[idx].material.color.setHex(isCovered ? 0x221c16 : 0x06b6d4);
-      toneHoles[idx].material.emissive.setHex(isCovered ? 0x000000 : 0x06b6d4);
-      toneHoles[idx].material.emissiveIntensity = isCovered ? 0.0 : 0.8;
+    if (toneHoleMeshes[idx]) {
+      toneHoleMeshes[idx].material.color.setHex(isCovered ? 0x221c16 : 0x06b6d4);
+      toneHoleMeshes[idx].material.emissive.setHex(isCovered ? 0x000000 : 0x06b6d4);
+      toneHoleMeshes[idx].material.emissiveIntensity = isCovered ? 0.0 : 0.85;
     }
   });
 }
@@ -843,7 +875,7 @@ async function startAudio() {
 
     renderRibbon(activeIdx);
     if (activeIdx >= 0) {
-      update3DFingersPose(scoreNotes[activeIdx].holes, 0.75);
+      update3DFingersPose(scoreNotes[activeIdx].holes);
     }
   }, 30);
 }
@@ -854,7 +886,7 @@ function stopAudio() {
   if (liveProcessorNode) liveProcessorNode.disconnect();
   if (window.playheadTimer) clearInterval(window.playheadTimer);
   renderRibbon(-1);
-  update3DFingersPose([], 0.0);
+  update3DFingersPose([]);
   document.getElementById('btn-play').innerText = '▶ Play Physical Engine';
 }
 
