@@ -2,10 +2,6 @@
 # ==============================================================================
 # build_manifold_wasm.sh - Automated OpenSCAD Manifold WASM Compiler
 # ==============================================================================
-# OpenSCAD provides a dedicated Emscripten build container with all WASM-compiled
-# dependencies (Eigen3, Boost, CGAL, Manifold, Clipper2, DoubleConversion).
-# This script builds the fast Manifold WASM binary seamlessly.
-# ==============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,10 +24,13 @@ fi
 # 2. Check for Docker
 if command -v docker &> /dev/null; then
     echo "🐳 Using OpenSCAD official wasm-base container for reproducible build..."
+    # Clean any stale host CMakeCache to prevent path mismatch
+    rm -rf "${BUILD_DIR}/CMakeCache.txt" "${BUILD_DIR}/CMakeFiles"
     mkdir -p "${BUILD_DIR}"
     
     # Configure via official OpenSCAD docker environment
     echo "⚙️  Configuring CMake with ENABLE_MANIFOLD=ON..."
+    cd "${ROOT_DIR}"
     "${OPENSCAD_SRC}/scripts/wasm-base-docker-run.sh" emcmake cmake -B /src/build_wasm -S /src/vendor/openscad \
         -DWASM_BUILD_TYPE=web \
         -DCMAKE_BUILD_TYPE=Release \
