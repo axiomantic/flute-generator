@@ -559,65 +559,82 @@ let scoreNotes = [];
 
 
 
-// Song templates relative to scale degrees
+// Soulfully syncopated song templates with micro-timings, breath pauses & mordents
 const SONG_TEMPLATES = {
   desert_caravan: {
     name: "Desert Caravan (Hijaz Maqam Trill)",
     intervals: [
-      { deg: 0, d: 0.8 },
-      { deg: 1, d: 0.12 }, { deg: 0, d: 0.12 }, { deg: 1, d: 0.12 }, { deg: 0, d: 0.12 }, { deg: 1, d: 0.5 },
-      { deg: 2, d: 1.0 },
-      { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 1.2 },
-      { deg: 4, d: 0.15 }, { deg: 5, d: 0.15 }, { deg: 4, d: 0.8 },
-      { deg: 3, d: 0.15 }, { deg: 2, d: 0.15 }, { deg: 3, d: 0.4 }, { deg: 2, d: 0.4 }, { deg: 1, d: 0.4 }, { deg: 0, d: 2.6 }
+      { deg: 0, d: 0.9 },
+      // Soulful syncopated pickup & delayed trill release
+      { deg: 1, d: 0.22 }, { deg: 0, d: 0.09 }, { deg: 1, d: 0.16 }, { deg: 0, d: 0.08 }, { deg: 1, d: 0.65 },
+      { deg: 2, d: 1.15 },
+      // Expressive flutter with accelerating-decelerating trill rhythm (rubato)
+      { deg: 3, d: 0.18 }, { deg: 2, d: 0.09 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.08 }, { deg: 3, d: 0.09 }, { deg: 2, d: 0.09 }, { deg: 3, d: 1.35 },
+      // Grace note drop
+      { deg: 4, d: 0.14 }, { deg: 5, d: 0.28 }, { deg: 4, d: 0.95 },
+      // Syncopated cascading finish with breath release
+      { deg: 3, d: 0.18 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.45 }, { deg: 2, d: 0.35 }, { deg: 1, d: 0.55 }, { deg: 0, d: 2.8 }
     ]
   },
   native_motif: {
-    name: "Plains Courting Song (Rapid Trill)",
+    name: "Plains Courting Song (Soulful Flutter)",
     intervals: [
-      { deg: 0, d: 1.0 }, { deg: 1, d: 0.3 }, { deg: 2, d: 0.6 },
-      { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 1.4 },
-      { deg: 4, d: 0.7 }, { deg: 5, d: 0.12 }, { deg: 4, d: 0.12 }, { deg: 5, d: 0.12 }, { deg: 4, d: 0.12 }, { deg: 3, d: 0.9 },
-      { deg: 2, d: 0.15 }, { deg: 3, d: 0.15 }, { deg: 2, d: 0.5 }, { deg: 1, d: 0.15 }, { deg: 2, d: 0.15 }, { deg: 1, d: 0.6 }, { deg: 0, d: 2.8 }
+      { deg: 0, d: 1.1 }, { deg: 1, d: 0.25 }, { deg: 2, d: 0.75 },
+      // Authentic vocalized courting trill with uneven grace notes
+      { deg: 3, d: 0.18 }, { deg: 2, d: 0.08 }, { deg: 3, d: 0.14 }, { deg: 2, d: 0.08 }, { deg: 3, d: 0.10 }, { deg: 2, d: 0.08 }, { deg: 3, d: 1.5 },
+      // Syncopated upper leap & delayed fall
+      { deg: 4, d: 0.85 }, { deg: 5, d: 0.14 }, { deg: 4, d: 0.09 }, { deg: 5, d: 0.18 }, { deg: 4, d: 0.12 }, { deg: 3, d: 1.05 },
+      // Gentle floating descent
+      { deg: 2, d: 0.22 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.6 }, { deg: 1, d: 0.22 }, { deg: 2, d: 0.12 }, { deg: 1, d: 0.7 }, { deg: 0, d: 3.0 }
     ]
   },
   condor_pasa: {
-    name: "El Cóndor Pasa (Andean Trill)",
+    name: "El Cóndor Pasa (Andean Sway)",
     intervals: [
-      { deg: 3, d: 1.0 },
-      { deg: 4, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 4, d: 0.4 }, { deg: 5, d: 0.8 },
-      { deg: 4, d: 0.12 }, { deg: 5, d: 0.12 }, { deg: 4, d: 0.12 }, { deg: 5, d: 0.12 }, { deg: 4, d: 0.4 }, { deg: 3, d: 0.4 }, { deg: 2, d: 1.4 },
-      { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.7 }, { deg: 2, d: 0.3 }, { deg: 1, d: 0.3 }, { deg: 0, d: 2.5 }
+      { deg: 3, d: 1.15 },
+      // Syncopated Andean charango grace slide
+      { deg: 4, d: 0.18 }, { deg: 3, d: 0.09 }, { deg: 4, d: 0.45 }, { deg: 5, d: 0.9 },
+      // Rhythmic bird flutter with accented release
+      { deg: 4, d: 0.14 }, { deg: 5, d: 0.09 }, { deg: 4, d: 0.11 }, { deg: 5, d: 0.09 }, { deg: 4, d: 0.45 }, { deg: 3, d: 0.35 }, { deg: 2, d: 1.6 },
+      // Syncopated pentatonic cadence
+      { deg: 3, d: 0.16 }, { deg: 2, d: 0.09 }, { deg: 3, d: 0.14 }, { deg: 2, d: 0.09 }, { deg: 3, d: 0.8 }, { deg: 2, d: 0.35 }, { deg: 1, d: 0.4 }, { deg: 0, d: 2.8 }
     ]
   },
   greensleeves: {
-    name: "Greensleeves (Baroque Trills)",
+    name: "Greensleeves (Baroque Sway)",
     intervals: [
-      { deg: 0, d: 0.6 }, { deg: 1, d: 1.2 },
-      { deg: 2, d: 0.15 }, { deg: 1, d: 0.15 }, { deg: 2, d: 0.6 },
-      { deg: 3, d: 1.0 },
-      { deg: 4, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 4, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 4, d: 0.4 }, { deg: 3, d: 0.7 },
-      { deg: 2, d: 1.2 },
-      { deg: 1, d: 0.15 }, { deg: 0, d: 0.15 }, { deg: 1, d: 0.15 }, { deg: 0, d: 0.15 }, { deg: 1, d: 0.6 }, { deg: 0, d: 2.6 }
+      { deg: 0, d: 0.75 }, { deg: 1, d: 1.4 },
+      // Lilting 6/8 baroque ornamentation
+      { deg: 2, d: 0.22 }, { deg: 1, d: 0.12 }, { deg: 2, d: 0.7 },
+      { deg: 3, d: 1.15 },
+      // Syncopated turn on the cadence
+      { deg: 4, d: 0.16 }, { deg: 3, d: 0.08 }, { deg: 4, d: 0.14 }, { deg: 3, d: 0.09 }, { deg: 4, d: 0.45 }, { deg: 3, d: 0.85 },
+      { deg: 2, d: 1.35 },
+      // Gentle resolving ornament
+      { deg: 1, d: 0.22 }, { deg: 0, d: 0.11 }, { deg: 1, d: 0.16 }, { deg: 0, d: 0.09 }, { deg: 1, d: 0.7 }, { deg: 0, d: 2.8 }
     ]
   },
   morning_mood: {
-    name: "Morning Mood (Pastoral Trill)",
+    name: "Morning Mood (Grieg Pastoral)",
     intervals: [
-      { deg: 3, d: 0.35 }, { deg: 2, d: 0.35 }, { deg: 1, d: 0.35 }, { deg: 0, d: 0.35 },
-      { deg: 1, d: 0.12 }, { deg: 0, d: 0.12 }, { deg: 1, d: 0.12 }, { deg: 0, d: 0.12 }, { deg: 1, d: 0.35 }, { deg: 2, d: 0.35 },
-      { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.12 }, { deg: 3, d: 1.0 },
-      { deg: 4, d: 0.15 }, { deg: 5, d: 0.15 }, { deg: 4, d: 0.15 }, { deg: 5, d: 0.15 }, { deg: 4, d: 1.4 }
+      { deg: 3, d: 0.45 }, { deg: 2, d: 0.35 }, { deg: 1, d: 0.35 }, { deg: 0, d: 0.45 },
+      // Lilting pastoral bird chirps with syncopated rhythm
+      { deg: 1, d: 0.18 }, { deg: 0, d: 0.08 }, { deg: 1, d: 0.14 }, { deg: 0, d: 0.08 }, { deg: 1, d: 0.4 }, { deg: 2, d: 0.4 },
+      // Cresting morning swell
+      { deg: 3, d: 0.16 }, { deg: 2, d: 0.08 }, { deg: 3, d: 0.14 }, { deg: 2, d: 0.09 }, { deg: 3, d: 1.2 },
+      { deg: 4, d: 0.22 }, { deg: 5, d: 0.14 }, { deg: 4, d: 0.18 }, { deg: 5, d: 0.14 }, { deg: 4, d: 1.6 }
     ]
   },
   amazing_grace: {
-    name: "Amazing Grace (Gospel Turn)",
+    name: "Amazing Grace (Gospel Sway)",
     intervals: [
-      { deg: 0, d: 0.7 }, { deg: 2, d: 1.4 },
-      { deg: 3, d: 0.15 }, { deg: 2, d: 0.15 }, { deg: 3, d: 0.15 }, { deg: 2, d: 0.15 }, { deg: 4, d: 0.6 },
-      { deg: 3, d: 0.4 }, { deg: 2, d: 1.6 },
-      { deg: 4, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 4, d: 0.12 }, { deg: 3, d: 0.12 }, { deg: 4, d: 0.8 },
-      { deg: 5, d: 0.15 }, { deg: 4, d: 0.15 }, { deg: 3, d: 2.2 }, { deg: 2, d: 0.7 }, { deg: 0, d: 2.8 }
+      { deg: 0, d: 0.85 }, { deg: 2, d: 1.6 },
+      // Soulful syncopated gospel melisma
+      { deg: 3, d: 0.22 }, { deg: 2, d: 0.11 }, { deg: 3, d: 0.18 }, { deg: 2, d: 0.11 }, { deg: 4, d: 0.75 },
+      { deg: 3, d: 0.45 }, { deg: 2, d: 1.8 },
+      // High grace-note trill and sustained resonance
+      { deg: 4, d: 0.18 }, { deg: 3, d: 0.09 }, { deg: 4, d: 0.14 }, { deg: 3, d: 0.09 }, { deg: 4, d: 0.95 },
+      { deg: 5, d: 0.22 }, { deg: 4, d: 0.14 }, { deg: 3, d: 2.5 }, { deg: 2, d: 0.85 }, { deg: 0, d: 3.2 }
     ]
   }
 };
@@ -1428,14 +1445,16 @@ function rebuild3DFlute() {
             fingerGroup.add(knuckleMesh);
           }
 
+          // Align indicator position directly with the mesh center offset (-cx, 0, cy)
+          const posX = -cx;
           const posY = absZ;
-          const posZ = chimneySurfaceZ;
+          const posZ = chimneySurfaceZ + cy;
 
-          fingerGroup.position.set(0, posY, posZ - 3.5);
+          fingerGroup.position.set(posX, posY, posZ - 2.5);
           fingerGroup.userData = {
             baseZ: posZ,
-            closedZ: posZ - 1.0,
-            openZ: posZ - 14.0
+            closedZ: posZ - 0.8,
+            openZ: posZ - 13.0
           };
 
           fluteRootGroup.add(fingerGroup);
