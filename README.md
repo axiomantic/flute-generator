@@ -165,11 +165,27 @@ flute-generator \
 | `--wall` | | `4.0` | Outer wall thickness in mm |
 | `--spacing` | | `25.0` | Distance between bore centers in mm |
 | `--hole-d` | | `7.0` | Tone hole diameter in mm |
+| `--windway-profile` | | `flat` | Mouthpiece airway profile (`flat`, `arched`, `sac`, `venturi`) |
+| `--drone-air-ratio` | | `0.78` | Ratio of drone airway height to melody airway height |
+| `--windway-texture` | | `smooth` | Aeroacoustic windway texture (`smooth`, `ribbed`) |
 | `--soundfont` | `-s` | `None` | Path to custom `.sf2` SoundFont (defaults to `ixox_flute.sf2`) |
 | `--output-dir` | `-o` | `./output` | Directory for generated files |
 | `--name` | `-n` | `flute_<note>_<scale>` | Base filename for output files |
 | `--interactive` | `-i` | | Force interactive wizard mode |
 | `--non-interactive` | `--batch` | | Run in non-interactive batch mode |
+
+---
+
+## 🌟 Examples & Showcase Gallery
+
+Explore pre-rendered, playable examples in the [`examples/`](examples/) directory:
+
+- 🪈 **[Native American Triple Flute (A4) with Slow Air Chamber](examples/01_native_american_a4_sac/)**
+- 🏜️ **[Desert Caravan Middle Eastern Flute (A4) with Ribbed Airways](examples/02_desert_caravan_hijaz_ribbed/)**
+- 🦅 **[Andean Condor Pasa Triple Flute (A4) with Arched Baroque Windway](examples/03_baroque_condor_pasa_arched/)**
+- 🏰 **[Renaissance Greensleeves Triple Flute (C5) in Dorian Mode](examples/04_greensleeves_dorian_c5/)**
+
+Each example includes 3D renderings, `.wav` audio previews, `.mid` sequences, `.scad` models, `.stl` files, and an interactive **HTML5 3D rotating model viewer** (`index.html`).
 
 ---
 

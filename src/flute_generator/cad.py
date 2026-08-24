@@ -178,33 +178,71 @@ module fipple_sound_windows() {{
     }}
 }}
 
+// Windway height and drone air balancing
+w_h_m = w_h;
+w_h_d1 = w_h * {dims.drone_air_ratio:.2f};
+w_h_d2 = w_h * {dims.drone_air_ratio:.2f};
+
+// Profile selector
+windway_profile = "{dims.windway_profile}"; // ["flat", "arched", "sac", "venturi"]
+windway_texture = "{dims.windway_texture}"; // ["smooth", "ribbed"]
+
+module single_windway(w, h, x_start, x_end, is_drone=false) {{
+    entry_h = (windway_profile == "venturi") ? h * 1.6 : h;
+    
+    difference() {{
+        hull() {{
+            translate([x_start - w/2, bore_melody/2 - h, fipple_z + win_len - 0.2])
+                cube([w, h, 1]);
+            translate([x_end - w/2, -entry_h/2, total_L - 0.1])
+                cube([w, entry_h, 1.2]);
+        }}
+        
+        // Micro-ribbed aeroacoustic texture on drone airways if enabled
+        if (is_drone && windway_texture == "ribbed") {{
+            for (rz = [fipple_z + win_len + 5 : 4 : total_L - 8]) {{
+                translate([x_start - w/2 - 0.5, bore_melody/2 - h - 0.3, rz])
+                    rotate([0, 90, 0])
+                        cylinder(r=0.4, h=w + 1, $fn=12);
+            }}
+        }}
+    }}
+}}
+
+module slow_air_chamber() {{
+    // Internal expansion reservoir for smoothing breath dynamics & warm attack
+    if (windway_profile == "sac") {{
+        sac_z_start = fipple_z + win_len + 10;
+        sac_z_end = total_L - 8;
+        hull() {{
+            translate([-tip_spacing * 0.9, 0, sac_z_start])
+                cylinder(d=6.0, h=1, center=true);
+            translate([tip_spacing * 0.9, 0, sac_z_start])
+                cylinder(d=6.0, h=1, center=true);
+            translate([-tip_spacing * 0.9, 0, sac_z_end])
+                cylinder(d=7.5, h=1, center=true);
+            translate([tip_spacing * 0.9, 0, sac_z_end])
+                cylinder(d=7.5, h=1, center=true);
+        }}
+    }}
+}}
+
 module converging_windways() {{
-    // Melody Windway (Center: angles to center of mouthpiece tip at Y=0)
     w_wm = bore_melody * {WINDWAY_WIDTH_RATIO:.2f};
-    hull() {{
-        translate([-w_wm/2, bore_melody/2 - w_h, fipple_z + win_len - 0.2])
-            cube([w_wm, w_h, 1]);
-        translate([-w_wm/2, -w_h/2, total_L - 0.1])
-            cube([w_wm, w_h, 1.2]);
-    }}
-
-    // Drone 1 Windway (Left: angles inward from -spacing to -tip_spacing, centered at Y=0)
     w_w1 = bore_drone1 * {WINDWAY_WIDTH_RATIO:.2f};
-    hull() {{
-        translate([-spacing - w_w1/2, bore_drone1/2 - w_h, fipple_z + win_len - 0.2])
-            cube([w_w1, w_h, 1]);
-        translate([-tip_spacing - w_w1/2, -w_h/2, total_L - 0.1])
-            cube([w_w1, w_h, 1.2]);
-    }}
-
-    // Drone 2 Windway (Right: angles inward from +spacing to +tip_spacing, centered at Y=0)
     w_w2 = bore_drone2 * {WINDWAY_WIDTH_RATIO:.2f};
-    hull() {{
-        translate([spacing - w_w2/2, bore_drone2/2 - w_h, fipple_z + win_len - 0.2])
-            cube([w_w2, w_h, 1]);
-        translate([tip_spacing - w_w2/2, -w_h/2, total_L - 0.1])
-            cube([w_w2, w_h, 1.2]);
-    }}
+
+    // Melody windway (Center)
+    single_windway(w_wm, w_h_m, 0, 0, false);
+
+    // Drone 1 windway (Left)
+    single_windway(w_w1, w_h_d1, -spacing, -tip_spacing, true);
+
+    // Drone 2 windway (Right)
+    single_windway(w_w2, w_h_d2, spacing, tip_spacing, true);
+
+    // Optional Slow Air Chamber (SAC) expansion bulb
+    slow_air_chamber();
 }}
 
 // --------------------------------------------------------------------

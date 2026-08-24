@@ -197,6 +197,24 @@ def parse_arguments(args: Optional[list] = None) -> argparse.Namespace:
         help="Tone hole diameter (mm)",
     )
     parser.add_argument(
+        "--windway-profile",
+        choices=["flat", "arched", "sac", "venturi"],
+        default="flat",
+        help="Mouthpiece windway acoustic profile (flat, arched, sac [Slow Air Chamber], venturi)",
+    )
+    parser.add_argument(
+        "--drone-air-ratio",
+        type=float,
+        default=0.78,
+        help="Ratio of drone windway height to melody windway height (0.5 to 1.0)",
+    )
+    parser.add_argument(
+        "--windway-texture",
+        choices=["smooth", "ribbed"],
+        default="smooth",
+        help="Aeroacoustic windway surface texture (smooth, ribbed)",
+    )
+    parser.add_argument(
         "--soundfont", "-s",
         default=None,
         help="Path to .sf2 SoundFont file",
@@ -237,6 +255,9 @@ def generate_flute(
     wall: float = 4.0,
     spacing: float = 25.0,
     hole_d: float = 7.0,
+    windway_profile: str = "flat",
+    drone_air_ratio: float = 0.78,
+    windway_texture: str = "smooth",
     output_dir: str = "./output",
     base_name: Optional[str] = None,
     soundfont_path: Optional[str] = None,
@@ -268,12 +289,16 @@ def generate_flute(
         wall=wall,
         spacing=spacing,
         hole_diameter=hole_d,
+        windway_profile=windway_profile,
+        drone_air_ratio=drone_air_ratio,
+        windway_texture=windway_texture,
     )
 
     print(f"      - Melody Tube Length : {dims.length_melody:.1f} mm (Fundamental: {dims.melody_frequencies[0]:.1f} Hz)")
     print(f"      - Drone 1 Tube Length: {dims.length_drone1:.1f} mm ({dims.drone1_frequency:.1f} Hz)")
     print(f"      - Drone 2 Tube Length: {dims.length_drone2:.1f} mm ({dims.drone2_frequency:.1f} Hz)")
     print(f"      - Tone Holes ({len(dims.hole_positions)} holes): " + ", ".join(f"{p:.1f}mm" for p in dims.hole_positions))
+    print(f"      - Mouthpiece Profile : {dims.windway_profile.upper()} (drone air ratio: {dims.drone_air_ratio:.2f}, texture: {dims.windway_texture})")
     print(f"      - Total Body Length  : {dims.total_length:.1f} mm")
 
     # 2. OpenSCAD 3D Model Generation
@@ -373,6 +398,9 @@ def main(cli_args: Optional[list] = None) -> int:
             wall=parsed.wall,
             spacing=parsed.spacing,
             hole_d=parsed.hole_d,
+            windway_profile=parsed.windway_profile,
+            drone_air_ratio=parsed.drone_air_ratio,
+            windway_texture=parsed.windway_texture,
             output_dir=parsed.output_dir,
             base_name=parsed.name,
             soundfont_path=parsed.soundfont,

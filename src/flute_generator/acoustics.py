@@ -26,6 +26,9 @@ class FluteDimensions:
     spacing: float
     hole_diameter: float
     tolerance: float
+    windway_profile: str = "flat"
+    drone_air_ratio: float = 0.78
+    windway_texture: str = "smooth"
 
 
 def midi_to_freq(midi_note: float) -> float:
@@ -78,6 +81,9 @@ def calculate_flute_geometry(
     hole_diameter: float = 7.0,
     tolerance: float = 0.4,
     extra_head_length: float = 30.0,
+    windway_profile: str = "flat",
+    drone_air_ratio: float = 0.78,
+    windway_texture: str = "smooth",
 ) -> FluteDimensions:
     """Calculate all acoustic and physical dimensions for the flute."""
     # Melody scale frequencies
@@ -120,4 +126,7 @@ def calculate_flute_geometry(
         spacing=spacing,
         hole_diameter=hole_diameter,
         tolerance=tolerance,
+        windway_profile=windway_profile,
+        drone_air_ratio=drone_air_ratio,
+        windway_texture=windway_texture,
     )
