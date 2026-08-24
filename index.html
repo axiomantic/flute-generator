@@ -2864,8 +2864,33 @@ module slice_part(z_bottom, z_top, has_male_bottom, has_female_top) {
     }
 }
 
-if (num_segments == 1 || print_part == "assembled") {
+module joint_seam_groove(z_pos) {
+    // Subtle V-groove chamfer showing the precision interlocking joint seam line
+    translate([0, 0, z_pos])
+        rotate_extrude($fn=6)
+            translate([outer_d * 0.866 / 2 + spacing, 0])
+                polygon([[-1.5, 0.35], [0.3, 0], [-1.5, -0.35]]);
+    
+    // Flat perimeter joint seam split line
+    translate([0, 0, z_pos])
+        difference() {
+            linear_extrude(height=0.4, center=true)
+                offset(r=1.5) hex_profile_2d();
+            linear_extrude(height=0.5, center=true)
+                offset(r=-0.3) hex_profile_2d();
+        }
+}
+
+if (num_segments == 1) {
     complete_flute();
+} else if (print_part == "assembled") {
+    // Render true assembled segments showing visible mechanical joint seam lines
+    difference() {
+        complete_flute();
+        if (num_segments >= 2) joint_seam_groove(z_cut1);
+        if (num_segments >= 3) joint_seam_groove(z_cut2);
+        if (num_segments >= 4) joint_seam_groove(z_cut3);
+    }
 } else if (num_segments == 2) {
     if (print_part == "part_1" || print_part == "head") {
         slice_part(z_cut1, total_L, true, false);
