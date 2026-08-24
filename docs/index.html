@@ -500,10 +500,18 @@
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:6px;">Song:</span>
         <select id="sel-preset-melody" style="width: 200px; font-size:0.75rem; padding:4px 6px;"></select>
 
-        <button class="btn-subtle" onclick="addNote()">➕ Add Note</button>
+        <span style="font-size:0.72rem; color:var(--text-muted); margin-left:4px;">Grid:</span>
+        <select id="sel-roll-bars" style="width: 100px; font-size:0.75rem; padding:4px 6px;">
+          <option value="fit" selected>Fit Window</option>
+          <option value="1">1 Bar (4s)</option>
+          <option value="2">2 Bars (8s)</option>
+          <option value="4">4 Bars (16s)</option>
+        </select>
+
+        <button class="btn-subtle" id="btn-add-note">➕ Add Note</button>
 
         <span style="font-size:0.72rem; color:var(--text-muted); margin-left:auto;">
-          🎹 Finger-Hole Piano Roll • Click note to change pitch • Right-click to remove
+          🎹 Drag note vertically to change hole pitch • Drag sides to resize duration • Click grid to insert
         </span>
       </div>
 
@@ -552,6 +560,17 @@ function midiToFreq(m) {
   return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
 }
 
+
+let lastSelectedDuration = 0.5; // Remembers the duration of the last interacted note
+let draggedNoteIdx = -1;
+let isResizingRight = false;
+let isDraggingNote = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragOrigDur = 0.5;
+let dragOrigTime = 0;
+let rollZoomMode = 'fit';
+
 function getPlayablePitches() {
   const root = parseInt(document.getElementById('sel-root').value);
   const scaleKey = document.getElementById('sel-scale').value;
@@ -563,363 +582,58 @@ function getPlayablePitches() {
     const targetInterval = intervals[h + 1] !== undefined ? intervals[h + 1] : Math.round(12 * (h + 1) / (numHoles + 1));
     pitches.push(root + targetInterval); // Index 1..N: Hole 1..N open
   }
-  // Optional 1st harmonic overblow (Octave of root)
+  // 1st harmonic overblow (+12 semitones / octave)
   pitches.push(root + 12);
   return pitches;
 }
 
-function quantizeMidi(target) {
-  const playable = getPlayablePitches();
-  if (!playable.length) return target;
-  return playable.reduce((closest, p) => Math.abs(p - target) < Math.abs(closest - target) ? p : closest, playable[0]);
-}
-
-function midiToHoles(midi) {
-  const root = parseInt(document.getElementById('sel-root').value);
-  const scaleKey = document.getElementById('sel-scale').value;
-  const numHoles = parseInt(document.getElementById('sel-holes').value);
-  const intervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
-
-  const interval = (midi - root) % 12;
-  const intervalIdx = intervals.indexOf(interval);
-
-  const holes = Array(numHoles).fill(true);
-  if (intervalIdx > 0) {
-    for (let h = 0; h < Math.min(numHoles, intervalIdx); h++) holes[h] = false;
-  }
-  return holes;
-}
-
-let scoreNotes = [];
-
-
-
-// Soulfully syncopated song templates with micro-timings, breath pauses & mordents
-const SONG_TEMPLATES = {
-  desert_caravan: {
-    name: "Desert Caravan (Hijaz Maqam Trill)",
-    intervals: [
-      { deg: 0, d: 0.9 },
-      // Soulful syncopated pickup & delayed trill release
-      { deg: 1, d: 0.22 }, { deg: 0, d: 0.09 }, { deg: 1, d: 0.16 }, { deg: 0, d: 0.08 }, { deg: 1, d: 0.65 },
-      { deg: 2, d: 1.15 },
-      // Expressive flutter with accelerating-decelerating trill rhythm (rubato)
-      { deg: 3, d: 0.18 }, { deg: 2, d: 0.09 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.08 }, { deg: 3, d: 0.09 }, { deg: 2, d: 0.09 }, { deg: 3, d: 1.35 },
-      // Grace note drop
-      { deg: 4, d: 0.14 }, { deg: 5, d: 0.28 }, { deg: 4, d: 0.95 },
-      // Syncopated cascading finish with breath release
-      { deg: 3, d: 0.18 }, { deg: 2, d: 0.12 }, { deg: 3, d: 0.45 }, { deg: 2, d: 0.35 }, { deg: 1, d: 0.55 }, { deg: 0, d: 2.8 }
-    ]
-  },
-  native_motif: {
-    name: "Plains Courting Song (Soulful Flutter)",
-    intervals: [
-      { deg: 0, d: 1.1 }, { deg: 1, d: 0.25 }, { deg: 2, d: 0.75 },
-      // Authentic vocalized courting trill with uneven grace notes
-      { deg: 3, d: 0.18 }, { deg: 2, d: 0.08 }, { deg: 3, d: 0.14 }, { deg: 2, d: 0.08 }, { deg: 3, d: 0.10 }, { deg: 2, d: 0.08 }, { deg: 3, d: 1.5 },
-      // Syncopated upper leap & delayed fall
-      { deg: 4, d: 0.85 }, { deg: 5, d: 0.14 }, { deg: 4, d: 0.09 }, { deg: 5, d: 0.18 }, { deg: 4, d: 0.12 }, { deg: 3, d: 1.05 },
-      // Gentle floating descent
-      { deg: 2, d: 0.22 }, { deg: 3, d: 0.12 }, { deg: 2, d: 0.6 }, { deg: 1, d: 0.22 }, { deg: 2, d: 0.12 }, { deg: 1, d: 0.7 }, { deg: 0, d: 3.0 }
-    ]
-  },
-  condor_pasa: {
-    name: "El Cóndor Pasa (Andean Sway)",
-    intervals: [
-      { deg: 3, d: 1.15 },
-      // Syncopated Andean charango grace slide
-      { deg: 4, d: 0.18 }, { deg: 3, d: 0.09 }, { deg: 4, d: 0.45 }, { deg: 5, d: 0.9 },
-      // Rhythmic bird flutter with accented release
-      { deg: 4, d: 0.14 }, { deg: 5, d: 0.09 }, { deg: 4, d: 0.11 }, { deg: 5, d: 0.09 }, { deg: 4, d: 0.45 }, { deg: 3, d: 0.35 }, { deg: 2, d: 1.6 },
-      // Syncopated pentatonic cadence
-      { deg: 3, d: 0.16 }, { deg: 2, d: 0.09 }, { deg: 3, d: 0.14 }, { deg: 2, d: 0.09 }, { deg: 3, d: 0.8 }, { deg: 2, d: 0.35 }, { deg: 1, d: 0.4 }, { deg: 0, d: 2.8 }
-    ]
-  },
-  greensleeves: {
-    name: "Greensleeves (Baroque Sway)",
-    intervals: [
-      { deg: 0, d: 0.75 }, { deg: 1, d: 1.4 },
-      // Lilting 6/8 baroque ornamentation
-      { deg: 2, d: 0.22 }, { deg: 1, d: 0.12 }, { deg: 2, d: 0.7 },
-      { deg: 3, d: 1.15 },
-      // Syncopated turn on the cadence
-      { deg: 4, d: 0.16 }, { deg: 3, d: 0.08 }, { deg: 4, d: 0.14 }, { deg: 3, d: 0.09 }, { deg: 4, d: 0.45 }, { deg: 3, d: 0.85 },
-      { deg: 2, d: 1.35 },
-      // Gentle resolving ornament
-      { deg: 1, d: 0.22 }, { deg: 0, d: 0.11 }, { deg: 1, d: 0.16 }, { deg: 0, d: 0.09 }, { deg: 1, d: 0.7 }, { deg: 0, d: 2.8 }
-    ]
-  },
-  morning_mood: {
-    name: "Morning Mood (Grieg Pastoral)",
-    intervals: [
-      { deg: 3, d: 0.45 }, { deg: 2, d: 0.35 }, { deg: 1, d: 0.35 }, { deg: 0, d: 0.45 },
-      // Lilting pastoral bird chirps with syncopated rhythm
-      { deg: 1, d: 0.18 }, { deg: 0, d: 0.08 }, { deg: 1, d: 0.14 }, { deg: 0, d: 0.08 }, { deg: 1, d: 0.4 }, { deg: 2, d: 0.4 },
-      // Cresting morning swell
-      { deg: 3, d: 0.16 }, { deg: 2, d: 0.08 }, { deg: 3, d: 0.14 }, { deg: 2, d: 0.09 }, { deg: 3, d: 1.2 },
-      { deg: 4, d: 0.22 }, { deg: 5, d: 0.14 }, { deg: 4, d: 0.18 }, { deg: 5, d: 0.14 }, { deg: 4, d: 1.6 }
-    ]
-  },
-  amazing_grace: {
-    name: "Amazing Grace (Gospel Sway)",
-    intervals: [
-      { deg: 0, d: 0.85 }, { deg: 2, d: 1.6 },
-      // Soulful syncopated gospel melisma
-      { deg: 3, d: 0.22 }, { deg: 2, d: 0.11 }, { deg: 3, d: 0.18 }, { deg: 2, d: 0.11 }, { deg: 4, d: 0.75 },
-      { deg: 3, d: 0.45 }, { deg: 2, d: 1.8 },
-      // High grace-note trill and sustained resonance
-      { deg: 4, d: 0.18 }, { deg: 3, d: 0.09 }, { deg: 4, d: 0.14 }, { deg: 3, d: 0.09 }, { deg: 4, d: 0.95 },
-      { deg: 5, d: 0.22 }, { deg: 4, d: 0.14 }, { deg: 3, d: 2.5 }, { deg: 2, d: 0.85 }, { deg: 0, d: 3.2 }
-    ]
-  }
-};
-
-let currentSongKey = 'desert_caravan';
-
-function regenerateSongForCurrentAcoustics() {
-  const root = parseInt(document.getElementById('sel-root').value);
-  const scaleKey = document.getElementById('sel-scale').value;
-  const numHoles = parseInt(document.getElementById('sel-holes').value);
-  const intervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
-  const playable = getPlayablePitches();
-
-  const tmpl = SONG_TEMPLATES[currentSongKey] || SONG_TEMPLATES.desert_caravan;
-
-  scoreNotes = [];
-  tmpl.intervals.forEach(item => {
-    // Map degree to current scale notes
-    const degreeClamped = item.deg % intervals.length;
-    const octShift = Math.floor(item.deg / intervals.length);
-    const targetMidi = root + (octShift * 12) + intervals[degreeClamped];
-    const qMidi = quantizeMidi(targetMidi);
-
-    scoreNotes.push({
-      midi: qMidi,
-      holes: midiToHoles(qMidi),
-      duration: Math.max(0.1, item.d * 0.75)
-    });
-  });
-
-  renderRibbon();
-}
-
-function populateSongDropdown() {
-  const sel = document.getElementById('sel-preset-melody');
-  if (!sel) return;
-  sel.innerHTML = '';
-  Object.keys(SONG_TEMPLATES).forEach(k => {
-    const opt = document.createElement('option');
-    opt.value = k;
-    opt.innerText = SONG_TEMPLATES[k].name;
-    sel.appendChild(opt);
-  });
-  sel.value = currentSongKey;
-}
-
-// -------------------------------------------------------------
-// Global Flute Preset Manager (Complete CAD + Acoustics + Visuals + Song)
-// -------------------------------------------------------------
-const DEFAULT_FLUTE_PRESETS = {
-  desert_drone: {
-    name: "A4 Middle Eastern Hijaz Triple Flute",
-    root: "69", scale: "hijaz", holes: "6", profile: "sac",
-    chimDepth: "2.8", chimRim: "3.2",
-    finish: "cedar", env: "canyon", indicator: "minimal_gem",
-    song: "desert_caravan"
-  },
-  plains_contrabass: {
-    name: "C2 Contrabass Sacred 5-Hole",
-    root: "36", scale: "native_american", holes: "5", profile: "sac",
-    chimDepth: "3.2", chimRim: "3.6",
-    finish: "walnut", env: "forest", indicator: "spirit_pads",
-    song: "native_motif"
-  },
-  baroque_tenor: {
-    name: "C4 Tenor Dorian Flute",
-    root: "60", scale: "dorian", holes: "7", profile: "venturi",
-    chimDepth: "2.4", chimRim: "2.8",
-    finish: "cherry", env: "studio", indicator: "minimal_gem",
-    song: "greensleeves"
-  },
-  piccolo_bright: {
-    name: "D6 Piccolo High-Crown",
-    root: "86", scale: "major", holes: "6", profile: "arched",
-    chimDepth: "2.0", chimRim: "2.4",
-    finish: "ebony", env: "cad_dark", indicator: "floating_orbs",
-    song: "morning_mood"
-  }
-};
-
-let userFlutePresets = {};
-
-function loadFlutePresetsFromStorage() {
-  try {
-    const raw = localStorage.getItem('flute_studio_presets_v2');
-    userFlutePresets = raw ? JSON.parse(raw) : {};
-  } catch(e) { userFlutePresets = {}; }
-  populateFlutePresetDropdown();
-}
-
-function saveFlutePresetsToStorage() {
-  try {
-    localStorage.setItem('flute_studio_presets_v2', JSON.stringify(userFlutePresets));
-  } catch(e) {}
-  populateFlutePresetDropdown();
-}
-
-function getAllFlutePresets() {
-  return { ...DEFAULT_FLUTE_PRESETS, ...userFlutePresets };
-}
-
-function populateFlutePresetDropdown() {
-  const sel = document.getElementById('sel-flute-preset');
-  if (!sel) return;
-  const curVal = sel.value;
-  sel.innerHTML = '';
-
-  const grpDef = document.createElement('optgroup');
-  grpDef.label = "Factory Flutes";
-  Object.keys(DEFAULT_FLUTE_PRESETS).forEach(k => {
-    const opt = document.createElement('option');
-    opt.value = k;
-    opt.innerText = DEFAULT_FLUTE_PRESETS[k].name;
-    grpDef.appendChild(opt);
-  });
-  sel.appendChild(grpDef);
-
-  if (Object.keys(userFlutePresets).length > 0) {
-    const grpUser = document.createElement('optgroup');
-    grpUser.label = "Saved Custom Flutes";
-    Object.keys(userFlutePresets).forEach(k => {
-      const opt = document.createElement('option');
-      opt.value = k;
-      opt.innerText = userFlutePresets[k].name;
-      grpUser.appendChild(opt);
-    });
-    sel.appendChild(grpUser);
-  }
-
-  if (curVal && (DEFAULT_FLUTE_PRESETS[curVal] || userFlutePresets[curVal])) {
-    sel.value = curVal;
-  } else {
-    sel.value = 'desert_drone';
-  }
-}
-
-function autoGenerateFlutePresetName() {
-  const root = parseInt(document.getElementById('sel-root').value);
-  const scale = document.getElementById('sel-scale').value.replace(/_/g, ' ');
-  const holes = document.getElementById('sel-holes').value;
-  const finish = document.getElementById('sel-wood-finish').value;
-  return `${getMidiName(root)} ${scale.charAt(0).toUpperCase() + scale.slice(1)} ${holes}-Hole (${finish.charAt(0).toUpperCase() + finish.slice(1)})`;
-}
-
-function saveCurrentFlutePreset() {
-  const defaultName = autoGenerateFlutePresetName();
-  const name = prompt("Save Complete Flute Preset As:", defaultName);
-  if (!name) return;
-
-  const key = 'flute_' + Date.now();
-  userFlutePresets[key] = {
-    name: name,
-    root: document.getElementById('sel-root').value,
-    scale: document.getElementById('sel-scale').value,
-    holes: document.getElementById('sel-holes').value,
-    profile: document.getElementById('sel-profile').value,
-    chimDepth: document.getElementById('rng-chim-depth').value,
-    chimRim: document.getElementById('rng-chim-rim').value,
-    finish: document.getElementById('sel-wood-finish').value,
-    env: document.getElementById('sel-environment').value,
-    indicator: document.getElementById('sel-indicator-style').value,
-    song: currentSongKey
-  };
-
-  saveFlutePresetsToStorage();
-  document.getElementById('sel-flute-preset').value = key;
-  persistCurrentStudioState();
-}
-
-function duplicateCurrentFlutePreset() {
-  saveCurrentFlutePreset();
-}
-
-function deleteCurrentFlutePreset() {
-  const sel = document.getElementById('sel-flute-preset');
-  const key = sel ? sel.value : null;
-  if (!key || DEFAULT_FLUTE_PRESETS[key]) {
-    alert("Built-in factory presets cannot be deleted.");
-    return;
-  }
-  if (confirm(`Delete custom flute preset "${userFlutePresets[key].name}"?`)) {
-    delete userFlutePresets[key];
-    saveFlutePresetsToStorage();
-    applyFlutePreset('desert_drone');
-  }
-}
-
-function applyFlutePreset(key) {
-  const all = getAllFlutePresets();
-  const p = all[key] || DEFAULT_FLUTE_PRESETS.desert_drone;
-
-  document.getElementById('sel-root').value = p.root;
-  document.getElementById('sel-scale').value = p.scale;
-  document.getElementById('sel-holes').value = p.holes;
-  document.getElementById('sel-profile').value = p.profile;
-  document.getElementById('rng-chim-depth').value = p.chimDepth;
-  document.getElementById('rng-chim-rim').value = p.chimRim;
-  document.getElementById('val-chim-depth').innerText = `${parseFloat(p.chimDepth).toFixed(1)} mm`;
-  document.getElementById('val-chim-rim').innerText = `${parseFloat(p.chimRim).toFixed(1)} mm`;
-
-  document.getElementById('sel-wood-finish').value = p.finish;
-  document.getElementById('sel-environment').value = p.env;
-  document.getElementById('sel-indicator-style').value = p.indicator;
-  applyEnvironment(p.env);
-
-  currentSongKey = p.song || 'desert_caravan';
-  document.getElementById('sel-preset-melody').value = currentSongKey;
-
-  persistCurrentStudioState();
-  regenerateSongForCurrentAcoustics();
-  rebuild3DFlute();
-}
-
-
-
-function quantizeScore() {
-  scoreNotes.forEach(s => {
-    s.midi = quantizeMidi(s.midi);
-    s.holes = midiToHoles(s.midi);
-  });
-  renderRibbon();
-  rebuild3DFlute();
-}
-
-
-const PX_PER_SEC = 90;
-
 function renderPianoRoll(activeIdx = -1) {
   const labelsContainer = document.getElementById('pianoroll-labels');
   const track = document.getElementById('pianoroll-track');
-  if (!labelsContainer || !track) return;
+  const scrollContainer = document.getElementById('pianoroll-grid-scroll');
+  if (!labelsContainer || !track || !scrollContainer) return;
 
-  const playable = getPlayablePitches(); // List of available pitches in ascending order
+  const playable = getPlayablePitches();
   const numHoles = parseInt(document.getElementById('sel-holes').value);
+  const reversedPitches = [...playable].reverse();
 
   // Clear previous labels & notes
   labelsContainer.innerHTML = '';
   track.querySelectorAll('.roll-grid-row, .piano-note-block').forEach(el => el.remove());
 
-  const totalDur = scoreNotes.reduce((sum, n) => sum + n.duration, 0) || 4.0;
-  const trackWidth = Math.max(800, totalDur * PX_PER_SEC + 120);
-  track.style.width = `${trackWidth}px`;
+  // Compute track width: Fit full container width or scale by fixed bars
+  const totalScoreDur = scoreNotes.reduce((sum, n) => sum + n.duration, 0) || 4.0;
+  const containerW = scrollContainer.clientWidth || 800;
 
-  // Render rows from highest pitch (Top) down to fundamental Root (Bottom)
-  const reversedPitches = [...playable].reverse();
+  let effectiveTrackWidth = containerW;
+  let pxPerSec = containerW / Math.max(2.0, totalScoreDur);
 
+  const selBars = document.getElementById('sel-roll-bars');
+  rollZoomMode = selBars ? selBars.value : 'fit';
+
+  if (rollZoomMode === '1') {
+    effectiveTrackWidth = Math.max(containerW, 800);
+    pxPerSec = effectiveTrackWidth / 4.0;
+  } else if (rollZoomMode === '2') {
+    effectiveTrackWidth = Math.max(containerW, 1400);
+    pxPerSec = effectiveTrackWidth / 8.0;
+  } else if (rollZoomMode === '4') {
+    effectiveTrackWidth = Math.max(containerW, 2400);
+    pxPerSec = effectiveTrackWidth / 16.0;
+  } else {
+    // 'fit' mode fills 100% of the visible piano roll view seamlessly!
+    effectiveTrackWidth = Math.max(containerW, 600);
+    pxPerSec = effectiveTrackWidth / Math.max(2.0, totalScoreDur);
+  }
+
+  track.style.width = `${effectiveTrackWidth}px`;
+
+  // Render Left Row Labels & Grid Background
   reversedPitches.forEach((pitch, rowIdx) => {
     const origIdx = playable.indexOf(pitch);
-    const labelRow = document.createElement('div');
     const isCurrentActiveRow = (activeIdx >= 0 && scoreNotes[activeIdx] && scoreNotes[activeIdx].midi === pitch);
+    
+    const labelRow = document.createElement('div');
     labelRow.className = `roll-row-label ${isCurrentActiveRow ? 'active' : ''}`;
     
     let holeName = 'Bell (All Closed)';
@@ -937,29 +651,59 @@ function renderPianoRoll(activeIdx = -1) {
 
     const gridRow = document.createElement('div');
     gridRow.className = 'roll-grid-row';
-    gridRow.dataset.rowPitch = pitch;
+    gridRow.dataset.pitch = pitch;
+    gridRow.dataset.rowIdx = rowIdx;
+
+    // Click empty row to append a new note with last selected duration at that exact pitch
+    gridRow.onclick = (e) => {
+      if (e.target !== gridRow) return;
+      insertNoteAtPitch(pitch);
+    };
+
     track.appendChild(gridRow);
   });
 
-  const rowHeight = labelsContainer.clientHeight / Math.max(1, reversedPitches.length);
-
-  // Render note blocks placed precisely in time (X) and pitch row (Y)
+  // Render Note Blocks
   let timeCursor = 0;
   scoreNotes.forEach((note, idx) => {
-    const leftPx = timeCursor * PX_PER_SEC;
-    const widthPx = Math.max(24, note.duration * PX_PER_SEC - 2);
+    const leftPx = timeCursor * pxPerSec;
+    const widthPx = Math.max(20, note.duration * pxPerSec - 3);
     const pitchRowIdx = reversedPitches.indexOf(note.midi);
-    const topPx = (pitchRowIdx >= 0 ? pitchRowIdx : 0) * (100 / reversedPitches.length);
+    const rowHeightPct = 100 / reversedPitches.length;
+    const topPct = (pitchRowIdx >= 0 ? pitchRowIdx : 0) * rowHeightPct;
 
     const noteEl = document.createElement('div');
     noteEl.className = `piano-note-block ${idx === activeIdx ? 'active' : ''}`;
     noteEl.style.left = `${leftPx}px`;
     noteEl.style.width = `${widthPx}px`;
-    noteEl.style.top = `${topPx}%`;
-    noteEl.style.height = `calc(${100 / reversedPitches.length}% - 4px)`;
-    noteEl.innerText = getMidiName(note.midi);
+    noteEl.style.top = `${topPct}%`;
+    noteEl.style.height = `calc(${rowHeightPct}% - 4px)`;
+    noteEl.dataset.noteIdx = idx;
 
-    noteEl.onclick = () => cycleNote(idx);
+    noteEl.innerHTML = `
+      <span style="pointer-events:none;">${getMidiName(note.midi)}</span>
+      <div class="resize-handle" style="position:absolute; right:0; top:0; bottom:0; width:6px; cursor:ew-resize;"></div>
+    `;
+
+    // Mouse drag handling (Vertical Pitch Drag & Horizontal Resize)
+    noteEl.onmousedown = (e) => {
+      e.stopPropagation();
+      draggedNoteIdx = idx;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      dragOrigDur = note.duration;
+      lastSelectedDuration = note.duration;
+
+      if (e.target.classList.contains('resize-handle')) {
+        isResizingRight = true;
+      } else {
+        isDraggingNote = true;
+      }
+
+      window.addEventListener('mousemove', onNoteMouseMove);
+      window.addEventListener('mouseup', onNoteMouseUp);
+    };
+
     noteEl.oncontextmenu = (e) => {
       e.preventDefault();
       if (scoreNotes.length > 1) {
@@ -973,10 +717,62 @@ function renderPianoRoll(activeIdx = -1) {
   });
 }
 
-function renderRibbon(activeIdx = -1) {
-  renderPianoRoll(activeIdx);
+function onNoteMouseMove(e) {
+  if (draggedNoteIdx < 0 || draggedNoteIdx >= scoreNotes.length) return;
+  const note = scoreNotes[draggedNoteIdx];
+  const track = document.getElementById('pianoroll-track');
+  if (!track) return;
+
+  const playable = getPlayablePitches();
+  const reversedPitches = [...playable].reverse();
+  const totalScoreDur = scoreNotes.reduce((sum, n) => sum + n.duration, 0) || 4.0;
+  const pxPerSec = track.clientWidth / Math.max(2.0, totalScoreDur);
+
+  if (isResizingRight) {
+    const deltaX = e.clientX - dragStartX;
+    const newDur = Math.max(0.08, dragOrigDur + (deltaX / pxPerSec));
+    note.duration = parseFloat(newDur.toFixed(2));
+    lastSelectedDuration = note.duration;
+    renderPianoRoll();
+  } else if (isDraggingNote) {
+    const trackRect = track.getBoundingClientRect();
+    const relativeY = e.clientY - trackRect.top;
+    const rowHeight = trackRect.height / reversedPitches.length;
+    const targetRowIdx = Math.max(0, Math.min(reversedPitches.length - 1, Math.floor(relativeY / rowHeight)));
+    const targetPitch = reversedPitches[targetRowIdx];
+
+    if (targetPitch && targetPitch !== note.midi) {
+      note.midi = targetPitch;
+      note.holes = midiToHoles(targetPitch);
+      lastSelectedDuration = note.duration;
+      renderPianoRoll();
+    }
+  }
 }
 
+function onNoteMouseUp() {
+  draggedNoteIdx = -1;
+  isDraggingNote = false;
+  isResizingRight = false;
+  window.removeEventListener('mousemove', onNoteMouseMove);
+  window.removeEventListener('mouseup', onNoteMouseUp);
+}
+
+function insertNoteAtPitch(pitch) {
+  const noteDur = lastSelectedDuration || 0.5;
+  scoreNotes.push({
+    midi: pitch,
+    holes: midiToHoles(pitch),
+    duration: noteDur
+  });
+  renderPianoRoll();
+}
+
+function addNote() {
+  const playable = getPlayablePitches();
+  const defaultPitch = playable[1] || playable[0];
+  insertNoteAtPitch(defaultPitch);
+}
 
 function cycleNote(idx) {
   const playable = getPlayablePitches();
@@ -1773,6 +1569,11 @@ document.getElementById('btn-play').addEventListener('click', async () => {
   else await startAudio();
 });
 document.getElementById('btn-stop').addEventListener('click', stopAudio);
+
+document.getElementById('btn-add-note').addEventListener('click', addNote);
+document.getElementById('sel-roll-bars').addEventListener('change', () => { renderPianoRoll(); });
+window.addEventListener('resize', () => { if (document.getElementById('pianoroll-track')) renderPianoRoll(); });
+
 
 // Scale, Hole Count, Root Pitch & Chimney Listeners
 function onAcousticsChanged() {
