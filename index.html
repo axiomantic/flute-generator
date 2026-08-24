@@ -421,6 +421,36 @@
           <option value="natural_minor">Natural Minor (Aeolian)</option>
         </select>
       </div>
+
+      <div class="field-group">
+        <label>Drone 1 Pitch (Left Tube)</label>
+        <select id="sel-drone1-interval">
+          <option value="-12">Root - 1 Octave (Sub-Bass Drone)</option>
+          <option value="-5">Sub-Dominant (-5 Semitones)</option>
+          <option value="0" selected>Root Fundamental (Unison)</option>
+          <option value="7">Perfect 5th (+7 Semitones)</option>
+          <option value="12">Octave Higher (+12 Semitones)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Drone 2 Pitch (Right Tube)</label>
+        <select id="sel-drone2-interval">
+          <option value="-12">Root - 1 Octave (Sub-Bass Drone)</option>
+          <option value="0">Root Fundamental (Unison)</option>
+          <option value="7" selected>Perfect 5th (+7 Semitones)</option>
+          <option value="12">Octave Higher (+12 Semitones)</option>
+          <option value="19">12th / Octave+5th (+19 Semitones)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Tube Outer Shell Profile</label>
+        <select id="sel-tube-shell-mode">
+          <option value="staggered" selected>Staggered Tubes (Acoustic Length Trim)</option>
+          <option value="unified">Unified Foot (Enclosed Flush Base)</option>
+        </select>
+      </div>
     </div>
 
         <div>
@@ -1862,6 +1892,9 @@ function persistCurrentStudioState() {
       env: document.getElementById('sel-environment') ? document.getElementById('sel-environment').value : 'canyon',
       indicator: document.getElementById('sel-indicator-style') ? document.getElementById('sel-indicator-style').value : 'minimal_gem',
       song: currentSongKey || 'desert_caravan',
+      drone1Interval: document.getElementById('sel-drone1-interval') ? document.getElementById('sel-drone1-interval').value : '0',
+      drone2Interval: document.getElementById('sel-drone2-interval') ? document.getElementById('sel-drone2-interval').value : '7',
+      tubeShellMode: document.getElementById('sel-tube-shell-mode') ? document.getElementById('sel-tube-shell-mode').value : 'staggered',
       segments: document.getElementById('sel-print-segments') ? document.getElementById('sel-print-segments').value : '1',
       printPart: document.getElementById('sel-print-part') ? document.getElementById('sel-print-part').value : 'assembled',
       jointTol: document.getElementById('rng-joint-tol') ? document.getElementById('rng-joint-tol').value : '0.18',
@@ -1904,6 +1937,9 @@ function restoreStudioState() {
         applyEnvironment(state.env);
       }
       if (state.indicator && document.getElementById('sel-indicator-style')) document.getElementById('sel-indicator-style').value = state.indicator;
+      if (state.drone1Interval && document.getElementById('sel-drone1-interval')) document.getElementById('sel-drone1-interval').value = state.drone1Interval;
+      if (state.drone2Interval && document.getElementById('sel-drone2-interval')) document.getElementById('sel-drone2-interval').value = state.drone2Interval;
+      if (state.tubeShellMode && document.getElementById('sel-tube-shell-mode')) document.getElementById('sel-tube-shell-mode').value = state.tubeShellMode;
       if (state.segments && document.getElementById('sel-print-segments')) document.getElementById('sel-print-segments').value = state.segments;
       if (state.printPart && document.getElementById('sel-print-part')) document.getElementById('sel-print-part').value = state.printPart;
       if (state.jointTol && document.getElementById('rng-joint-tol')) {
@@ -1957,8 +1993,11 @@ function rebuild3DFlute() {
   const printPart     = document.getElementById('sel-print-part') ? document.getElementById('sel-print-part').value : 'assembled';
   const jointTol      = parseFloat(document.getElementById('rng-joint-tol') ? document.getElementById('rng-joint-tol').value : '0.18');
   const jointLen      = parseFloat(document.getElementById('rng-joint-len') ? document.getElementById('rng-joint-len').value : '14.0');
+  const drone1Int     = parseInt(document.getElementById('sel-drone1-interval') ? document.getElementById('sel-drone1-interval').value : '0');
+  const drone2Int     = parseInt(document.getElementById('sel-drone2-interval') ? document.getElementById('sel-drone2-interval').value : '7');
+  const tubeShellMode = document.getElementById('sel-tube-shell-mode') ? document.getElementById('sel-tube-shell-mode').value : 'staggered';
 
-  const scadStr = generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, printPart, jointTol, jointLen);
+  const scadStr = generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth, rimThickness, numSegments, printPart, jointTol, jointLen, drone1Int, drone2Int, tubeShellMode);
   document.getElementById('lbl-status').innerText = 'Compiling OpenSCAD WASM...';
 
   getOpenSCAD()
@@ -2316,8 +2355,10 @@ async function startAudio() {
   liveD2Pipe = new WebPhysicalPipe(sr, 16.0);
 
   const root = parseInt(document.getElementById('sel-root').value);
-  liveD1Pipe.setFreq(midiToFreq(root));
-  liveD2Pipe.setFreq(midiToFreq(root + 7));
+  const d1Int = parseInt(document.getElementById('sel-drone1-interval') ? document.getElementById('sel-drone1-interval').value : '0');
+  const d2Int = parseInt(document.getElementById('sel-drone2-interval') ? document.getElementById('sel-drone2-interval').value : '7');
+  liveD1Pipe.setFreq(midiToFreq(root + d1Int));
+  liveD2Pipe.setFreq(midiToFreq(root + d2Int));
 
   currentPlaybackTime = 0.0;
   isAudioRunning = true;
@@ -2469,6 +2510,9 @@ function onAcousticsChanged() {
 
 document.getElementById('sel-holes').addEventListener('change', onAcousticsChanged);
 document.getElementById('sel-scale').addEventListener('change', onAcousticsChanged);
+document.getElementById('sel-drone1-interval').addEventListener('change', onAcousticsChanged);
+document.getElementById('sel-drone2-interval').addEventListener('change', onAcousticsChanged);
+document.getElementById('sel-tube-shell-mode').addEventListener('change', onAcousticsChanged);
 document.getElementById('sel-root').addEventListener('change', onAcousticsChanged);
 document.getElementById('sel-profile').addEventListener('change', () => {
   rebuild3DFlute();
@@ -2538,7 +2582,7 @@ document.getElementById('rng-chim-rim').addEventListener('input', (e) => {
 });
 
 // Complete Standalone OpenSCAD Generator in JS (matches cad.py 100%)
-function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.8, rimThickness = 3.2, numSegments = 1, printPart = 'assembled', jointTol = 0.18, jointLen = 14.0) {
+function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.8, rimThickness = 3.2, numSegments = 1, printPart = 'assembled', jointTol = 0.18, jointLen = 14.0, drone1Interval = 0, drone2Interval = 7, tubeShellMode = 'staggered') {
   let boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0;
   if (rootMidi >= 74) { boreM = 12.0; boreD1 = 14.0; boreD2 = 10.0; }
   else if (rootMidi >= 67) { boreM = 16.0; boreD1 = 18.0; boreD2 = 14.0; }
@@ -2547,8 +2591,8 @@ function generateScadJs(rootMidi, scaleKey, numHoles, profile, chimneyDepth = 2.
   else { boreM = 40.0; boreD1 = 46.0; boreD2 = 34.0; }
 
   const fMel = midiToFreq(rootMidi);
-  const fD1 = midiToFreq(rootMidi);
-  const fD2 = midiToFreq(rootMidi + 7);
+  const fD1 = midiToFreq(rootMidi + drone1Interval);
+  const fD2 = midiToFreq(rootMidi + drone2Interval);
 
   const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
   const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * boreD1;
@@ -2626,6 +2670,7 @@ module hex_profile_2d() {
 }
 
 windway_profile = "${profile}";
+tube_shell_mode = "${tubeShellMode}";
 
 module single_windway(w, h, x_start, x_end) {
     entry_h = (windway_profile == "venturi") ? h * 1.6 : h;
@@ -2666,8 +2711,28 @@ module converging_windways() {
 module complete_flute() {
     difference() {
         union() {
-            // Main flute body
-            linear_extrude(height=fipple_z + win_len) hex_profile_2d();
+            // Independent Acoustic Tube Lengths (Staggered or Unified)
+            if (tube_shell_mode == "staggered") {
+                // Drone 1 Tube (Left)
+                translate([-spacing, 0, fipple_z - L_drone1 - 8])
+                    cylinder(d=outer_d, h=L_drone1 + win_len + 8, $fn=6);
+
+                // Melody Tube (Center)
+                translate([0, 0, fipple_z - L_melody - 8])
+                    cylinder(d=outer_d, h=L_melody + win_len + 8, $fn=6);
+
+                // Drone 2 Tube (Right)
+                translate([spacing, 0, fipple_z - L_drone2 - 8])
+                    cylinder(d=outer_d, h=L_drone2 + win_len + 8, $fn=6);
+
+                // Upper Bridge & Webbing (JS-evaluated minimum acoustic length)
+                translate([0, 0, ${(fippleZ - Math.min(lMel, lD1, lD2) * 0.45).toFixed(2)}])
+                    linear_extrude(height=${(Math.min(lMel, lD1, lD2) * 0.45 + winLen).toFixed(2)})
+                        hex_profile_2d();
+            } else {
+                // Unified Monolithic Hexagonal Body
+                linear_extrude(height=fipple_z + win_len) hex_profile_2d();
+            }
             
             // Converging Mouthpiece Beak lofting smoothly inward to human lip tip
             hull() {
