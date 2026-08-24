@@ -2159,6 +2159,31 @@ function rebuild3DFlute() {
       fluteMesh.position.set(-cx, 0, cy);
       fluteRootGroup.add(fluteMesh);
 
+      // Acoustic & Geometric dimensions for Three.js keywork placement
+      let boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0;
+      if (rootMidi >= 74) { boreM = 12.0; boreD1 = 14.0; boreD2 = 10.0; }
+      else if (rootMidi >= 67) { boreM = 16.0; boreD1 = 18.0; boreD2 = 14.0; }
+      else if (rootMidi >= 58) { boreM = 19.0; boreD1 = 22.0; boreD2 = 16.0; }
+      else if (rootMidi >= 46) { boreM = 28.0; boreD1 = 32.0; boreD2 = 24.0; }
+      else { boreM = 40.0; boreD1 = 46.0; boreD2 = 34.0; }
+
+      const fMel = midiToFreq(rootMidi);
+      const fD1 = midiToFreq(rootMidi + drone1Int);
+      const fD2 = midiToFreq(rootMidi + drone2Int);
+      const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
+      const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * boreD1;
+      const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * boreD2;
+      const maxBore = Math.max(boreM, boreD1, boreD2);
+      const wall = Math.max(5.5, maxBore * 0.22);
+      const outerD = maxBore + wall * 2;
+      const spacing = Math.max(outerD * 0.95, boreM * 1.45);
+      const holeDiam = Math.max(5.0, Math.min(9.5, boreM * 0.38));
+      const headLen = 42.0;
+      const totalBodyLen = Math.max(lMel, lD1, lD2) + 30.0;
+      const totalCadLen = totalBodyLen + headLen;
+      const fippleZ = totalCadLen - headLen;
+      const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+
       
       
       // Multi-Color Functional Component Materials (Distinct Visual Identification)
