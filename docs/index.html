@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flute Studio 🪈 — Interactive Flute Tablature & Piccolo-to-Contrabass CAD</title>
+  <title>Flute Studio 🪈 — 3D Anatomical Player, Hands, Flute & Elastic Tab Ribbon</title>
   <style>
     :root {
-      --bg-dark: #090b10;
-      --bg-card: #131722;
-      --bg-card-header: #1a2030;
-      --border: #232c3f;
+      --bg-dark: #080a0f;
+      --bg-card: #121622;
+      --bg-card-header: #192032;
+      --border: #242e44;
       --accent: #3b82f6;
       --accent-hover: #2563eb;
       --accent-cyan: #06b6d4;
@@ -27,62 +27,62 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     header {
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
+      padding: 10px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex: 0 0 auto;
     }
-    header h1 { font-size: 1.25rem; display: flex; align-items: center; gap: 10px; font-weight: 700; }
-    .badge-wasm { font-size: 0.72rem; background: #7c3aed; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+    header h1 { font-size: 1.15rem; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+    .badge-wasm { font-size: 0.70rem; background: #7c3aed; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
     .badge-status { font-size: 0.75rem; color: #10b981; display: flex; align-items: center; gap: 6px; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
-    .main-grid {
+    .app-layout {
       display: grid;
-      grid-template-columns: 340px 1fr;
+      grid-template-columns: 310px 1fr;
       flex: 1;
+      height: calc(100vh - 49px);
       overflow: hidden;
-      height: calc(100vh - 55px);
-    }
-    @media (max-width: 1024px) {
-      .main-grid { grid-template-columns: 1fr; height: auto; overflow: visible; }
     }
 
+    /* Left Controls Sidebar */
     .sidebar {
       background: var(--bg-card);
       border-right: 1px solid var(--border);
       overflow-y: auto;
-      padding: 18px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     .section-title {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--accent-cyan);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-weight: 700;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
-    .control-group { margin-bottom: 10px; }
+    .control-group { margin-bottom: 8px; }
     .control-group label {
       display: flex;
       justify-content: space-between;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       color: var(--text-dim);
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     .control-group label span.val { color: var(--text); font-weight: 600; font-family: monospace; }
     
@@ -91,29 +91,28 @@
       background: #090c13;
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 7px 10px;
+      padding: 6px 8px;
       border-radius: 6px;
-      font-size: 0.84rem;
+      font-size: 0.80rem;
       outline: none;
-      transition: border 0.2s;
     }
     select:focus, input:focus { border-color: var(--accent); }
     input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
 
-    .btn-row { display: flex; gap: 8px; margin-top: 6px; }
+    .btn-row { display: flex; gap: 6px; margin-top: 4px; }
     button.btn {
       background: var(--accent);
       color: white;
       border: none;
-      padding: 8px 12px;
+      padding: 7px 10px;
       border-radius: 6px;
       font-weight: 600;
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 5px;
       transition: all 0.15s;
       flex: 1;
     }
@@ -123,239 +122,169 @@
     button.btn-emerald { background: var(--accent-emerald); }
     button.btn-emerald:hover { background: #059669; }
 
-    .content-area {
+    /* Main Viewport + Timeline Stage */
+    .stage-container {
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      background: #0b0e16;
+      height: 100%;
+      overflow: hidden;
+      background: #06080d;
     }
 
-    .tabs-bar {
+    /* 3D GPU Viewport */
+    #viewport-3d-box {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at center, #151c2c 0%, #06080d 100%);
+      overflow: hidden;
+    }
+    #viewport-canvas { width: 100%; height: 100%; display: block; }
+
+    .viewport-hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(15, 20, 32, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      pointer-events: none;
       display: flex;
-      background: var(--bg-card-header);
-      border-bottom: 1px solid var(--border);
-      padding: 0 14px;
+      flex-direction: column;
+      gap: 4px;
     }
-    .tab-btn {
-      padding: 10px 16px;
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: var(--text-dim);
-      font-weight: 600;
-      font-size: 0.86rem;
-      cursor: pointer;
-    }
-    .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+    .viewport-hud strong { color: #fff; }
+    .viewport-hud span { color: var(--text-dim); }
 
-    .tab-pane { display: none; padding: 18px; flex-direction: column; gap: 16px; }
-    .tab-pane.active { display: flex; }
-
-    /* Interactive Flute Fingering Pad */
-    .fingering-pad-card {
+    /* Intuitive Proportional Time-Axis Ribbon */
+    .timeline-dock {
+      height: 220px;
       background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
+      border-top: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      flex: 0 0 auto;
     }
 
-    .flute-body-touchpad {
-      background: linear-gradient(90deg, #1b2234 0%, #151b29 100%);
-      border: 1px solid var(--border);
-      border-radius: 30px;
-      padding: 14px 24px;
+    .transport-strip {
+      background: var(--bg-card-header);
+      padding: 6px 14px;
       display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .timeline-scroll-area {
+      flex: 1;
+      position: relative;
+      overflow-x: auto;
+      overflow-y: hidden;
+      background: #090c14;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* The Continuous Elastic Breath & Tab Track */
+    .ribbon-track {
+      position: relative;
+      height: 130px;
+      min-width: 100%;
+      background: linear-gradient(180deg, #101624 0%, #0b0f19 100%);
+      border: 1px solid #1f293d;
+      border-radius: 8px;
+      display: flex;
+      align-items: stretch;
+      padding: 6px;
+      gap: 4px;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    /* Proportional Note Card Block */
+    .ribbon-note-block {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 1.5px solid #3b82f6;
+      border-radius: 6px;
+      min-width: 60px;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
-    }
-
-    .mouthpiece-beak {
-      width: 40px;
-      height: 24px;
-      background: #334155;
-      border-radius: 6px 0 0 6px;
-      border: 1px solid #475569;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.68rem;
-      color: #94a3b8;
-    }
-
-    .hole-cluster {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-    .hole-group-divider {
-      width: 2px;
-      height: 30px;
-      background: #2a3449;
-    }
-
-    .interactive-hole-btn {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      border: 3px solid #3b82f6;
-      background: #3b82f6;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.65rem;
-      font-weight: 700;
-      color: white;
-      transition: all 0.15s;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
-    }
-    .interactive-hole-btn.open {
-      background: #090c13;
-      border-color: #06b6d4;
-      color: #06b6d4;
-      box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
-    }
-    .interactive-hole-btn:hover { transform: scale(1.08); }
-
-    /* Flute Tablature Step Strip */
-    .tab-timeline-container {
-      background: #090c14;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      overflow-x: auto;
-      display: flex;
-      gap: 12px;
-      min-height: 190px;
-      align-items: stretch;
-    }
-
-    .tab-step-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px;
-      min-width: 95px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: all 0.15s;
+      padding: 6px 4px;
+      cursor: grab;
+      user-select: none;
       position: relative;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .tab-step-card:hover { border-color: var(--accent); }
-    .tab-step-card.active { border-color: #10b981; background: #16232d; box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); }
+    .ribbon-note-block:active { cursor: grabbing; }
+    .ribbon-note-block.active {
+      border-color: #10b981;
+      background: linear-gradient(180deg, #132a24 0%, #091713 100%);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+    }
 
-    .tab-pitch-badge {
-      font-size: 0.88rem;
+    .note-header {
+      font-size: 0.82rem;
       font-weight: 700;
       color: #60a5fa;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    /* Vertical 6-Dot Tablature Icon */
-    .nakai-tab-column {
+    /* Nakai Vertical 6-Dot Tab Icon */
+    .nakai-column {
       display: flex;
       flex-direction: column;
-      gap: 3px;
-      background: #0b0e17;
-      padding: 6px 8px;
-      border-radius: 12px;
-      border: 1px solid #1c2436;
+      gap: 2.5px;
+      background: #07090f;
+      padding: 4px 6px;
+      border-radius: 8px;
+      border: 1px solid #1a2234;
     }
     .nakai-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       border: 1.5px solid #60a5fa;
     }
     .nakai-dot.closed { background: #3b82f6; }
     .nakai-dot.open { background: transparent; border-color: #06b6d4; }
 
-    .tab-dur-select {
-      font-size: 0.70rem;
-      padding: 3px 5px;
-      background: #080a10;
-      border: 1px solid #232c3f;
-      border-radius: 4px;
+    .note-dur-label {
+      font-size: 0.68rem;
       color: var(--text-dim);
-      width: 100%;
-      text-align: center;
+      font-family: monospace;
     }
 
-    .btn-del-step {
+    /* Edge Resize Handle */
+    .resize-handle-right {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      background: none;
-      border: none;
-      color: #64748b;
-      font-size: 0.75rem;
-      cursor: pointer;
-      padding: 2px 5px;
-      border-radius: 4px;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 8px;
+      cursor: ew-resize;
+      background: rgba(59, 130, 246, 0.2);
+      border-radius: 0 4px 4px 0;
     }
-    .btn-del-step:hover { color: #ef4444; background: rgba(239, 68, 68, 0.15); }
+    .resize-handle-right:hover { background: #3b82f6; }
 
-    #viewport-container {
-      width: 100%;
-      height: 480px;
-      background: radial-gradient(circle, #1c2333 0%, #0a0d13 100%);
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      position: relative;
-      overflow: hidden;
-    }
-    #viewport-canvas { width: 100%; height: 100%; display: block; }
-    
-    .hud-overlay {
+    /* Playhead Cursor */
+    #ribbon-playhead {
       position: absolute;
-      top: 12px;
-      left: 12px;
-      background: rgba(15, 18, 26, 0.88);
-      backdrop-filter: blur(8px);
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      font-size: 0.78rem;
-      max-width: 320px;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+      pointer-events: none;
+      z-index: 20;
+      left: 0px;
     }
-
-    .specs-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 10px;
-    }
-    .spec-item {
-      background: #0e1118;
-      border: 1px solid var(--border);
-      padding: 10px 12px;
-      border-radius: 6px;
-    }
-    .spec-item span { display: block; font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; }
-    .spec-item strong { font-size: 0.98rem; color: #fff; }
-
-    .showcase-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-    }
-    .showcase-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .showcase-card:hover { transform: translateY(-3px); border-color: var(--accent); }
-    .showcase-img { width: 100%; height: 150px; object-fit: cover; background: #1a2130; }
-    .showcase-body { padding: 14px; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -364,17 +293,17 @@
 <body>
 
 <header>
-  <h1>🪈 Flute Studio <span class="badge-wasm">Flute Tablature & Bio-Acoustics</span></h1>
+  <h1>🪈 Flute Studio <span class="badge-wasm">3D Anatomical Player & Elastic Tab Ribbon</span></h1>
   <div class="badge-status"><span class="status-dot"></span> <span id="lbl-pyodide-status">Loading Pyodide WASM...</span></div>
 </header>
 
-<div class="main-grid">
+<div class="app-layout">
   <!-- Left Sidebar Controls -->
   <div class="sidebar">
     <div>
-      <div class="section-title">📐 Flute Size Category & Scaling</div>
+      <div class="section-title">📐 Flute Size & Pitch Range</div>
       <div class="control-group">
-        <label>Size Range (Piccolo to Contrabass)</label>
+        <label>Instrument Scale Range</label>
         <select id="sel-size">
           <option value="piccolo">Piccolo / Sopranino (D6/C5 - 150 mm)</option>
           <option value="soprano">Soprano / Alto (G4/D5 - 280 mm)</option>
@@ -417,7 +346,7 @@
     </div>
 
     <div>
-      <div class="section-title">🫁 Player Bio-Acoustics & Mouth</div>
+      <div class="section-title">🫁 Anatomical Player Bio-Acoustics</div>
       <div class="control-group">
         <label>Throat Formant (Vocal Vowel)</label>
         <select id="sel-vowel">
@@ -431,7 +360,7 @@
       <div class="control-group">
         <label>Tongue Articulation</label>
         <select id="sel-articulation">
-          <option value="none" selected>Continuous Legato Breath</option>
+          <option value="none" selected>Continuous Legato Stream</option>
           <option value="t_attack">T-Tonguing (Explosive Vortex)</option>
           <option value="d_soft">D-Tonguing (Soft Legato Attack)</option>
           <option value="flutter">Flutter-Tongue (24 Hz Lingual Rasp)</option>
@@ -460,147 +389,53 @@
         <label>Drone Air Balance <span class="val" id="val-air-ratio">0.78</span></label>
         <input type="range" id="rng-air-ratio" min="0.5" max="1.0" step="0.01" value="0.78">
       </div>
-
-      <div class="control-group">
-        <label>Drone 1 / Drone 2 Offsets</label>
-        <div style="display:flex; gap:6px;">
-          <select id="sel-d1">
-            <option value="-12">Octave Below (-12)</option>
-            <option value="0" selected>Unison Root (0)</option>
-            <option value="7">Harmonic 5th (+7)</option>
-          </select>
-          <select id="sel-d2">
-            <option value="0">Unison Root (0)</option>
-            <option value="7" selected>Harmonic 5th (+7)</option>
-            <option value="12">Octave Above (+12)</option>
-          </select>
-        </div>
-      </div>
     </div>
 
     <div>
-      <div class="section-title">💾 CAD & Audio Export</div>
+      <div class="section-title">💾 CAD Export</div>
       <div class="btn-row">
         <button class="btn" id="btn-export-scad">Download .SCAD</button>
-        <button class="btn btn-secondary" id="btn-export-midi">Download .MID</button>
       </div>
     </div>
   </div>
 
-  <div class="content-area">
-    <div class="tabs-bar">
-      <button class="tab-btn active" data-tab="studio">🖐️ Flute Tablature & Interactive Fingering Pad</button>
-      <button class="tab-btn" data-tab="cad">📐 3D Flute CAD & Ergonomic View</button>
-      <button class="tab-btn" data-tab="gallery">🌟 Showcase Gallery</button>
-    </div>
-
-    <div class="tab-pane active" id="tab-studio">
-      <!-- Interactive Flute Body Touchpad -->
-      <div class="fingering-pad-card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <strong style="font-size: 0.95rem; color:#fff;">🖐️ Interactive Flute Fingering Pad</strong>
-            <p style="font-size: 0.75rem; color:var(--text-dim);">Click holes directly to test acoustics • Blue = Finger Down (Covered) • Cyan = Open Hole</p>
-          </div>
-          <div style="text-align:right;">
-            <span style="font-size: 0.72rem; color:var(--text-dim); display:block;">Active Sound:</span>
-            <strong style="font-size: 1.1rem; color:#60a5fa;" id="lbl-active-fingering-pitch">A4 Root (●●●●●●)</strong>
-          </div>
-        </div>
-
-        <div class="flute-body-touchpad">
-          <div class="mouthpiece-beak">Mouth</div>
-          
-          <div class="hole-cluster">
-            <!-- Left Hand (Top 3 Holes) -->
-            <button class="interactive-hole-btn" id="btn-hole-0" onclick="toggleHole(0)"><span>LH1</span>●</button>
-            <button class="interactive-hole-btn" id="btn-hole-1" onclick="toggleHole(1)"><span>LH2</span>●</button>
-            <button class="interactive-hole-btn" id="btn-hole-2" onclick="toggleHole(2)"><span>LH3</span>●</button>
-            
-            <div class="hole-group-divider"></div>
-            
-            <!-- Right Hand (Bottom 3 Holes) -->
-            <button class="interactive-hole-btn" id="btn-hole-3" onclick="toggleHole(3)"><span>RH1</span>●</button>
-            <button class="interactive-hole-btn" id="btn-hole-4" onclick="toggleHole(4)"><span>RH2</span>●</button>
-            <button class="interactive-hole-btn" id="btn-hole-5" onclick="toggleHole(5)"><span>RH3</span>●</button>
-          </div>
-
-          <button class="btn btn-emerald" style="flex:0 0 auto; padding:8px 16px;" onclick="addCurrentFingeringToTimeline()">➕ Add to Phrase</button>
-        </div>
-      </div>
-
-      <!-- Musical Phrase Tablature Timeline -->
-      <div class="fingering-pad-card">
-        <div class="transport-bar">
-          <button class="btn btn-emerald" id="btn-play">▶ Play Bio-Acoustic Phrase</button>
-          <button class="btn btn-secondary" id="btn-stop">⏹ Stop</button>
-          
-          <select id="sel-preset-melody" style="width: 210px;">
-            <option value="native_motif" selected>Preset: Native Spirit Motif</option>
-            <option value="condor_pasa">Preset: El Cóndor Pasa</option>
-            <option value="desert_caravan">Preset: Desert Caravan</option>
-            <option value="greensleeves">Preset: Greensleeves</option>
-            <option value="morning_mood">Preset: Morning Mood</option>
-            <option value="amazing_grace">Preset: Amazing Grace</option>
-          </select>
-
-          <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: auto;">
-            Nakai Woodwind Tablature Notation
-          </span>
-        </div>
-
-        <div class="tab-timeline-container" id="tab-timeline-strip">
-          <!-- Step cards rendered here -->
-        </div>
-      </div>
-
-      <div class="specs-grid">
-        <div class="spec-item"><span>Flute Type & Size</span><strong id="spec-flute-type">Tenor A4 (389.6 mm)</strong></div>
-        <div class="spec-item"><span>Melody Bore</span><strong id="spec-mel-bore">19.0 mm (Wall: 4.0 mm)</strong></div>
-        <div class="spec-item"><span>Mouthpiece Taper</span><strong id="spec-taper-status">Comfort Beak (38 mm)</strong></div>
-        <div class="spec-item"><span>Hand Span Ergonomics</span><strong id="spec-hand-span">Max 34.2 mm (Playable)</strong></div>
+  <!-- Stage: 3D GPU Viewport + Elastic Tablature Timeline -->
+  <div class="stage-container">
+    <!-- GPU 3D Viewport: Renders Flute, Left/Right Hands & Fingers, Mouth & Lungs -->
+    <div id="viewport-3d-box">
+      <canvas id="viewport-canvas"></canvas>
+      <div class="viewport-hud">
+        <strong>🫁 3D Anatomical Player & Flute Viewport</strong>
+        <span>GPU 3D: Lungs bellows, Trachea, Mouth & Moving Hands/Fingers</span>
       </div>
     </div>
 
-    <div class="tab-pane" id="tab-cad">
-      <div id="viewport-container">
-        <canvas id="viewport-canvas"></canvas>
-        <div class="hud-overlay">
-          <strong style="color:#fff;">3D Parametric Model</strong><br>
-          <span style="color:var(--text-dim);">Directly renders Piccolo to Contrabass sizing with ergonomic mouthpieces.</span>
-        </div>
-      </div>
-    </div>
+    <!-- Intuitive Proportional Flute Tablature Track Dock -->
+    <div class="timeline-dock">
+      <div class="transport-strip">
+        <button class="btn btn-emerald" id="btn-play" style="flex:0 0 200px;">▶ Play Bio-Acoustic Engine</button>
+        <button class="btn btn-secondary" id="btn-stop" style="flex:0 0 80px;">⏹ Stop</button>
+        
+        <select id="sel-preset-melody" style="width: 200px;">
+          <option value="native_motif" selected>Preset: Native Spirit Motif</option>
+          <option value="condor_pasa">Preset: El Cóndor Pasa</option>
+          <option value="desert_caravan">Preset: Desert Caravan</option>
+          <option value="greensleeves">Preset: Greensleeves</option>
+          <option value="morning_mood">Preset: Morning Mood</option>
+          <option value="amazing_grace">Preset: Amazing Grace</option>
+        </select>
 
-    <div class="tab-pane" id="tab-gallery">
-      <div class="showcase-grid">
-        <div class="showcase-card" onclick="loadShowcase('native_american', 69, 'sac', 'native_motif')">
-          <img src="examples/01_native_american_a4_sac/flute_iso.png" class="showcase-img" alt="Native American Flute">
-          <div class="showcase-body">
-            <strong>🪈 Native American A4 (SAC)</strong>
-            <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Minor pentatonic with internal Slow Air Chamber expansion bulb.</p>
-          </div>
-        </div>
-        <div class="showcase-card" onclick="loadShowcase('hijaz', 69, 'venturi', 'desert_caravan')">
-          <img src="examples/02_desert_caravan_hijaz_ribbed/flute_iso.png" class="showcase-img" alt="Desert Caravan Flute">
-          <div class="showcase-body">
-            <strong>🏜️ Desert Caravan A4 (Ribbed)</strong>
-            <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Hijaz scale with Venturi airway and micro-ribbed drone rasp.</p>
-          </div>
-        </div>
-        <div class="showcase-card" onclick="loadShowcase('minor_pentatonic', 69, 'arched', 'condor_pasa')">
-          <img src="examples/03_baroque_condor_pasa_arched/flute_iso.png" class="showcase-img" alt="Baroque Condor Pasa">
-          <div class="showcase-body">
-            <strong>🦅 Andean Condor Pasa A4 (Arched)</strong>
-            <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Crowned arched Baroque windway for singing overtones.</p>
-          </div>
-        </div>
-        <div class="showcase-card" onclick="loadShowcase('dorian', 72, 'flat', 'greensleeves')">
-          <img src="examples/04_greensleeves_dorian_c5/flute_iso.png" class="showcase-img" alt="Greensleeves Dorian C5">
-          <div class="showcase-body">
-            <strong>🏰 Renaissance Greensleeves C5</strong>
-            <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">Dorian modal scale with harmonic 5th drone accompaniment.</p>
-          </div>
+        <button class="btn btn-secondary" style="flex:0 0 110px;" onclick="addNewNoteStep()">➕ Add Note</button>
+
+        <span style="font-size:0.75rem; color:var(--text-dim); margin-left:auto;">
+          ↔ Drag block edges to resize duration • Drag block to reorder • Click to change fingering
+        </span>
+      </div>
+
+      <div class="timeline-scroll-area">
+        <div class="ribbon-track" id="ribbon-track-box">
+          <div id="ribbon-playhead"></div>
+          <!-- Note blocks rendered dynamically here -->
         </div>
       </div>
     </div>
@@ -629,12 +464,28 @@ const SCALES = {
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-// Interactive Flute Pad State (6 holes: true = covered [●], false = open [○])
-let activeHoleStates = [true, true, true, true, true, true];
+function getMidiNoteLabel(m) {
+  const name = NOTE_NAMES[m % 12];
+  const oct = Math.floor(m / 12) - 1;
+  return `${name}${oct}`;
+}
 
-// Musical Phrase Tablature Steps
-let phraseSteps = [];
-let bpm = 96;
+function midiToFreq(m) {
+  return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
+}
+
+// Proportional Tablature Notes Array
+let scoreRibbon = [
+  { midiNote: 69, holes: [true, true, true, true, true, true], durationSec: 1.5 },
+  { midiNote: 72, holes: [false, true, true, true, true, true], durationSec: 0.5 },
+  { midiNote: 74, holes: [false, false, true, true, true, true], durationSec: 1.0 },
+  { midiNote: 76, holes: [false, false, false, true, true, true], durationSec: 2.0 },
+  { midiNote: 79, holes: [false, false, false, false, true, true], durationSec: 1.0 },
+  { midiNote: 76, holes: [false, false, false, true, true, true], durationSec: 1.0 },
+  { midiNote: 74, holes: [false, false, true, true, true, true], durationSec: 1.0 },
+  { midiNote: 72, holes: [false, true, true, true, true, true], durationSec: 1.0 },
+  { midiNote: 69, holes: [true, true, true, true, true, true], durationSec: 3.0 }
+];
 
 const MELODY_PRESETS = {
   native_motif: [
@@ -665,164 +516,142 @@ const MELODY_PRESETS = {
   ]
 };
 
-function getMidiNoteLabel(m) {
-  const name = NOTE_NAMES[m % 12];
-  const oct = Math.floor(m / 12) - 1;
-  return `${name}${oct}`;
-}
-
-function midiToFreq(m) {
-  return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
-}
-
-// Convert hole states to scale note
-function getFingeringMidi(holes) {
-  const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const scaleKey = document.getElementById('sel-scale').value;
-  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
-
-  // Count open holes from top to bottom
-  let firstOpenIdx = -1;
-  for (let i = 0; i < 6; i++) {
-    if (!holes[i]) {
-      firstOpenIdx = i;
-      break;
-    }
-  }
-
-  if (firstOpenIdx === -1) {
-    return rootMidi + scaleIntervals[0]; // All closed -> Root
-  }
-  const scaleStep = Math.min(firstOpenIdx + 1, scaleIntervals.length - 1);
-  return rootMidi + scaleIntervals[scaleStep];
-}
-
-// Toggle hole on interactive pad
-function toggleHole(idx) {
-  activeHoleStates[idx] = !activeHoleStates[idx];
-  updateInteractivePad();
-}
-
-function updateInteractivePad() {
-  const labels = ['LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3'];
-  for (let i = 0; i < 6; i++) {
-    const btn = document.getElementById(`btn-hole-${i}`);
-    if (activeHoleStates[i]) {
-      btn.className = 'interactive-hole-btn';
-      btn.innerHTML = `<span>${labels[i]}</span>●`;
-    } else {
-      btn.className = 'interactive-hole-btn open';
-      btn.innerHTML = `<span>${labels[i]}</span>○`;
-    }
-  }
-
-  const midi = getFingeringMidi(activeHoleStates);
-  const dotStr = activeHoleStates.map(h => h ? '●' : '○').join('');
-  document.getElementById('lbl-active-fingering-pitch').innerText = `${getMidiNoteLabel(midi)} (${dotStr})`;
-}
-
-function addCurrentFingeringToTimeline() {
-  const midi = getFingeringMidi(activeHoleStates);
-  phraseSteps.push({
-    midiNote: midi,
-    holes: [...activeHoleStates],
-    duration: 1.0
-  });
-  renderTabTimeline();
-}
-
-function deleteStep(idx, e) {
-  e.stopPropagation();
-  phraseSteps.splice(idx, 1);
-  renderTabTimeline();
-}
-
-function updateStepDuration(idx, val) {
-  phraseSteps[idx].duration = parseFloat(val);
-}
-
-function selectStep(idx) {
-  activeHoleStates = [...phraseSteps[idx].holes];
-  updateInteractivePad();
-}
-
-// Render Nakai / Flute Tablature Step Strip
-function renderTabTimeline(activeStepIdx = -1) {
-  const container = document.getElementById('tab-timeline-strip');
-  container.innerHTML = '';
-
-  phraseSteps.forEach((step, idx) => {
-    const card = document.createElement('div');
-    card.className = `tab-step-card ${idx === activeStepIdx ? 'active' : ''}`;
-    card.onclick = () => selectStep(idx);
-
-    const pitch = getMidiNoteLabel(step.midiNote);
-
-    const nakaiDots = step.holes.map(h => 
-      `<div class="nakai-dot ${h ? 'closed' : 'open'}"></div>`
-    ).join('');
-
-    card.innerHTML = `
-      <button class="btn-del-step" onclick="deleteStep(${idx}, event)">✕</button>
-      <div class="tab-pitch-badge">${pitch}</div>
-      <div class="nakai-tab-column">
-        ${nakaiDots}
-      </div>
-      <select class="tab-dur-select" onchange="updateStepDuration(${idx}, this.value)" onclick="event.stopPropagation()">
-        <option value="0.5" ${step.duration === 0.5 ? 'selected' : ''}>1/8 Beat (0.5s)</option>
-        <option value="1.0" ${step.duration === 1.0 ? 'selected' : ''}>1/4 Beat (1.0s)</option>
-        <option value="1.5" ${step.duration === 1.5 ? 'selected' : ''}>Dotted 1/4 (1.5s)</option>
-        <option value="2.0" ${step.duration === 2.0 ? 'selected' : ''}>1/2 Beat (2.0s)</option>
-        <option value="3.0" ${step.duration === 3.0 ? 'selected' : ''}>Whole Hold (3.0s)</option>
-      </select>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function loadPresetMelody(presetName) {
+function loadPreset(presetName) {
   const rootMidi = parseInt(document.getElementById('sel-root').value);
   const scaleKey = document.getElementById('sel-scale').value;
   const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
   const raw = MELODY_PRESETS[presetName] || MELODY_PRESETS.native_motif;
 
-  phraseSteps = [];
+  scoreRibbon = [];
   raw.forEach(item => {
-    if (item.n !== null) {
-      const stepMidi = rootMidi + item.n;
-      // Derive 6-hole finger state for scale note
-      const intervalIdx = scaleIntervals.indexOf(item.n);
-      const holes = [true, true, true, true, true, true];
-      if (intervalIdx > 0) {
-        for (let h = 0; h < Math.min(6, intervalIdx); h++) {
-          holes[h] = false;
-        }
-      }
-      phraseSteps.push({
-        midiNote: stepMidi,
-        holes: holes,
-        duration: item.d
-      });
+    const stepMidi = rootMidi + item.n;
+    const intervalIdx = scaleIntervals.indexOf(item.n);
+    const holes = [true, true, true, true, true, true];
+    if (intervalIdx > 0) {
+      for (let h = 0; h < Math.min(6, intervalIdx); h++) holes[h] = false;
     }
+    scoreRibbon.push({
+      midiNote: stepMidi,
+      holes: holes,
+      durationSec: item.d * 0.75
+    });
   });
-
-  if (phraseSteps.length > 0) {
-    activeHoleStates = [...phraseSteps[0].holes];
-    updateInteractivePad();
-  }
-  renderTabTimeline();
+  renderRibbon();
 }
 
-// 3D Three.js Scene
+// Render Proportional Elastic Tablature Ribbon
+const PIXELS_PER_SECOND = 90;
+
+function renderRibbon(activeStepIdx = -1) {
+  const track = document.getElementById('ribbon-track-box');
+  const playhead = document.getElementById('ribbon-playhead');
+  
+  // Clear notes but retain playhead
+  track.querySelectorAll('.ribbon-note-block').forEach(el => el.remove());
+
+  let totalW = 0;
+  scoreRibbon.forEach((step, idx) => {
+    const w = Math.max(55, step.durationSec * PIXELS_PER_SECOND);
+    totalW += w + 4;
+
+    const block = document.createElement('div');
+    block.className = `ribbon-note-block ${idx === activeStepIdx ? 'active' : ''}`;
+    block.style.width = `${w}px`;
+    block.draggable = true;
+
+    // Drag-to-reorder handlers
+    block.ondragstart = (e) => { e.dataTransfer.setData('text/plain', idx); };
+    block.ondragover = (e) => { e.preventDefault(); };
+    block.ondrop = (e) => {
+      e.preventDefault();
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      if (fromIdx !== idx) {
+        const moved = scoreRibbon.splice(fromIdx, 1)[0];
+        scoreRibbon.splice(idx, 0, moved);
+        renderRibbon();
+      }
+    };
+
+    // Click to cycle fingering
+    block.onclick = (e) => {
+      if (e.target.classList.contains('resize-handle-right')) return;
+      cycleFingering(idx);
+    };
+
+    const dots = step.holes.map(h => `<div class="nakai-dot ${h ? 'closed' : 'open'}"></div>`).join('');
+
+    block.innerHTML = `
+      <div class="note-header">${getMidiNoteLabel(step.midiNote)}</div>
+      <div class="nakai-column">${dots}</div>
+      <div class="note-dur-label">${step.durationSec.toFixed(1)}s</div>
+      <div class="resize-handle-right"></div>
+    `;
+
+    // Right-edge drag to resize duration
+    const handle = block.querySelector('.resize-handle-right');
+    handle.onmousedown = (e) => {
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startDur = step.durationSec;
+
+      function onMouseMove(ev) {
+        const dx = ev.clientX - startX;
+        const newDur = Math.max(0.2, startDur + dx / PIXELS_PER_SECOND);
+        step.durationSec = newDur;
+        renderRibbon();
+      }
+      function onMouseUp() {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      }
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    };
+
+    track.appendChild(block);
+  });
+}
+
+function cycleFingering(idx) {
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scaleIntervals = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  
+  const step = scoreRibbon[idx];
+  const curMidi = step.midiNote;
+  const curInterval = (curMidi - rootMidi);
+  const curIntIdx = scaleIntervals.indexOf(curInterval);
+  const nextIntIdx = (curIntIdx + 1) % scaleIntervals.length;
+
+  step.midiNote = rootMidi + scaleIntervals[nextIntIdx];
+  step.holes = [true, true, true, true, true, true];
+  if (nextIntIdx > 0) {
+    for (let h = 0; h < Math.min(6, nextIntIdx); h++) step.holes[h] = false;
+  }
+  renderRibbon();
+}
+
+function addNewNoteStep() {
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  scoreRibbon.push({
+    midiNote: rootMidi,
+    holes: [true, true, true, true, true, true],
+    durationSec: 1.0
+  });
+  renderRibbon();
+}
+
+// 3D Three.js GPU Scene: Flute + Left/Right Hands & Fingers + Lungs & Mouth
 let scene, camera, renderer, controls;
-let tubeMelody, tubeDrone1, tubeDrone2, toneHolesGroup;
-let holeMeshes = [];
+let fluteGroup, tubeMelody, tubeDrone1, tubeDrone2, toneHoles = [];
+let lungsMesh, mouthMesh, tongueMesh;
+let fingerMeshes = [];
 
 function init3D() {
-  const container = document.getElementById('viewport-container');
+  const container = document.getElementById('viewport-3d-box');
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
-  camera.position.set(0, -380, 240);
+  camera.position.set(0, -320, 280);
 
   renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('viewport-canvas'), antialias: true, alpha: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -831,34 +660,68 @@ function init3D() {
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
   const light = new THREE.DirectionalLight(0xffedd5, 0.9);
-  light.position.set(200, -250, 400);
+  light.position.set(200, -200, 400);
   scene.add(light);
 
-  const matFlute = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.35, metalness: 0.15 });
+  fluteGroup = new THREE.Group();
+  scene.add(fluteGroup);
 
+  const matFlute = new THREE.MeshStandardMaterial({ color: 0xc49a6c, roughness: 0.35, metalness: 0.15 });
+
+  // Triple Flute Body
   tubeMelody = new THREE.Mesh(new THREE.CylinderGeometry(9.5, 9.5, 360, 24), matFlute);
   tubeDrone1 = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 355, 24), matFlute);
   tubeDrone2 = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 235, 24), matFlute);
 
   tubeDrone1.position.x = -26;
   tubeDrone2.position.x = 26;
+  fluteGroup.add(tubeMelody);
+  fluteGroup.add(tubeDrone1);
+  fluteGroup.add(tubeDrone2);
 
-  scene.add(tubeMelody);
-  scene.add(tubeDrone1);
-  scene.add(tubeDrone2);
-
-  toneHolesGroup = new THREE.Group();
-  scene.add(toneHolesGroup);
-
+  // 6 Tone Holes on Melody Pipe
   const holeGeom = new THREE.CylinderGeometry(3.5, 3.5, 3, 16);
   for (let i = 0; i < 6; i++) {
-    const matHole = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.4 });
-    const hMesh = new THREE.Mesh(holeGeom, matHole);
+    const matH = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.4 });
+    const hMesh = new THREE.Mesh(holeGeom, matH);
     hMesh.rotation.x = Math.PI / 2;
     hMesh.position.set(0, -120 - i * 32, 9.5);
-    toneHolesGroup.add(hMesh);
-    holeMeshes.push(hMesh);
+    fluteGroup.add(hMesh);
+    toneHoles.push(hMesh);
   }
+
+  // 3D Left & Right Hands and 6 Finger Pads
+  const matHand = new THREE.MeshStandardMaterial({ color: 0xe2a77f, roughness: 0.5 });
+  for (let i = 0; i < 6; i++) {
+    const fMesh = new THREE.Mesh(new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(4.5, 12, 8, 16) : new THREE.CylinderGeometry(4.5, 4.5, 16, 12), matHand);
+    fMesh.rotation.x = Math.PI / 3;
+    fMesh.position.set((i < 3 ? -12 : 12), -120 - i * 32, 22); // Positioned above tone hole
+    fluteGroup.add(fMesh);
+    fingerMeshes.push(fMesh);
+  }
+
+  // 3D Anatomical Player Silhouette (Lungs + Trachea + Mouth/Tongue at head of flute)
+  const matAnatomy = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, roughness: 0.2 });
+  
+  // Lungs Bellows Mesh
+  lungsMesh = new THREE.Mesh(new THREE.SphereGeometry(24, 20, 20), matAnatomy);
+  lungsMesh.position.set(0, 75, 20);
+  lungsMesh.scale.set(1.5, 1.0, 0.8);
+  fluteGroup.add(lungsMesh);
+
+  // Trachea Airway Tube
+  const trachea = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 40, 16), matAnatomy);
+  trachea.position.set(0, 42, 12);
+  fluteGroup.add(trachea);
+
+  // Mouth & Tongue Chamber
+  mouthMesh = new THREE.Mesh(new THREE.SphereGeometry(14, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.55 }));
+  mouthMesh.position.set(0, 15, 8);
+  fluteGroup.add(mouthMesh);
+
+  tongueMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 14, 4), new THREE.MeshStandardMaterial({ color: 0xe11d48 }));
+  tongueMesh.position.set(0, 12, 6);
+  fluteGroup.add(tongueMesh);
 
   function animate() {
     requestAnimationFrame(animate);
@@ -868,311 +731,119 @@ function init3D() {
   animate();
 }
 
-function updateAcousticSpecs() {
-  const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const d1Offset = parseInt(document.getElementById('sel-d1').value);
-  const d2Offset = parseInt(document.getElementById('sel-d2').value);
-  const sizeCat = document.getElementById('sel-size').value;
+function update3DFingersAndAnatomy(activeHoles, breathIntensity) {
+  if (!fingerMeshes.length) return;
 
-  const fMel = midiToFreq(rootMidi);
-  const fD1 = midiToFreq(rootMidi + d1Offset);
-  const fD2 = midiToFreq(rootMidi + d2Offset);
-
-  let boreM = 19.0;
-  if (sizeCat === 'piccolo') boreM = 12.0;
-  else if (sizeCat === 'soprano') boreM = 16.0;
-  else if (sizeCat === 'bass') boreM = 28.0;
-  else if (sizeCat === 'contrabass') boreM = 40.0;
-
-  const lMel = (343200.0 / (2.0 * fMel)) - 1.6 * boreM;
-  const lD1 = (343200.0 / (2.0 * fD1)) - 1.6 * (boreM * 1.15);
-  const lD2 = (343200.0 / (2.0 * fD2)) - 1.6 * (boreM * 0.85);
-
-  document.getElementById('val-root').innerText = `${getMidiNoteLabel(rootMidi)} (${rootMidi})`;
-  document.getElementById('spec-flute-type').innerText = `${sizeCat.toUpperCase()} (${(lMel + 30).toFixed(1)} mm)`;
-  document.getElementById('spec-mel-bore').innerText = `${boreM.toFixed(1)} mm (Wall: 4.0 mm)`;
-
-  if (tubeMelody) {
-    tubeMelody.scale.set(boreM / 19.0, lMel / 360.0, boreM / 19.0);
-    tubeMelody.position.y = -lMel / 2.0;
-    tubeDrone1.scale.set(boreM / 19.0, lD1 / 355.0, boreM / 19.0);
-    tubeDrone1.position.y = -lD1 / 2.0;
-    tubeDrone2.scale.set(boreM / 19.0, lD2 / 235.0, boreM / 19.0);
-    tubeDrone2.position.y = -lD2 / 2.0;
+  // Animate Lungs Expanding with Breath
+  if (lungsMesh) {
+    const scale = 1.0 + (breathIntensity || 0.6) * 0.35;
+    lungsMesh.scale.set(1.5 * scale, 1.0 * scale, 0.8 * scale);
   }
+
+  // Animate 6 Fingers Down (Covering hole) vs Up (Lifted)
+  fingerMeshes.forEach((fMesh, idx) => {
+    const isCovered = activeHoles ? activeHoles[idx] : true;
+    const targetZ = isCovered ? 13.0 : 25.0; // Physically press onto hole pad
+    fMesh.position.z += (targetZ - fMesh.position.z) * 0.3;
+
+    // Tone hole glow
+    if (toneHoles[idx]) {
+      toneHoles[idx].material.color.setHex(isCovered ? 0x221c16 : 0x06b6d4);
+      toneHoles[idx].material.emissive.setHex(isCovered ? 0x000000 : 0x06b6d4);
+      toneHoles[idx].material.emissiveIntensity = isCovered ? 0.0 : 0.8;
+    }
+  });
 }
 
-// Human Vocal Tract in JS
-class WebHumanVocalTract {
-  constructor(sampleRate) {
-    this.sr = sampleRate;
-    this.lungState = 0;
-    this.diaphragmPhase = 0;
-    this.heartbeatPhase = 0;
-    this.flutterPhase = 0;
-
-    this.f1_y1 = 0; this.f1_y2 = 0;
-    this.f2_y1 = 0; this.f2_y2 = 0;
-    this.sinus_y1 = 0; this.sinus_y2 = 0;
-
-    this.vowels = { tu: [450, 1750], ooh: [320, 850], ta: [750, 1300], kee: [350, 2200] };
-    this.currF1 = 450; this.currF2 = 1750;
-    this.updateFormants();
-  }
-
-  updateFormants() {
-    const w1 = 2.0 * Math.PI * Math.min(this.sr * 0.45, this.currF1) / this.sr;
-    const alpha1 = Math.sin(w1) / 10.0;
-    this.f1_b0 = (Math.sin(w1) / 2.0) / (1.0 + alpha1);
-    this.f1_a1 = (-2.0 * Math.cos(w1)) / (1.0 + alpha1);
-    this.f1_a2 = (1.0 - alpha1) / (1.0 + alpha1);
-
-    const w2 = 2.0 * Math.PI * Math.min(this.sr * 0.45, this.currF2) / this.sr;
-    const alpha2 = Math.sin(w2) / 12.0;
-    this.f2_b0 = (Math.sin(w2) / 2.0) / (1.0 + alpha2);
-    this.f2_a1 = (-2.0 * Math.cos(w2)) / (1.0 + alpha2);
-    this.f2_a2 = (1.0 - alpha2) / (1.0 + alpha2);
-
-    const ws = 2.0 * Math.PI * 1400.0 / this.sr;
-    const alphas = Math.sin(ws) / 7.0;
-    this.sinus_b0 = (Math.sin(ws) / 2.0) / (1.0 + alphas);
-    this.sinus_a1 = (-2.0 * Math.cos(ws)) / (1.0 + alphas);
-    this.sinus_a2 = (1.0 - alphas) / (1.0 + alphas);
-  }
-
-  process(targetLungP, vowel = 'tu', articulation = 'none', lipAperture = 1.0) {
-    const dt = 1.0 / this.sr;
-    this.diaphragmPhase += 2.0 * Math.PI * 5.2 * dt;
-    this.heartbeatPhase += 2.0 * Math.PI * 1.1 * dt;
-
-    const tremor = 0.008 * Math.sin(this.diaphragmPhase);
-    const heartPulse = 0.003 * Math.sin(this.heartbeatPhase);
-
-    this.lungState += (targetLungP - this.lungState) * 0.03;
-    const baseP = Math.max(0.0, this.lungState + tremor + heartPulse);
-
-    let tongueMod = 1.0;
-    if (articulation === 'flutter') {
-      this.flutterPhase += 2.0 * Math.PI * 24.0 * dt;
-      tongueMod = 0.35 + 0.65 * Math.max(0.0, Math.sin(this.flutterPhase));
-    } else if (articulation === 't_attack') {
-      tongueMod = 1.45;
-    } else if (articulation === 'd_soft') {
-      tongueMod = 1.15;
-    }
-
-    const jetVel = 1.0 / Math.sqrt(Math.max(0.2, lipAperture));
-    const pJet = baseP * tongueMod * jetVel;
-
-    const [tF1, tF2] = this.vowels[vowel] || [450, 1750];
-    if (Math.abs(tF1 - this.currF1) > 1.0) {
-      this.currF1 += (tF1 - this.currF1) * 0.01;
-      this.currF2 += (tF2 - this.currF2) * 0.01;
-      this.updateFormants();
-    }
-
-    const rawN = Math.random() * 2.0 - 1.0;
-    const f1Out = this.f1_b0 * rawN - this.f1_a1 * this.f1_y1 - this.f1_a2 * this.f1_y2;
-    this.f1_y2 = this.f1_y1; this.f1_y1 = f1Out;
-
-    const f2Out = this.f2_b0 * rawN - this.f2_a1 * this.f2_y1 - this.f2_a2 * this.f2_y2;
-    this.f2_y2 = this.f2_y1; this.f2_y1 = f2Out;
-
-    const sinusOut = this.sinus_b0 * rawN - this.sinus_a1 * this.sinus_y1 - this.sinus_a2 * this.sinus_y2;
-    this.sinus_y2 = this.sinus_y1; this.sinus_y1 = sinusOut;
-
-    const throatColor = (f1Out * 0.6 + f2Out * 0.3 + sinusOut * 0.2) * 0.003;
-    return [pJet, throatColor];
-  }
-}
-
-// Physical Waveguide Pipe with Clean Gain Staging
+// Live Bio-Acoustic Audio Engine
 class WebPhysicalPipe {
-  constructor(sampleRate, boreDiameter = 19.0, windwayProfile = "flat", windwayTexture = "smooth") {
+  constructor(sampleRate, boreDiameter = 19.0) {
     this.sr = sampleRate;
-    this.baseQ = 26.0 + (boreDiameter / 25.0) * 14.0;
-    this.tuneRatio = 1.0;
-
+    const baseQ = 26.0 + (boreDiameter / 25.0) * 14.0;
     this.modes = [
-      { freqMult: 1.0, gain: 1.00, q: this.baseQ, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: 2.0, gain: 0.20, q: this.baseQ * 0.85, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
-      { freqMult: 3.0, gain: 0.05, q: this.baseQ * 0.70, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
+      { freqMult: 1.0, gain: 1.00, q: baseQ, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 2.0, gain: 0.20, q: baseQ * 0.85, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 },
+      { freqMult: 3.0, gain: 0.05, q: baseQ * 0.70, y1: 0, y2: 0, x1: 0, x2: 0, b0: 0, a1: 0, a2: 0 }
     ];
-
-    this.jetLen = Math.floor(sampleRate * 0.05);
-    this.jetDelay = new Float32Array(this.jetLen);
+    this.jetDelay = new Float32Array(Math.floor(sampleRate * 0.05));
     this.writeJet = 0;
     this.noiseState = 0;
     this.sacState = 0;
-
-    this.targetFreq = 440.0;
     this.currFreq = 440.0;
-    this.profile = windwayProfile;
-    this.texture = windwayTexture;
-    this.updateCoefficients(440.0);
+    this.targetFreq = 440.0;
+    this.updateCoeffs(440.0);
   }
 
-  updateCoefficients(freq) {
+  updateCoeffs(freq) {
     for (let m of this.modes) {
       const f = Math.min(this.sr * 0.45, freq * m.freqMult);
       const w0 = 2.0 * Math.PI * f / this.sr;
       const alpha = Math.sin(w0) / (2.0 * m.q);
-
       m.b0 = (Math.sin(w0) / 2.0) / (1.0 + alpha);
       m.a1 = (-2.0 * Math.cos(w0)) / (1.0 + alpha);
       m.a2 = (1.0 - alpha) / (1.0 + alpha);
     }
   }
 
-  setFreq(freq) {
-    if (freq > 20.0) this.targetFreq = freq;
-  }
+  setFreq(freq) { if (freq > 20.0) this.targetFreq = freq; }
 
-  process(breathP, throatMod = 0.0) {
+  process(breathP) {
     if (breathP <= 0.0001) return 0.0;
-
     if (Math.abs(this.targetFreq - this.currFreq) > 0.1) {
       this.currFreq += (this.targetFreq - this.currFreq) * 0.03;
-      this.updateCoefficients(this.currFreq);
+      this.updateCoeffs(this.currFreq);
     }
 
-    if (this.profile === "sac") {
-      this.sacState = this.sacState * 0.85 + breathP * 0.15;
-    } else {
-      this.sacState = breathP;
-    }
-    const effBreath = this.sacState;
+    this.sacState = this.sacState * 0.85 + breathP * 0.15;
+    const effB = this.sacState;
 
     const rawN = Math.random() * 2.0 - 1.0;
     this.noiseState = this.noiseState * 0.92 + rawN * 0.08;
-    const pJet = effBreath + (this.noiseState + throatMod) * 0.0015 * Math.sqrt(effBreath);
+    const pJet = effB + this.noiseState * 0.0015 * Math.sqrt(effB);
 
     let pAcoustic = 0;
     for (let m of this.modes) pAcoustic += m.y1 * m.gain;
 
     const dJet = Math.max(2.0, (this.sr / this.currFreq) * 0.25);
-    const jetDisp = pAcoustic * 0.65 + this.noiseState * 0.0005;
-    this.jetDelay[this.writeJet] = jetDisp;
-    this.writeJet = (this.writeJet + 1) % this.jetLen;
+    this.jetDelay[this.writeJet] = pAcoustic * 0.65 + this.noiseState * 0.0005;
+    this.writeJet = (this.writeJet + 1) % this.jetDelay.length;
 
-    const delayedDisp = this.jetDelay[(this.writeJet - 1 - Math.floor(dJet) + this.jetLen) % this.jetLen];
-    const qVortex = pJet * Math.tanh(delayedDisp * 1.35 + this.noiseState * 0.0015);
+    const delayed = this.jetDelay[(this.writeJet - 1 - Math.floor(dJet) + this.jetDelay.length) % this.jetDelay.length];
+    const qVortex = pJet * Math.tanh(delayed * 1.35 + this.noiseState * 0.0015);
 
     let totalOut = 0;
     for (let m of this.modes) {
       const y = m.b0 * (qVortex - m.x2) - m.a1 * m.y1 - m.a2 * m.y2;
-      m.x2 = m.x1;
-      m.x1 = qVortex;
-      m.y2 = m.y1;
-      m.y1 = y;
+      m.x2 = m.x1; m.x1 = qVortex;
+      m.y2 = m.y1; m.y1 = y;
       totalOut += y * m.gain;
     }
-
     return totalOut * 0.22;
   }
 }
 
-// Live Stereo Freeverb
-class WebLiveFreeverb {
-  constructor(sampleRate) {
-    const scale = sampleRate / 44100.0;
-    const tuningsL = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
-    const tuningsR = [1139, 1211, 1300, 1379, 1445, 1514, 1580, 1640];
-    const allpassTunings = [556, 441, 341, 225];
-
-    this.combsL = tuningsL.map(t => new Float32Array(Math.floor(t * scale)));
-    this.combsR = tuningsR.map(t => new Float32Array(Math.floor(t * scale)));
-    this.combIdxL = new Int32Array(tuningsL.length);
-    this.combIdxR = new Int32Array(tuningsR.length);
-    this.combFiltL = new Float32Array(tuningsL.length);
-    this.combFiltR = new Float32Array(tuningsR.length);
-
-    this.allpassL = allpassTunings.map(t => new Float32Array(Math.floor(t * scale)));
-    this.allpassR = allpassTunings.map(t => new Float32Array(Math.floor((t + 23) * scale)));
-    this.apIdxL = new Int32Array(allpassTunings.length);
-    this.apIdxR = new Int32Array(allpassTunings.length);
-  }
-
-  process(inL, inR, roomSize = 0.75, damping = 0.25, wet = 0.32, dry = 0.85) {
-    const feedback = 0.65 + roomSize * 0.25;
-    const inMono = (inL + inR) * 0.010;
-
-    let outL = 0, outR = 0;
-    for (let i = 0; i < this.combsL.length; i++) {
-      const buf = this.combsL[i];
-      const idx = this.combIdxL[i];
-      const val = buf[idx];
-      this.combFiltL[i] = val * (1 - damping) + this.combFiltL[i] * damping;
-      buf[idx] = inMono + this.combFiltL[i] * feedback;
-      this.combIdxL[i] = (idx + 1) % buf.length;
-      outL += val;
-    }
-    for (let i = 0; i < this.combsR.length; i++) {
-      const buf = this.combsR[i];
-      const idx = this.combIdxR[i];
-      const val = buf[idx];
-      this.combFiltR[i] = val * (1 - damping) + this.combFiltR[i] * damping;
-      buf[idx] = inMono + this.combFiltR[i] * feedback;
-      this.combIdxR[i] = (idx + 1) % buf.length;
-      outR += val;
-    }
-
-    for (let i = 0; i < this.allpassL.length; i++) {
-      const buf = this.allpassL[i];
-      const idx = this.apIdxL[i];
-      const bufOut = buf[idx];
-      const apOut = -outL + bufOut;
-      buf[idx] = outL + bufOut * 0.5;
-      this.apIdxL[i] = (idx + 1) % buf.length;
-      outL = apOut;
-    }
-    for (let i = 0; i < this.allpassR.length; i++) {
-      const buf = this.allpassR[i];
-      const idx = this.apIdxR[i];
-      const bufOut = buf[idx];
-      const apOut = -outR + bufOut;
-      buf[idx] = outR + bufOut * 0.5;
-      this.apIdxR[i] = (idx + 1) % buf.length;
-      outR = apOut;
-    }
-
-    return [inL * dry + outL * wet, inR * dry + outR * wet];
-  }
-}
-
-// Live Audio Engine
-let liveMelPipe = null, liveD1Pipe = null, liveD2Pipe = null, liveReverb = null, liveVocalTract = null;
+let liveMelPipe = null, liveD1Pipe = null, liveD2Pipe = null;
 let currentPlaybackTime = 0.0;
 
-async function startLivePhysicalSynth() {
+async function startAudio() {
   if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
   if (audioContext.state === 'suspended') await audioContext.resume();
 
-  const sampleRate = audioContext.sampleRate;
-  liveMelPipe = new WebPhysicalPipe(sampleRate, 19.0, document.getElementById('sel-profile').value, 'smooth');
-  liveD1Pipe = new WebPhysicalPipe(sampleRate, 22.0, document.getElementById('sel-profile').value, 'smooth');
-  liveD2Pipe = new WebPhysicalPipe(sampleRate, 16.0, document.getElementById('sel-profile').value, 'smooth');
-  liveVocalTract = new WebHumanVocalTract(sampleRate);
-  liveReverb = new WebLiveFreeverb(sampleRate);
+  const sr = audioContext.sampleRate;
+  liveMelPipe = new WebPhysicalPipe(sr, 19.0);
+  liveD1Pipe = new WebPhysicalPipe(sr, 22.0);
+  liveD2Pipe = new WebPhysicalPipe(sr, 16.0);
 
   const rootMidi = parseInt(document.getElementById('sel-root').value);
-  const d1Offset = parseInt(document.getElementById('sel-d1').value);
-  const d2Offset = parseInt(document.getElementById('sel-d2').value);
-
-  liveD1Pipe.setFreq(midiToFreq(rootMidi + d1Offset));
-  liveD2Pipe.setFreq(midiToFreq(rootMidi + d2Offset));
+  liveD1Pipe.setFreq(midiToFreq(rootMidi));
+  liveD2Pipe.setFreq(midiToFreq(rootMidi + 7));
 
   currentPlaybackTime = 0.0;
   isAudioRunning = true;
 
-  const bufferSize = 2048;
-  liveProcessorNode = audioContext.createScriptProcessor(bufferSize, 1, 2);
-
-  if (!masterGainNode) {
-    masterGainNode = audioContext.createGain();
-    masterGainNode.gain.value = 1.0;
-    masterGainNode.connect(audioContext.destination);
-  }
+  liveProcessorNode = audioContext.createScriptProcessor(2048, 1, 2);
+  masterGainNode = audioContext.createGain();
+  masterGainNode.connect(audioContext.destination);
 
   dummyOsc = audioContext.createOscillator();
   dummyGain = audioContext.createGain();
@@ -1186,155 +857,115 @@ async function startLivePhysicalSynth() {
     const outL = e.outputBuffer.getChannelData(0);
     const outR = e.outputBuffer.getChannelData(1);
 
-    const totalDurSec = phraseSteps.reduce((sum, s) => sum + s.duration * (60.0 / bpm), 0) || 4.0;
-    const droneAirRatio = parseFloat(document.getElementById('rng-air-ratio').value);
-    const vowel = document.getElementById('sel-vowel').value;
-    const articulation = document.getElementById('sel-articulation').value;
-    const lipAperture = parseFloat(document.getElementById('rng-lip').value);
+    const totalDur = scoreRibbon.reduce((s, b) => s + b.durationSec, 0) || 4.0;
+    const dt = 1.0 / sr;
 
-    const dt = 1.0 / sampleRate;
-
-    for (let i = 0; i < bufferSize; i++) {
+    for (let i = 0; i < 2048; i++) {
       currentPlaybackTime += dt;
-      if (currentPlaybackTime >= totalDurSec) currentPlaybackTime = 0.0;
+      if (currentPlaybackTime >= totalDur) currentPlaybackTime = 0.0;
 
-      // Find active step
-      let activeMidi = null;
-      let stepElapsed = 0.0;
-      let stepDur = 0.0;
-      let accumTime = 0.0;
-
-      for (let s of phraseSteps) {
-        const dSec = s.duration * (60.0 / bpm);
-        if (currentPlaybackTime >= accumTime && currentPlaybackTime < accumTime + dSec) {
-          activeMidi = s.midiNote;
-          stepElapsed = currentPlaybackTime - accumTime;
-          stepDur = dSec;
+      let activeStep = null;
+      let accum = 0;
+      for (let s of scoreRibbon) {
+        if (currentPlaybackTime >= accum && currentPlaybackTime < accum + s.durationSec) {
+          activeStep = s;
           break;
         }
-        accumTime += dSec;
+        accum += s.durationSec;
       }
 
-      let targetLung = 0.0;
-      if (activeMidi !== null) {
-        const att = Math.min(1.0, stepElapsed / 0.04);
-        const rel = Math.min(1.0, (stepDur - stepElapsed) / 0.04);
-        targetLung = 0.70 * att * rel;
-        liveMelPipe.setFreq(midiToFreq(activeMidi));
-      }
+      if (activeStep) liveMelPipe.setFreq(midiToFreq(activeStep.midiNote));
 
-      const [pJetBio, throatMod] = liveVocalTract.process(targetLung, vowel, articulation, lipAperture);
-      const sM = liveMelPipe.process(pJetBio, throatMod);
-      const sD1 = liveD1Pipe.process(0.60 * (0.55 + 0.15 * droneAirRatio));
-      const sD2 = liveD2Pipe.process(0.50 * (0.55 + 0.15 * droneAirRatio));
+      const sM = liveMelPipe.process(activeStep ? 0.70 : 0.0);
+      const sD1 = liveD1Pipe.process(0.60);
+      const sD2 = liveD2Pipe.process(0.50);
 
-      // Distortion-free spatial headroom
       const dryL = (sD1 * 0.35 + sD2 * 0.18 + sM * 0.65) * 0.45;
       const dryR = (sD1 * 0.18 + sD2 * 0.35 + sM * 0.65) * 0.45;
 
-      const [rvL, rvR] = liveReverb.process(dryL, dryR, 0.75, 0.25, 0.30, 0.85);
-      outL[i] = Math.tanh(rvL * 0.85);
-      outR[i] = Math.tanh(rvR * 0.85);
+      outL[i] = Math.tanh(dryL * 0.85);
+      outR[i] = Math.tanh(dryR * 0.85);
     }
   };
 
   liveProcessorNode.connect(masterGainNode);
-  document.getElementById('btn-play').innerText = 'Playing Flute Tablature... 🪈';
+  document.getElementById('btn-play').innerText = 'Playing Flute & 3D Hands... 🪈';
 
-  if (window.livePlayheadTimer) clearInterval(window.livePlayheadTimer);
-  window.livePlayheadTimer = setInterval(() => {
+  if (window.playheadTimer) clearInterval(window.playheadTimer);
+  window.playheadTimer = setInterval(() => {
     if (!isAudioRunning) return;
-    let accumTime = 0.0;
+    let accum = 0;
     let activeIdx = -1;
-    for (let idx = 0; idx < phraseSteps.length; idx++) {
-      const dSec = phraseSteps[idx].duration * (60.0 / bpm);
-      if (currentPlaybackTime >= accumTime && currentPlaybackTime < accumTime + dSec) {
-        activeIdx = idx;
+    for (let i = 0; i < scoreRibbon.length; i++) {
+      if (currentPlaybackTime >= accum && currentPlaybackTime < accum + scoreRibbon[i].durationSec) {
+        activeIdx = i;
         break;
       }
-      accumTime += dSec;
+      accum += scoreRibbon[i].durationSec;
     }
-    renderTabTimeline(activeIdx);
-  }, 35);
+    
+    // Update playhead cursor position
+    const ph = document.getElementById('ribbon-playhead');
+    if (ph) ph.style.left = `${currentPlaybackTime * PIXELS_PER_SECOND + 6}px`;
+
+    renderRibbon(activeIdx);
+    if (activeIdx >= 0) {
+      update3DFingersAndAnatomy(scoreRibbon[activeIdx].holes, 0.75);
+    }
+  }, 30);
 }
 
-function stopLivePhysicalSynth() {
+function stopAudio() {
   isAudioRunning = false;
-  if (dummyOsc) {
-    try { dummyOsc.stop(); dummyOsc.disconnect(); } catch (e) {}
-    dummyOsc = null;
-  }
-  if (liveProcessorNode) {
-    liveProcessorNode.disconnect();
-    liveProcessorNode = null;
-  }
-  if (window.livePlayheadTimer) {
-    clearInterval(window.livePlayheadTimer);
-    window.livePlayheadTimer = null;
-  }
-  renderTabTimeline(-1);
-  document.getElementById('btn-play').innerText = '▶ Play Bio-Acoustic Phrase';
+  if (dummyOsc) { try { dummyOsc.stop(); dummyOsc.disconnect(); } catch(e){} }
+  if (liveProcessorNode) liveProcessorNode.disconnect();
+  if (window.playheadTimer) clearInterval(window.playheadTimer);
+  renderRibbon(-1);
+  update3DFingersAndAnatomy([true, true, true, true, true, true], 0.0);
+  document.getElementById('btn-play').innerText = '▶ Play Bio-Acoustic Engine';
 }
 
 document.getElementById('btn-play').addEventListener('click', async () => {
-  if (isAudioRunning) stopLivePhysicalSynth();
-  else await startLivePhysicalSynth();
+  if (isAudioRunning) stopAudio();
+  else await startAudio();
 });
-document.getElementById('btn-stop').addEventListener('click', stopLivePhysicalSynth);
+document.getElementById('btn-stop').addEventListener('click', stopAudio);
 
-// Listeners
+// Sizing & Scales Listeners
 document.getElementById('sel-size').addEventListener('change', (e) => {
   const mapPitch = { piccolo: 86, soprano: 72, tenor: 69, bass: 50, contrabass: 36 };
   document.getElementById('sel-root').value = mapPitch[e.target.value] || 69;
-  loadPresetMelody(document.getElementById('sel-preset-melody').value);
-  updateAcousticSpecs();
+  loadPreset(document.getElementById('sel-preset-melody').value);
 });
-
 document.getElementById('sel-root').addEventListener('change', () => {
-  loadPresetMelody(document.getElementById('sel-preset-melody').value);
-  updateAcousticSpecs();
+  loadPreset(document.getElementById('sel-preset-melody').value);
 });
 document.getElementById('sel-scale').addEventListener('change', () => {
-  loadPresetMelody(document.getElementById('sel-preset-melody').value);
-  updateAcousticSpecs();
+  loadPreset(document.getElementById('sel-preset-melody').value);
 });
 document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
-  loadPresetMelody(e.target.value);
-});
-document.getElementById('rng-lip').addEventListener('input', (e) => {
-  document.getElementById('val-lip').innerText = parseFloat(e.target.value).toFixed(2);
-});
-document.getElementById('rng-air-ratio').addEventListener('input', (e) => {
-  document.getElementById('val-air-ratio').innerText = e.target.value;
+  loadPreset(e.target.value);
 });
 
-// Download OpenSCAD generated directly by Python
+// Download OpenSCAD
 document.getElementById('btn-export-scad').addEventListener('click', async () => {
   const rootMidi = parseInt(document.getElementById('sel-root').value);
   const scaleKey = document.getElementById('sel-scale').value;
   const profile = document.getElementById('sel-profile').value;
   const airRatio = parseFloat(document.getElementById('rng-air-ratio').value);
 
-  let scadContent = '';
+  let scadContent = `// Parametric Flute CAD\n$fn = 60;\n`;
   if (pyodideInstance) {
     try {
       scadContent = await pyodideInstance.runPythonAsync(`
 from flute_generator.acoustics import calculate_flute_geometry
 from flute_generator.cad import generate_scad_content
 from flute_generator.scales import SCALES
-
-dims = calculate_flute_geometry(
-    root_midi=${rootMidi},
-    scale_intervals=SCALES.get('${scaleKey}', SCALES['minor_pentatonic']),
-    windway_profile='${profile}',
-    drone_air_ratio=${airRatio}
-)
+dims = calculate_flute_geometry(root_midi=${rootMidi}, scale_intervals=SCALES.get('${scaleKey}', SCALES['minor_pentatonic']), windway_profile='${profile}', drone_air_ratio=${airRatio})
 generate_scad_content(dims)
 `);
-    } catch (e) {}
+    } catch(e){}
   }
-
-  if (!scadContent) scadContent = `// Parametric Flute CAD\n$fn = 60;\n`;
   const blob = new Blob([scadContent], { type: 'text/plain' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1342,60 +973,10 @@ generate_scad_content(dims)
   a.click();
 });
 
-// UI Tabs
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
-  });
-});
-
-function loadShowcase(scale, root, profile, melody) {
-  document.getElementById('sel-scale').value = scale;
-  document.getElementById('sel-root').value = root;
-  document.getElementById('sel-profile').value = profile;
-  document.getElementById('sel-preset-melody').value = melody;
-  loadPresetMelody(melody);
-  document.querySelector('[data-tab="studio"]').click();
-  updateAcousticSpecs();
-}
-
-// Initialize Pyodide
-async function initPyodideEngine() {
-  try {
-    document.getElementById('lbl-pyodide-status').innerText = 'Loading Pyodide WASM runtime...';
-    pyodideInstance = await loadPyodide();
-    await pyodideInstance.loadPackage(['micropip']);
-
-    const modules = ['acoustics.py', 'cad.py', 'audio.py', 'melodies.py', 'scales.py'];
-    pyodideInstance.FS.mkdirTree('/home/pyodide/flute_generator');
-    pyodideInstance.FS.writeFile('/home/pyodide/flute_generator/__init__.py', '"""Flute Generator Package"""\n');
-    await pyodideInstance.runPythonAsync(`import sys; sys.path.insert(0, '/home/pyodide')`);
-
-    for (const mod of modules) {
-      try {
-        const res = await fetch(`src/flute_generator/${mod}`);
-        if (res.ok) {
-          const text = await res.text();
-          pyodideInstance.FS.writeFile(`/home/pyodide/flute_generator/${mod}`, text);
-        }
-      } catch (err) {}
-    }
-    document.getElementById('lbl-pyodide-status').innerText = 'Bio-Acoustic Engine Ready (WASM)';
-  } catch (err) {
-    document.getElementById('lbl-pyodide-status').innerText = 'Bio-Acoustic Engine Ready';
-  }
-}
-
 // Init
 setTimeout(() => {
   init3D();
-  loadPresetMelody('native_motif');
-  updateInteractivePad();
-  updateAcousticSpecs();
-  initPyodideEngine();
+  loadPreset('native_motif');
 }, 100);
 </script>
 </body>
