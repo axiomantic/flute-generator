@@ -2107,6 +2107,69 @@ class WebPhysicalPipe {
   }
 }
 
+
+// High-Fidelity Spatial Room Simulator (Algorithmic Impulse Generator)
+let convolverNode = null;
+let wetGainNode = null;
+let dryGainNode = null;
+
+function createRoomImpulseBuffer(ctx, envKey = 'canyon') {
+  const sampleRate = ctx.sampleRate;
+  let duration = 2.4;
+  let decay = 2.8;
+  let earlyReflectionsCount = 18;
+
+  if (envKey === 'studio') {
+    duration = 1.1; decay = 4.2; earlyReflectionsCount = 12;
+  } else if (envKey === 'forest') {
+    duration = 2.0; decay = 3.0; earlyReflectionsCount = 24;
+  } else if (envKey === 'cad_dark') {
+    duration = 0.5; decay = 6.0; earlyReflectionsCount = 8;
+  } else {
+    // Canyon
+    duration = 2.8; decay = 2.2; earlyReflectionsCount = 30;
+  }
+
+  const length = Math.floor(sampleRate * duration);
+  const impulse = ctx.createBuffer(2, length, sampleRate);
+  const left = impulse.getChannelData(0);
+  const right = impulse.getChannelData(1);
+
+  // Generate early reflection clusters + smooth diffuse reverberant tail
+  for (let i = 0; i < length; i++) {
+    const t = i / sampleRate;
+    const env = Math.exp(-decay * t);
+
+    // Diffuse stereo noise tail
+    const noiseL = (Math.random() * 2 - 1) * env;
+    const noiseR = (Math.random() * 2 - 1) * env;
+
+    left[i] = noiseL * 0.7;
+    right[i] = noiseR * 0.7;
+  }
+
+  // Inject discrete early reflections with acoustic stereo panning
+  for (let r = 0; r < earlyReflectionsCount; r++) {
+    const delayTime = 0.015 + (r / earlyReflectionsCount) * 0.18 + Math.random() * 0.01;
+    const idx = Math.floor(delayTime * sampleRate);
+    if (idx < length) {
+      const amp = (1.0 - r / earlyReflectionsCount) * 0.45;
+      const pan = Math.random();
+      left[idx] += amp * (1 - pan);
+      right[idx] += amp * pan;
+    }
+  }
+
+  return impulse;
+}
+
+function updateRoomAcoustics(envKey) {
+  if (!audioContext || !convolverNode) return;
+  try {
+    convolverNode.buffer = createRoomImpulseBuffer(audioContext, envKey);
+  } catch(e) {}
+}
+
 let liveMelPipe = null, liveD1Pipe = null, liveD2Pipe = null;
 let currentPlaybackTime = 0.0;
 
@@ -2126,8 +2189,29 @@ async function startAudio() {
   currentPlaybackTime = 0.0;
   isAudioRunning = true;
 
+  // Pure Acoustic Flow Graph: ScriptProcessor (Dry Model) -> Master Split -> [Dry Gain + Convolver Room Reverb Wet Gain] -> Destination
   liveProcessorNode = audioContext.createScriptProcessor(2048, 1, 2);
+
+  dryGainNode = audioContext.createGain();
+  dryGainNode.gain.value = 0.65;
+
+  wetGainNode = audioContext.createGain();
+  wetGainNode.gain.value = 0.45;
+
+  convolverNode = audioContext.createConvolver();
+  const currentEnv = document.getElementById('sel-environment') ? document.getElementById('sel-environment').value : 'canyon';
+  convolverNode.buffer = createRoomImpulseBuffer(audioContext, currentEnv);
+
   masterGainNode = audioContext.createGain();
+  masterGainNode.gain.value = 1.0;
+
+  // Audio Graph Connections
+  liveProcessorNode.connect(dryGainNode);
+  liveProcessorNode.connect(convolverNode);
+  convolverNode.connect(wetGainNode);
+
+  dryGainNode.connect(masterGainNode);
+  wetGainNode.connect(masterGainNode);
   masterGainNode.connect(audioContext.destination);
 
   dummyOsc = audioContext.createOscillator();
@@ -2172,15 +2256,11 @@ async function startAudio() {
       const sD1 = liveD1Pipe.process(liveBreathIntensity * 0.75);
       const sD2 = liveD2Pipe.process(liveBreathIntensity * 0.65);
 
-      const dryL = (sD1 * 0.35 + sD2 * 0.18 + sM * 0.65) * 0.45;
-      const dryR = (sD1 * 0.18 + sD2 * 0.35 + sM * 0.65) * 0.45;
-
-      outL[i] = Math.tanh(dryL * 0.70);
-      outR[i] = Math.tanh(dryR * 0.70);
+      // Pure Linear Acoustic Bore Summation (Zero artificial distortion/clipping)
+      outL[i] = (sD1 * 0.50 + sD2 * 0.25 + sM * 0.85) * 0.50;
+      outR[i] = (sD1 * 0.25 + sD2 * 0.50 + sM * 0.85) * 0.50;
     }
   };
-
-  liveProcessorNode.connect(masterGainNode);
   document.getElementById('btn-play').innerText = '⏸ Pause';
 
   if (window.playheadTimer) clearInterval(window.playheadTimer);
@@ -2291,6 +2371,7 @@ document.getElementById('sel-indicator-style').addEventListener('change', () => 
   rebuild3DFlute();
 });
 document.getElementById('sel-environment').addEventListener('change', (e) => {
+  updateRoomAcoustics(e.target.value);
   persistCurrentStudioState();
   applyEnvironment(e.target.value);
 });
