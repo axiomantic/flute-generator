@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "openscad-wasm": "^0.0.4"
+  }
+}

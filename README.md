@@ -163,6 +163,29 @@ Open the `.scad` file in [OpenSCAD](https://openscad.org/), select your desired 
 
 ---
 
+## ⚡ WebAssembly & Fast Manifold Engine Build
+
+The web interface compiles parametric CAD models client-side into 3D polygon meshes via OpenSCAD WebAssembly.
+
+### Building OpenSCAD WASM with the Fast Manifold Engine
+
+To build a custom build of OpenSCAD targeting WebAssembly with the 50× faster **Manifold CSG backend** (`-DENABLE_MANIFOLD=ON`), run:
+
+```bash
+# 1. Install & activate Emscripten SDK
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk && ./emsdk install latest && ./emsdk activate latest
+source ./emsdk_env.sh
+cd ..
+
+# 2. Run the automated Manifold WASM build script
+./scripts/build_manifold_wasm.sh
+```
+
+This compiles upstream OpenSCAD with the Manifold geometry kernel and places `openscad.js` and `openscad.wasm` into the project root for immediate in-browser execution.
+
+---
+
 ## 🧪 Running Tests
 
 Run the full pytest suite:
