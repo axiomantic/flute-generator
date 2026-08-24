@@ -9,10 +9,7 @@ from typing import Optional
 from .acoustics import calculate_flute_geometry
 from .audio import (
     create_flute_midi,
-    find_soundfont,
-    get_soundfont_instructions,
-    render_soundfont_wav,
-    synthesize_fallback_wav,
+    synthesize_flute_audio,
 )
 from .cad import save_scad_file
 from .melodies import MELODY_PRESETS, build_quantized_melody
@@ -105,7 +102,6 @@ def interactive_wizard() -> dict:
     # 6. Output settings
     out_dir = prompt_user_input("\nOutput directory", "./output")
     out_name = prompt_user_input("Base file name", f"flute_{midi_to_note_name(root_midi)}_{scale_name}")
-    sf2_path = prompt_user_input("Custom SoundFont .sf2 path (press Enter to auto-detect)", "")
 
     return {
         "root_midi": root_midi,
@@ -121,7 +117,6 @@ def interactive_wizard() -> dict:
         "hole_d": hole_d,
         "output_dir": out_dir,
         "name": out_name,
-        "soundfont": sf2_path if sf2_path else None,
     }
 
 
@@ -215,9 +210,28 @@ def parse_arguments(args: Optional[list] = None) -> argparse.Namespace:
         help="Aeroacoustic windway surface texture (smooth, ribbed)",
     )
     parser.add_argument(
-        "--soundfont", "-s",
-        default=None,
-        help="Path to .sf2 SoundFont file",
+        "--room-size",
+        type=float,
+        default=0.75,
+        help="Stereo reverb room size (0.0 to 1.0)",
+    )
+    parser.add_argument(
+        "--reverb-damping",
+        type=float,
+        default=0.25,
+        help="Stereo reverb high-frequency damping (0.0 to 1.0)",
+    )
+    parser.add_argument(
+        "--reverb-wet",
+        type=float,
+        default=0.32,
+        help="Stereo reverb wet mix level (0.0 to 1.0)",
+    )
+    parser.add_argument(
+        "--reverb-dry",
+        type=float,
+        default=0.85,
+        help="Stereo reverb dry mix level (0.0 to 1.0)",
     )
     parser.add_argument(
         "--output-dir", "-o",
@@ -258,11 +272,14 @@ def generate_flute(
     windway_profile: str = "flat",
     drone_air_ratio: float = 0.78,
     windway_texture: str = "smooth",
+    room_size: float = 0.75,
+    damping: float = 0.25,
+    reverb_wet: float = 0.32,
+    reverb_dry: float = 0.85,
     output_dir: str = "./output",
     base_name: Optional[str] = None,
-    soundfont_path: Optional[str] = None,
 ) -> dict:
-    """Execute complete geometry calculations, CAD script generation, and audio synthesis."""
+    """Execute complete geometry calculations, CAD script generation, and physical modeling audio synthesis."""
     scale_intervals = SCALES.get(scale_name, SCALES["minor_pentatonic"])
     root_name = midi_to_note_name(root_midi)
 
@@ -306,8 +323,8 @@ def generate_flute(
     save_scad_file(dims, scad_file)
     print(f"      ✓ OpenSCAD file saved: {scad_file.resolve()}")
 
-    # 3. Melody Quantization and Audio Synthesis
-    print(f"\n[3/3] Quantizing melody '{melody_name}' & synthesizing audio...")
+    # 3. Melody Quantization and Physical Waveguide Synthesis
+    print(f"\n[3/3] Quantizing melody '{melody_name}' & synthesizing physical waveguide audio...")
     melody_events = build_quantized_melody(
         melody_name=melody_name,
         root_midi=root_midi,
@@ -317,29 +334,16 @@ def generate_flute(
     create_flute_midi(dims, melody_events, midi_file)
     print(f"      ✓ MIDI file saved: {midi_file.resolve()}")
 
-    # SoundFont & WAV rendering
-    sf2 = find_soundfont(soundfont_path)
-    fluidsynth_installed = bool(shutil.which("fluidsynth"))
-
-    wav_rendered = False
-    if sf2 and fluidsynth_installed:
-        wav_rendered = render_soundfont_wav(midi_file, sf2, wav_file)
-        if wav_rendered:
-            print(f"      ✓ SoundFont audio rendered: {wav_file.resolve()} (using {sf2.name})")
-
-    if not wav_rendered:
-        if not sf2:
-            print("\n" + "=" * 60)
-            print(get_soundfont_instructions())
-            print("=" * 60 + "\n")
-        elif not fluidsynth_installed:
-            print("\n[!] FluidSynth binary not found in system PATH.")
-            print("    To render with SoundFont, install FluidSynth (e.g. 'brew install fluidsynth' or 'apt install fluidsynth').")
-
-        # Fallback synthesis
-        print("      * Generating pure-Python harmonic audio preview...")
-        synthesize_fallback_wav(dims, melody_events, wav_file)
-        print(f"      ✓ Fallback audio preview saved: {wav_file.resolve()}")
+    synthesize_flute_audio(
+        dims=dims,
+        melody_events=melody_events,
+        wav_path=wav_file,
+        room_size=room_size,
+        damping=damping,
+        reverb_wet=reverb_wet,
+        reverb_dry=reverb_dry,
+    )
+    print(f"      ✓ Physical modeling acoustic audio rendered: {wav_file.resolve()} (Reverb: room={room_size:.2f}, wet={reverb_wet:.2f})")
 
     print("\n✨ Flute generation complete!")
     print(f"   • OpenSCAD: {scad_file}")
@@ -358,11 +362,9 @@ def main(cli_args: Optional[list] = None) -> int:
     """CLI entrypoint."""
     parsed = parse_arguments(cli_args)
 
-    # Determine if interactive mode should be triggered:
-    # If explicitly requested with --interactive, or if running in a terminal with no arguments passed
     has_custom_args = any(
         arg in (sys.argv[1:] if cli_args is None else cli_args)
-        for arg in ["--root", "-r", "--scale", "--melody", "-m", "--soundfont", "-s", "--drone1", "--drone2"]
+        for arg in ["--root", "-r", "--scale", "--melody", "-m", "--drone1", "--drone2", "--windway-profile"]
     )
     should_run_interactive = parsed.interactive or (not parsed.non_interactive and not has_custom_args and sys.stdin.isatty())
 
@@ -382,7 +384,6 @@ def main(cli_args: Optional[list] = None) -> int:
             hole_d=params["hole_d"],
             output_dir=params["output_dir"],
             base_name=params["name"],
-            soundfont_path=params["soundfont"],
         )
     else:
         root_midi = note_name_to_midi(parsed.root)
@@ -401,8 +402,11 @@ def main(cli_args: Optional[list] = None) -> int:
             windway_profile=parsed.windway_profile,
             drone_air_ratio=parsed.drone_air_ratio,
             windway_texture=parsed.windway_texture,
+            room_size=parsed.room_size,
+            damping=parsed.reverb_damping,
+            reverb_wet=parsed.reverb_wet,
+            reverb_dry=parsed.reverb_dry,
             output_dir=parsed.output_dir,
             base_name=parsed.name,
-            soundfont_path=parsed.soundfont,
         )
     return 0

@@ -22,7 +22,13 @@ class TestCliParsing:
             "--wall", "3.5",
             "--spacing", "24.0",
             "--hole-d", "6.5",
-            "--soundfont", "/path/to/font.sf2",
+            "--windway-profile", "sac",
+            "--drone-air-ratio", "0.75",
+            "--windway-texture", "ribbed",
+            "--room-size", "0.8",
+            "--reverb-damping", "0.3",
+            "--reverb-wet", "0.4",
+            "--reverb-dry", "0.8",
             "--output-dir", "/tmp/out",
             "--name", "my_custom_flute",
             "--non-interactive",
@@ -36,7 +42,13 @@ class TestCliParsing:
         assert args.wall == 3.5
         assert args.spacing == 24.0
         assert args.hole_d == 6.5
-        assert args.soundfont == "/path/to/font.sf2"
+        assert args.windway_profile == "sac"
+        assert args.drone_air_ratio == 0.75
+        assert args.windway_texture == "ribbed"
+        assert args.room_size == 0.8
+        assert args.reverb_damping == 0.3
+        assert args.reverb_wet == 0.4
+        assert args.reverb_dry == 0.8
         assert args.output_dir == "/tmp/out"
         assert args.name == "my_custom_flute"
         assert args.non_interactive is True
@@ -45,8 +57,7 @@ class TestCliParsing:
 class TestInteractiveWizardSimulation:
     def test_interactive_wizard_with_default_answers(self):
         """Simulate user pressing Enter (accepting defaults) on all prompts."""
-        # Simulated responses for: root, scale, melody, drone1, drone2, adv_choice, out_dir, out_name, sf2
-        inputs = ["", "", "", "", "", "N", "", "", ""]
+        inputs = ["", "", "", "", "", "N", "", ""]
         with patch("builtins.input", side_effect=inputs):
             params = interactive_wizard()
 
@@ -56,7 +67,6 @@ class TestInteractiveWizardSimulation:
         assert params["drone1_offset"] == 0
         assert params["drone2_offset"] == 7
         assert params["output_dir"] == "./output"
-        assert params["soundfont"] is None
 
     def test_interactive_wizard_with_custom_answers_and_advanced_geometry(self):
         """Simulate user providing specific custom inputs including advanced physical bore options."""
@@ -75,7 +85,6 @@ class TestInteractiveWizardSimulation:
             "8.0",      # hole_d
             "/tmp/flute_out",  # output_dir
             "custom_c5_flute", # base name
-            "custom.sf2",      # soundfont
         ]
         with patch("builtins.input", side_effect=inputs):
             params = interactive_wizard()
@@ -93,7 +102,6 @@ class TestInteractiveWizardSimulation:
         assert params["hole_d"] == 8.0
         assert params["output_dir"] == "/tmp/flute_out"
         assert params["name"] == "custom_c5_flute"
-        assert params["soundfont"] == "custom.sf2"
 
 
 class TestEndToEndExecution:

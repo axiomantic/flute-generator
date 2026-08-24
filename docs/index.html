@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flute Studio 🪈 — 3D Acoustic CAD & Physical Modeling Synthesizer</title>
+  <style>
+    :root {
+      --bg-dark: #0f1117;
+      --bg-card: #1a1d27;
+      --bg-card-header: #242938;
+      --border: #2e364a;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.4);
+      --accent-gold: #f59e0b;
+      --accent-emerald: #10b981;
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --key-white: #e2e8f0;
+      --key-black: #1e293b;
+      --scale-note: #2563eb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+    header .header-badge { font-size: 0.75rem; background: var(--accent); padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+    header nav { display: flex; gap: 12px; }
+    header a.nav-btn {
+      color: var(--text-dim);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    header a.nav-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      flex: 1;
+      overflow: hidden;
+      height: calc(100vh - 65px);
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid { grid-template-columns: 1fr; height: auto; overflow: visible; }
+    }
+
+    /* Sidebar controls */
+    .sidebar {
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-group { margin-bottom: 12px; }
+    .control-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+    .control-group label span.val { color: var(--text); font-weight: 600; font-family: monospace; }
+    
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      background: #11141e;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    select:focus, input:focus { border-color: var(--accent); }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+    button.btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 9px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+      flex: 1;
+    }
+    button.btn:hover { background: #2563eb; box-shadow: 0 0 12px var(--accent-glow); }
+    button.btn-secondary { background: #2a3142; color: var(--text); }
+    button.btn-secondary:hover { background: #374158; }
+    button.btn-emerald { background: var(--accent-emerald); }
+    button.btn-emerald:hover { background: #059669; }
+
+    /* Content Area */
+    .content-area {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: #131620;
+    }
+
+    .tabs-bar {
+      display: flex;
+      background: var(--bg-card-header);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+    }
+    .tab-btn {
+      padding: 12px 18px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-pane { display: none; padding: 20px; flex-direction: column; gap: 20px; }
+    .tab-pane.active { display: flex; }
+
+    /* 3D Viewport */
+    #viewport-container {
+      width: 100%;
+      height: 480px;
+      background: radial-gradient(circle, #1f2738 0%, #0d1017 100%);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    #viewport-canvas { width: 100%; height: 100%; display: block; }
+    .viewport-overlay {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: rgba(15, 17, 23, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    /* Piano Roll Canvas */
+    .pianoroll-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .transport-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pianoroll-wrapper {
+      position: relative;
+      height: 340px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0b0d13;
+    }
+    #pianoroll-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+    /* Showcase Cards */
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+    }
+    .showcase-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+      cursor: pointer;
+    }
+    .showcase-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .showcase-img { width: 100%; height: 160px; object-fit: cover; background: #232a3b; }
+    .showcase-body { padding: 16px; }
+    .showcase-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+    .showcase-desc { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .spec-item {
+      background: #11141e;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .spec-item span { display: block; font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; }
+    .spec-item strong { font-size: 1.05rem; color: #fff; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>🪈 Flute Studio <span class="header-badge">Physical Waveguide Engine</span></h1>
+  <nav>
+    <a href="https://github.com/axiomantic/flute-generator" target="_blank" class="nav-btn">GitHub Repo ↗</a>
+  </nav>
+</header>
+
+<div class="main-grid">
+  <!-- Left Parameters Sidebar -->
+  <div class="sidebar">
+    <!-- Acoustic Tuning -->
+    <div>
+      <div class="section-title">🎵 Acoustic Physics & Tuning</div>
+      <div class="control-group">
+        <label>Root Pitch <span class="val" id="val-root">A4 (69)</span></label>
+        <select id="sel-root">
+          <option value="60">C4 (60 - 261.6 Hz)</option>
+          <option value="62">D4 (62 - 293.7 Hz)</option>
+          <option value="64">E4 (64 - 329.6 Hz)</option>
+          <option value="65">F4 (65 - 349.2 Hz)</option>
+          <option value="67">G4 (67 - 392.0 Hz)</option>
+          <option value="69" selected>A4 (69 - 440.0 Hz)</option>
+          <option value="71">B4 (71 - 493.9 Hz)</option>
+          <option value="72">C5 (72 - 523.3 Hz)</option>
+          <option value="74">D5 (74 - 587.3 Hz)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Musical Scale</label>
+        <select id="sel-scale">
+          <option value="native_american" selected>Native American (Minor Pentatonic)</option>
+          <option value="hijaz">Hijaz (Middle Eastern)</option>
+          <option value="minor_pentatonic">Minor Pentatonic</option>
+          <option value="major_pentatonic">Major Pentatonic</option>
+          <option value="dorian">Dorian Mode</option>
+          <option value="major">Major Scale</option>
+          <option value="natural_minor">Natural Minor</option>
+          <option value="blues">Blues Scale</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Drone 1 Offset <span class="val" id="val-d1">Unison Root (0)</span></label>
+        <select id="sel-d1">
+          <option value="-12">Octave Below (-12 semitones)</option>
+          <option value="0" selected>Unison Root (0 semitones)</option>
+          <option value="7">Harmonic 5th (+7 semitones)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Drone 2 Offset <span class="val" id="val-d2">Harmonic 5th (+7)</span></label>
+        <select id="sel-d2">
+          <option value="0">Unison Root (0 semitones)</option>
+          <option value="7" selected>Harmonic 5th (+7 semitones)</option>
+          <option value="12">Octave Above (+12 semitones)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Mouthpiece & Aeroacoustics -->
+    <div>
+      <div class="section-title">🌬️ Mouthpiece & Aeroacoustics</div>
+      <div class="control-group">
+        <label>Windway Profile</label>
+        <select id="sel-profile">
+          <option value="sac" selected>Slow Air Chamber (SAC - Native American)</option>
+          <option value="arched">Arched Crown (Baroque Overtones)</option>
+          <option value="venturi">Venturi Taper (High Jet Velocity)</option>
+          <option value="flat">Flat Planar (Direct Whistle)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Drone Air Balancing <span class="val" id="val-air-ratio">0.78</span></label>
+        <input type="range" id="rng-air-ratio" min="0.5" max="1.0" step="0.01" value="0.78">
+      </div>
+
+      <div class="control-group">
+        <label>Windway Texture</label>
+        <select id="sel-texture">
+          <option value="smooth" selected>Smooth (Laminar)</option>
+          <option value="ribbed">Micro-Ribbed (Acoustic Rasp)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Reverb & Room Ambience -->
+    <div>
+      <div class="section-title">🏛️ Stereo Freeverb Reverb</div>
+      <div class="control-group">
+        <label>Room Size <span class="val" id="val-room">0.78</span></label>
+        <input type="range" id="rng-room" min="0.1" max="0.98" step="0.01" value="0.78">
+      </div>
+      <div class="control-group">
+        <label>Damping <span class="val" id="val-damp">0.25</span></label>
+        <input type="range" id="rng-damp" min="0.0" max="1.0" step="0.01" value="0.25">
+      </div>
+      <div class="control-group">
+        <label>Reverb Wet Mix <span class="val" id="val-wet">0.35</span></label>
+        <input type="range" id="rng-wet" min="0.0" max="1.0" step="0.01" value="0.35">
+      </div>
+    </div>
+
+    <!-- Export Actions -->
+    <div>
+      <div class="section-title">💾 CAD & Model Export</div>
+      <div class="btn-row">
+        <button class="btn" id="btn-export-scad">Download .SCAD</button>
+        <button class="btn btn-secondary" id="btn-export-midi">Download .MID</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Main Workspace -->
+  <div class="content-area">
+    <div class="tabs-bar">
+      <button class="tab-btn active" data-tab="studio">🎹 Visual Piano Roll & Synthesizer</button>
+      <button class="tab-btn" data-tab="cad">📐 3D Parametric CAD View</button>
+      <button class="tab-btn" data-tab="gallery">🌟 Showcase Gallery</button>
+    </div>
+
+    <!-- Tab 1: Studio & Piano Roll -->
+    <div class="tab-pane active" id="tab-studio">
+      <div class="pianoroll-card">
+        <div class="transport-bar">
+          <button class="btn btn-emerald" id="btn-play">▶ Play Physical Synth</button>
+          <button class="btn btn-secondary" id="btn-stop">⏹ Stop</button>
+          
+          <select id="sel-preset-melody" style="width: 220px;">
+            <option value="native_motif">Preset: Native Spirit Motif</option>
+            <option value="condor_pasa">Preset: El Cóndor Pasa</option>
+            <option value="desert_caravan">Preset: Desert Caravan</option>
+            <option value="greensleeves">Preset: Greensleeves</option>
+            <option value="morning_mood">Preset: Morning Mood</option>
+            <option value="amazing_grace">Preset: Amazing Grace</option>
+          </select>
+
+          <div style="font-size: 0.85rem; color: var(--text-dim); margin-left: auto;">
+            <span>Click & Drag to draw notes • Scale notes highlighted</span>
+          </div>
+        </div>
+
+        <div class="pianoroll-wrapper">
+          <canvas id="pianoroll-canvas"></canvas>
+        </div>
+
+        <div style="display: flex; gap: 20px; align-items: center; font-size: 0.85rem; color: var(--text-dim);">
+          <label><input type="checkbox" id="chk-drone1" checked> Enable Root Drone</label>
+          <label><input type="checkbox" id="chk-drone2" checked> Enable Harmonic Drone</label>
+          <label><input type="checkbox" id="chk-vibrato" checked> Natural Trailing Vibrato</label>
+        </div>
+      </div>
+
+      <!-- Live Acoustic Dimensions Readout -->
+      <div class="specs-grid">
+        <div class="spec-item">
+          <span>Melody Resonator</span>
+          <strong id="spec-mel-len">359.6 mm (440.0 Hz)</strong>
+        </div>
+        <div class="spec-item">
+          <span>Drone 1 Resonator</span>
+          <strong id="spec-d1-len">354.8 mm (440.0 Hz)</strong>
+        </div>
+        <div class="spec-item">
+          <span>Drone 2 Resonator</span>
+          <strong id="spec-d2-len">234.7 mm (659.3 Hz)</strong>
+        </div>
+        <div class="spec-item">
+          <span>Total Flute Height</span>
+          <strong id="spec-total-len">389.6 mm</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 3D CAD Viewer -->
+    <div class="tab-pane" id="tab-cad">
+      <div id="viewport-container">
+        <canvas id="viewport-canvas"></canvas>
+        <div class="viewport-overlay">
+          <strong>Parametric Triple Flute</strong><br>
+          <span style="color: var(--text-dim);">Click & drag to rotate • Scroll to zoom</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Showcase Gallery -->
+    <div class="tab-pane" id="tab-gallery">
+      <div class="showcase-grid">
+        <div class="showcase-card" onclick="loadShowcase('native_american', 69, 'sac', 'native_motif')">
+          <img src="01_native_american_a4_sac/flute_iso.png" class="showcase-img" alt="Native American Flute">
+          <div class="showcase-body">
+            <div class="showcase-title">🪈 Native American A4 (SAC)</div>
+            <div class="showcase-desc">Minor pentatonic scale with internal Slow Air Chamber expansion reservoir for warm, velvety breath attack.</div>
+            <button class="btn btn-secondary">Load into Studio</button>
+          </div>
+        </div>
+
+        <div class="showcase-card" onclick="loadShowcase('hijaz', 69, 'venturi', 'desert_caravan', 'ribbed')">
+          <img src="02_desert_caravan_hijaz_ribbed/flute_iso.png" class="showcase-img" alt="Desert Caravan Flute">
+          <div class="showcase-body">
+            <div class="showcase-title">🏜️ Desert Caravan A4 (Ribbed)</div>
+            <div class="showcase-desc">Middle Eastern Hijaz scale with accelerating Venturi windways and micro-ribbed harmonic drone rasp.</div>
+            <button class="btn btn-secondary">Load into Studio</button>
+          </div>
+        </div>
+
+        <div class="showcase-card" onclick="loadShowcase('minor_pentatonic', 69, 'arched', 'condor_pasa')">
+          <img src="03_baroque_condor_pasa_arched/flute_iso.png" class="showcase-img" alt="Baroque Condor Pasa Flute">
+          <div class="showcase-body">
+            <div class="showcase-title">🦅 Andean Condor Pasa A4 (Arched)</div>
+            <div class="showcase-desc">Crowned arched Baroque windway focusing laminar airflow onto the labium for singing upper harmonics.</div>
+            <button class="btn btn-secondary">Load into Studio</button>
+          </div>
+        </div>
+
+        <div class="showcase-card" onclick="loadShowcase('dorian', 72, 'flat', 'greensleeves')">
+          <img src="04_greensleeves_dorian_c5/flute_iso.png" class="showcase-img" alt="Greensleeves Dorian C5">
+          <div class="showcase-body">
+            <div class="showcase-title">🏰 Renaissance Greensleeves C5</div>
+            <div class="showcase-desc">High-register Dorian triple flute with calibrated fifth drone accompaniment and planar voicing.</div>
+            <button class="btn btn-secondary">Load into Studio</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====================================================================
+// Scales & Musical Definitions
+// ====================================================================
+const SCALES = {
+  native_american: [0, 3, 5, 7, 10, 12],
+  hijaz: [0, 1, 4, 5, 7, 8, 10, 12],
+  minor_pentatonic: [0, 3, 5, 7, 10, 12],
+  major_pentatonic: [0, 2, 4, 7, 9, 12],
+  dorian: [0, 2, 3, 5, 7, 9, 10, 12],
+  major: [0, 2, 4, 5, 7, 9, 11, 12],
+  natural_minor: [0, 2, 3, 5, 7, 8, 10, 12],
+  blues: [0, 3, 5, 6, 7, 10, 12],
+};
+
+const MELODY_PRESETS = {
+  native_motif: [
+    { n: 0, d: 2.0, v: 100 }, { n: 3, d: 1.0, v: 95 }, { n: 5, d: 2.0, v: 105 },
+    { n: 7, d: 2.0, v: 110 }, { n: 10, d: 1.5, v: 100 }, { n: 7, d: 1.5, v: 95 },
+    { n: 5, d: 1.0, v: 90 }, { n: 3, d: 2.0, v: 95 }, { n: 0, d: 3.0, v: 85 }
+  ],
+  condor_pasa: [
+    { n: 0, d: 1.0, v: 95 }, { n: 3, d: 1.0, v: 100 }, { n: 5, d: 1.5, v: 105 },
+    { n: 7, d: 1.5, v: 110 }, { n: 10, d: 1.0, v: 100 }, { n: 7, d: 2.0, v: 95 },
+    { n: 5, d: 1.0, v: 90 }, { n: 3, d: 1.0, v: 90 }, { n: 0, d: 2.5, v: 85 }
+  ],
+  desert_caravan: [
+    { n: 0, d: 1.5, v: 100 }, { n: 1, d: 0.5, v: 90 }, { n: 4, d: 1.5, v: 110 },
+    { n: 5, d: 1.5, v: 105 }, { n: 7, d: 2.0, v: 115 }, { n: 8, d: 1.0, v: 100 },
+    { n: 7, d: 1.0, v: 95 }, { n: 5, d: 1.0, v: 90 }, { n: 4, d: 1.5, v: 95 },
+    { n: 1, d: 1.0, v: 85 }, { n: 0, d: 3.0, v: 80 }
+  ],
+  greensleeves: [
+    { n: 0, d: 1.0, v: 95 }, { n: 3, d: 2.0, v: 105 }, { n: 5, d: 1.0, v: 100 },
+    { n: 7, d: 1.5, v: 110 }, { n: 9, d: 0.5, v: 100 }, { n: 7, d: 1.0, v: 95 },
+    { n: 5, d: 2.0, v: 100 }, { n: 2, d: 1.0, v: 90 }, { n: 0, d: 3.0, v: 85 }
+  ],
+  morning_mood: [
+    { n: 7, d: 1.0, v: 100 }, { n: 4, d: 1.0, v: 95 }, { n: 2, d: 1.0, v: 90 },
+    { n: 0, d: 1.0, v: 85 }, { n: 2, d: 1.0, v: 90 }, { n: 4, d: 1.0, v: 95 },
+    { n: 7, d: 2.0, v: 105 }, { n: 9, d: 2.0, v: 110 }, { n: 7, d: 3.0, v: 90 }
+  ],
+  amazing_grace: [
+    { n: 0, d: 1.0, v: 90 }, { n: 5, d: 2.0, v: 105 }, { n: 9, d: 0.5, v: 95 },
+    { n: 7, d: 0.5, v: 90 }, { n: 5, d: 2.0, v: 100 }, { n: 9, d: 1.0, v: 105 },
+    { n: 7, d: 3.0, v: 95 }, { n: 5, d: 1.0, v: 90 }, { n: 0, d: 3.0, v: 85 }
+  ]
+};
+
+function midiToFreq(m) {
+  return 440.0 * Math.pow(2.0, (m - 69.0) / 12.0);
+}
+
+function calculateAcoustics(rootMidi, scaleKey, d1Offset, d2Offset, boreM = 19.0, boreD1 = 22.0, boreD2 = 16.0) {
+  const c = 343200.0; // mm/s
+  const scale = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  const fMel = midiToFreq(rootMidi);
+  const fD1 = midiToFreq(rootMidi + d1Offset);
+  const fD2 = midiToFreq(rootMidi + d2Offset);
+
+  const lMel = (c / (2.0 * fMel)) - 1.6 * boreM;
+  const lD1 = (c / (2.0 * fD1)) - 1.6 * boreD1;
+  const lD2 = (c / (2.0 * fD2)) - 1.6 * boreD2;
+  const totalL = Math.max(lMel, lD1, lD2) + 30.0;
+
+  const holes = scale.slice(1).map(semi => {
+    const f = midiToFreq(rootMidi + semi);
+    return (c / (2.0 * f)) - 1.6 * boreM;
+  });
+
+  return { fMel, fD1, fD2, lMel, lD1, lD2, totalL, holes, scale };
+}
+
+// ====================================================================
+// Web Audio Digital Waveguide Synthesizer
+// ====================================================================
+let audioCtx = null;
+let isPlaying = false;
+let playheadTimer = null;
+let currentScore = [];
+
+class WebWaveguidePipe {
+  constructor(sampleRate) {
+    this.sr = sampleRate;
+    this.boreLen = Math.floor(sampleRate * 0.1);
+    this.jetLen = Math.floor(sampleRate * 0.05);
+    this.boreDelay = new Float32Array(this.boreLen);
+    this.jetDelay = new Float32Array(this.jetLen);
+    this.writeBore = 0;
+    this.writeJet = 0;
+    this.filterState = 0;
+    this.dcX = 0;
+    this.dcY = 0;
+    this.currDelay = sampleRate / 440.0;
+    this.targetDelay = this.currDelay;
+  }
+
+  setFreq(freq) {
+    if (freq > 20.0) this.targetDelay = this.sr / freq;
+  }
+
+  process(breathP, noiseGain = 0.03) {
+    if (breathP <= 0.001) {
+      this.filterState *= 0.95;
+      return 0.0;
+    }
+    this.currDelay += (this.targetDelay - this.currDelay) * 0.015;
+
+    const noise = (Math.random() * 2.0 - 1.0) * noiseGain * Math.sqrt(breathP);
+    const pIn = breathP + noise;
+
+    const idxBore = (this.writeBore - 1 - Math.floor(this.currDelay) + this.boreLen) % this.boreLen;
+    const boreRefl = this.boreDelay[idxBore];
+
+    this.filterState = this.filterState * 0.30 + boreRefl * 0.70;
+    const boreSig = this.filterState;
+
+    const jetDelayLen = Math.max(2, Math.min(Math.floor(this.currDelay * 0.40), this.currDelay - 2));
+    const jetIn = pIn + 0.35 * boreSig;
+    this.jetDelay[this.writeJet] = jetIn;
+    this.writeJet = (this.writeJet + 1) % this.jetLen;
+
+    const idxJet = (this.writeJet - 1 - jetDelayLen + this.jetLen) % this.jetLen;
+    const jetOut = this.jetDelay[idxJet];
+
+    const jetDc = Math.tanh(pIn - pIn * pIn * pIn);
+    const vortexDrive = Math.tanh(jetOut - jetOut * jetOut * jetOut) - jetDc;
+
+    const inj = -(vortexDrive * 0.65 + boreSig * 0.60);
+    this.boreDelay[this.writeBore] = inj;
+    this.writeBore = (this.writeBore + 1) % this.boreLen;
+
+    const dcOut = boreSig - this.dcX + 0.995 * this.dcY;
+    this.dcX = boreSig;
+    this.dcY = dcOut;
+
+    return dcOut * 1.5;
+  }
+}
+
+// Stereo Freeverb in JavaScript
+class WebFreeverb {
+  constructor(sampleRate) {
+    const scale = sampleRate / 44100.0;
+    const tuningsL = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617];
+    const tuningsR = [1139, 1211, 1300, 1379, 1445, 1514, 1580, 1640];
+    const allpassTunings = [556, 441, 341, 225];
+
+    this.combsL = tuningsL.map(t => new Float32Array(Math.floor(t * scale)));
+    this.combsR = tuningsR.map(t => new Float32Array(Math.floor(t * scale)));
+    this.combIdxL = new Int32Array(tuningsL.length);
+    this.combIdxR = new Int32Array(tuningsR.length);
+    this.combFiltL = new Float32Array(tuningsL.length);
+    this.combFiltR = new Float32Array(tuningsR.length);
+
+    this.allpassL = allpassTunings.map(t => new Float32Array(Math.floor(t * scale)));
+    this.allpassR = allpassTunings.map(t => new Float32Array(Math.floor((t + 23) * scale)));
+    this.apIdxL = new Int32Array(allpassTunings.length);
+    this.apIdxR = new Int32Array(allpassTunings.length);
+  }
+
+  process(inL, inR, roomSize = 0.78, damping = 0.25, wet = 0.35, dry = 0.85) {
+    const feedback = 0.65 + roomSize * 0.25;
+    const inMono = (inL + inR) * 0.012;
+
+    let outL = 0, outR = 0;
+    for (let i = 0; i < this.combsL.length; i++) {
+      const buf = this.combsL[i];
+      const idx = this.combIdxL[i];
+      const val = buf[idx];
+      this.combFiltL[i] = val * (1 - damping) + this.combFiltL[i] * damping;
+      buf[idx] = inMono + this.combFiltL[i] * feedback;
+      this.combIdxL[i] = (idx + 1) % buf.length;
+      outL += val;
+    }
+    for (let i = 0; i < this.combsR.length; i++) {
+      const buf = this.combsR[i];
+      const idx = this.combIdxR[i];
+      const val = buf[idx];
+      this.combFiltR[i] = val * (1 - damping) + this.combFiltR[i] * damping;
+      buf[idx] = inMono + this.combFiltR[i] * feedback;
+      this.combIdxR[i] = (idx + 1) % buf.length;
+      outR += val;
+    }
+
+    for (let i = 0; i < this.allpassL.length; i++) {
+      const buf = this.allpassL[i];
+      const idx = this.apIdxL[i];
+      const bufOut = buf[idx];
+      const apOut = -outL + bufOut;
+      buf[idx] = outL + bufOut * 0.5;
+      this.apIdxL[i] = (idx + 1) % buf.length;
+      outL = apOut;
+    }
+    for (let i = 0; i < this.allpassR.length; i++) {
+      const buf = this.allpassR[i];
+      const idx = this.apIdxR[i];
+      const bufOut = buf[idx];
+      const apOut = -outR + bufOut;
+      buf[idx] = outR + bufOut * 0.5;
+      this.apIdxR[i] = (idx + 1) % buf.length;
+      outR = apOut;
+    }
+
+    return [inL * dry + outL * wet, inR * dry + outR * wet];
+  }
+}
+
+// ScriptProcessor / AudioWorklet Player
+let scriptNode = null;
+let melPipe, d1Pipe, d2Pipe, reverb;
+let noteEvents = [];
+let currentBeat = 0;
+let bpm = 96;
+
+function initAudioEngine() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  const sr = audioCtx.sampleRate;
+  melPipe = new WebWaveguidePipe(sr);
+  d1Pipe = new WebWaveguidePipe(sr);
+  d2Pipe = new WebWaveguidePipe(sr);
+  reverb = new WebFreeverb(sr);
+
+  if (scriptNode) scriptNode.disconnect();
+  scriptNode = audioCtx.createScriptProcessor(2048, 0, 2);
+
+  let playSampleIdx = 0;
+  scriptNode.onaudioprocess = function(e) {
+    const outL = e.outputBuffer.getChannelData(0);
+    const outR = e.outputBuffer.getChannelData(1);
+    const sr = audioCtx.sampleRate;
+    const spb = 60.0 / bpm;
+
+    const rootMidi = parseInt(document.getElementById('sel-root').value);
+    const d1Offset = parseInt(document.getElementById('sel-d1').value);
+    const d2Offset = parseInt(document.getElementById('sel-d2').value);
+    const scaleKey = document.getElementById('sel-scale').value;
+    const acoustics = calculateAcoustics(rootMidi, scaleKey, d1Offset, d2Offset);
+
+    d1Pipe.setFreq(acoustics.fD1);
+    d2Pipe.setFreq(acoustics.fD2);
+
+    const enableD1 = document.getElementById('chk-drone1').checked;
+    const enableD2 = document.getElementById('chk-drone2').checked;
+    const airRatio = parseFloat(document.getElementById('rng-air-ratio').value);
+    const roomSize = parseFloat(document.getElementById('rng-room').value);
+    const damping = parseFloat(document.getElementById('rng-damp').value);
+    const wet = parseFloat(document.getElementById('rng-wet').value);
+
+    for (let i = 0; i < outL.length; i++) {
+      if (!isPlaying) {
+        outL[i] = 0;
+        outR[i] = 0;
+        continue;
+      }
+      const t = playSampleIdx / sr;
+      playSampleIdx++;
+
+      // Active note evaluation
+      let activeNote = null;
+      let activeVel = 0;
+      let elapsed = 0;
+      let dur = 1.0;
+
+      for (let ne of noteEvents) {
+        if (t >= ne.start && t < ne.end) {
+          activeNote = ne.note;
+          activeVel = ne.vel;
+          elapsed = t - ne.start;
+          dur = ne.end - ne.start;
+          break;
+        }
+      }
+
+      let breathM = 0;
+      if (activeNote !== null) {
+        let vib = 1.0;
+        if (dur > 0.6 && elapsed > dur * 0.45 && document.getElementById('chk-vibrato').checked) {
+          vib = 1.0 + 0.0035 * Math.sin(2.0 * Math.PI * 5.2 * elapsed);
+        }
+        melPipe.setFreq(midiToFreq(activeNote) * vib);
+
+        const att = Math.min(1.0, elapsed / 0.02);
+        const rel = Math.min(1.0, (dur - elapsed) / 0.02);
+        breathM = (0.65 + (activeVel / 127.0) * 0.25) * att * rel;
+      }
+
+      const breathD1 = enableD1 ? 0.70 * airRatio : 0;
+      const breathD2 = enableD2 ? 0.65 * airRatio : 0;
+
+      const sM = melPipe.process(breathM);
+      const sD1 = d1Pipe.process(breathD1);
+      const sD2 = d2Pipe.process(breathD2);
+
+      const dryL = sD1 * 0.50 + sD2 * 0.20 + sM * 0.65;
+      const dryR = sD1 * 0.20 + sD2 * 0.50 + sM * 0.65;
+
+      const [procL, procR] = reverb.process(dryL, dryR, roomSize, damping, wet, 0.85);
+      outL[i] = Math.max(-1.0, Math.min(1.0, procL));
+      outR[i] = Math.max(-1.0, Math.min(1.0, procR));
+    }
+  };
+
+  scriptNode.connect(audioCtx.destination);
+}
+
+// ====================================================================
+// Piano Roll UI & Sequencer Canvas
+// ====================================================================
+const prCanvas = document.getElementById('pianoroll-canvas');
+const prCtx = prCanvas.getContext('2d');
+
+function resizeCanvas() {
+  prCanvas.width = prCanvas.parentElement.clientWidth * window.devicePixelRatio;
+  prCanvas.height = prCanvas.parentElement.clientHeight * window.devicePixelRatio;
+  drawPianoRoll();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function loadPresetScore(presetKey) {
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scale = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  const preset = MELODY_PRESETS[presetKey] || MELODY_PRESETS.native_motif;
+
+  currentScore = [];
+  let currBeat = 0;
+  preset.forEach(p => {
+    // Snap preset offset to scale
+    const semi = scale[p.n % scale.length] + Math.floor(p.n / scale.length) * 12;
+    currentScore.push({
+      startBeat: currBeat,
+      durationBeats: p.d,
+      midiNote: rootMidi + semi,
+      vel: p.v
+    });
+    currBeat += p.d;
+  });
+  buildPlayEvents();
+  drawPianoRoll();
+}
+
+function buildPlayEvents() {
+  const spb = 60.0 / bpm;
+  noteEvents = currentScore.map(n => ({
+    start: n.startBeat * spb,
+    end: (n.startBeat + n.durationBeats) * spb,
+    note: n.midiNote,
+    vel: n.vel
+  }));
+}
+
+function drawPianoRoll() {
+  const w = prCanvas.width;
+  const h = prCanvas.height;
+  prCtx.clearRect(0, 0, w, h);
+
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const scale = SCALES[scaleKey] || SCALES.minor_pentatonic;
+  const scaleSet = new Set(scale.map(s => (rootMidi + s) % 12));
+
+  const minNote = rootMidi - 5;
+  const maxNote = rootMidi + 19;
+  const totalNotes = maxNote - minNote;
+  const noteH = h / totalNotes;
+  const totalBeats = Math.max(16, Math.ceil(currentScore.reduce((acc, n) => Math.max(acc, n.startBeat + n.durationBeats + 2), 0)));
+  const beatW = w / totalBeats;
+
+  // Grid background
+  for (let n = minNote; n <= maxNote; n++) {
+    const y = h - (n - minNote + 1) * noteH;
+    const isScale = scaleSet.has(n % 12);
+    const isRoot = (n % 12) === (rootMidi % 12);
+
+    prCtx.fillStyle = isRoot ? 'rgba(59, 130, 246, 0.25)' : (isScale ? 'rgba(37, 99, 235, 0.1)' : '#0f121a');
+    prCtx.fillRect(0, y, w, noteH);
+
+    prCtx.strokeStyle = '#1e2433';
+    prCtx.strokeRect(0, y, w, noteH);
+  }
+
+  // Beat vertical lines
+  for (let b = 0; b <= totalBeats; b++) {
+    prCtx.strokeStyle = (b % 4 === 0) ? '#3b4256' : '#1a1f2c';
+    prCtx.lineWidth = (b % 4 === 0) ? 1.5 : 1;
+    prCtx.beginPath();
+    prCtx.moveTo(b * beatW, 0);
+    prCtx.lineTo(b * beatW, h);
+    prCtx.stroke();
+  }
+
+  // Draw Score Notes
+  currentScore.forEach(n => {
+    const x = n.startBeat * beatW;
+    const y = h - (n.midiNote - minNote + 1) * noteH;
+    const nw = n.durationBeats * beatW - 2;
+    const nh = noteH - 2;
+
+    prCtx.fillStyle = '#3b82f6';
+    prCtx.shadowColor = 'rgba(59, 130, 246, 0.5)';
+    prCtx.shadowBlur = 8;
+    prCtx.fillRect(x, y, nw, nh);
+    prCtx.shadowBlur = 0;
+
+    prCtx.strokeStyle = '#93c5fd';
+    prCtx.strokeRect(x, y, nw, nh);
+  });
+}
+
+// Mouse note adding
+let isDragging = false;
+prCanvas.addEventListener('mousedown', (e) => {
+  const rect = prCanvas.getBoundingClientRect();
+  const scaleX = prCanvas.width / rect.width;
+  const scaleY = prCanvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const minNote = rootMidi - 5;
+  const maxNote = rootMidi + 19;
+  const noteH = prCanvas.height / (maxNote - minNote);
+  const totalBeats = 16;
+  const beatW = prCanvas.width / totalBeats;
+
+  const clickedBeat = Math.floor(mx / beatW);
+  const clickedNote = minNote + Math.floor((prCanvas.height - my) / noteH);
+
+  // Toggle/add note
+  const existingIdx = currentScore.findIndex(n => n.startBeat === clickedBeat && n.midiNote === clickedNote);
+  if (existingIdx >= 0) {
+    currentScore.splice(existingIdx, 1);
+  } else {
+    currentScore.push({
+      startBeat: clickedBeat,
+      durationBeats: 1.0,
+      midiNote: clickedNote,
+      vel: 100
+    });
+  }
+  buildPlayEvents();
+  drawPianoRoll();
+});
+
+// Transport Controls
+document.getElementById('btn-play').addEventListener('click', () => {
+  initAudioEngine();
+  isPlaying = true;
+  document.getElementById('btn-play').innerText = 'Playing... 🪈';
+});
+
+document.getElementById('btn-stop').addEventListener('click', () => {
+  isPlaying = false;
+  document.getElementById('btn-play').innerText = '▶ Play Physical Synth';
+});
+
+document.getElementById('sel-preset-melody').addEventListener('change', (e) => {
+  loadPresetScore(e.target.value);
+});
+
+// ====================================================================
+// 3D Three.js OpenSCAD Viewer
+// ====================================================================
+let scene, camera, renderer, controls, fluteMesh;
+
+function init3D() {
+  const container = document.getElementById('viewport-container');
+  const canvas = document.getElementById('viewport-canvas');
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
+  camera.position.set(0, -450, 220);
+
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const ambLight = new THREE.AmbientLight(0xffffff, 0.75);
+  scene.add(ambLight);
+
+  const dirLight1 = new THREE.DirectionalLight(0xffedd5, 0.9);
+  dirLight1.position.set(200, -250, 400);
+  scene.add(dirLight1);
+
+  const dirLight2 = new THREE.DirectionalLight(0xdbeafe, 0.5);
+  dirLight2.position.set(-200, 250, -100);
+  scene.add(dirLight2);
+
+  update3DModel();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+}
+
+function update3DModel() {
+  if (fluteMesh) scene.remove(fluteMesh);
+
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const d1Offset = parseInt(document.getElementById('sel-d1').value);
+  const d2Offset = parseInt(document.getElementById('sel-d2').value);
+  const acoustics = calculateAcoustics(rootMidi, scaleKey, d1Offset, d2Offset);
+
+  // Update UI Specs Readout
+  document.getElementById('spec-mel-len').innerText = `${acoustics.lMel.toFixed(1)} mm (${acoustics.fMel.toFixed(1)} Hz)`;
+  document.getElementById('spec-d1-len').innerText = `${acoustics.lD1.toFixed(1)} mm (${acoustics.fD1.toFixed(1)} Hz)`;
+  document.getElementById('spec-d2-len').innerText = `${acoustics.lD2.toFixed(1)} mm (${acoustics.fD2.toFixed(1)} Hz)`;
+  document.getElementById('spec-total-len').innerText = `${acoustics.totalL.toFixed(1)} mm`;
+
+  const fluteGroup = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.35, metalness: 0.15 });
+
+  // 3 Hexagonal Pipe Bores
+  const spacing = 25.0;
+  const geomBody = new THREE.CylinderGeometry(15, 15, acoustics.totalL, 6);
+  const meshBody = new THREE.Mesh(geomBody, mat);
+  meshBody.position.set(0, 0, acoustics.totalL / 2);
+  fluteGroup.add(meshBody);
+
+  const geomD1 = new THREE.CylinderGeometry(14, 14, acoustics.lD1 + 42, 6);
+  const meshD1 = new THREE.Mesh(geomD1, mat);
+  meshD1.position.set(-spacing, 0, (acoustics.lD1 + 42) / 2);
+  fluteGroup.add(meshD1);
+
+  const geomD2 = new THREE.CylinderGeometry(13, 13, acoustics.lD2 + 42, 6);
+  const meshD2 = new THREE.Mesh(geomD2, mat);
+  meshD2.position.set(spacing, 0, (acoustics.lD2 + 42) / 2);
+  fluteGroup.add(meshD2);
+
+  fluteMesh = fluteGroup;
+  scene.add(fluteMesh);
+}
+
+// UI Tabs Switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    if (btn.dataset.tab === 'cad') {
+      resizeCanvas();
+      if (!scene) init3D();
+    }
+  });
+});
+
+// Live Param Updates
+['sel-root', 'sel-scale', 'sel-d1', 'sel-d2', 'sel-profile'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    loadPresetScore(document.getElementById('sel-preset-melody').value);
+    if (scene) update3DModel();
+  });
+});
+
+['rng-air-ratio', 'rng-room', 'rng-damp', 'rng-wet'].forEach(id => {
+  document.getElementById(id).addEventListener('input', (e) => {
+    const valSpan = e.target.previousElementSibling.querySelector('.val');
+    if (valSpan) valSpan.innerText = e.target.value;
+  });
+});
+
+// Showcase Loader Helper
+function loadShowcase(scale, root, profile, melody) {
+  document.getElementById('sel-scale').value = scale;
+  document.getElementById('sel-root').value = root;
+  document.getElementById('sel-profile').value = profile;
+  document.getElementById('sel-preset-melody').value = melody;
+  loadPresetScore(melody);
+  document.querySelector('[data-tab="studio"]').click();
+}
+
+// Export OpenSCAD File
+document.getElementById('btn-export-scad').addEventListener('click', () => {
+  const rootMidi = parseInt(document.getElementById('sel-root').value);
+  const scaleKey = document.getElementById('sel-scale').value;
+  const d1Offset = parseInt(document.getElementById('sel-d1').value);
+  const d2Offset = parseInt(document.getElementById('sel-d2').value);
+  const profile = document.getElementById('sel-profile').value;
+  const acoustics = calculateAcoustics(rootMidi, scaleKey, d1Offset, d2Offset);
+
+  const scadContent = `// Parametric Triple Flute CAD Script
+// Root: ${rootMidi}, Scale: ${scaleKey}, Profile: ${profile}
+$fn = 60;
+outer_d = 27.0;
+spacing = 25.0;
+total_L = ${acoustics.totalL.toFixed(2)};
+fipple_z = ${acoustics.totalL.toFixed(2)} - 42.0;
+
+module flute() {
+  difference() {
+    hull() {
+      translate([-spacing, 0]) cylinder(d=outer_d, h=total_L, $fn=6);
+      translate([spacing, 0]) cylinder(d=outer_d, h=total_L, $fn=6);
+    }
+    // Resonator bores
+    translate([0, 0, -1]) cylinder(d=19.0, h=fipple_z - ${acoustics.lMel.toFixed(2)} + 1);
+    translate([-spacing, 0, -1]) cylinder(d=22.0, h=fipple_z - ${acoustics.lD1.toFixed(2)} + 1);
+    translate([spacing, 0, -1]) cylinder(d=16.0, h=fipple_z - ${acoustics.lD2.toFixed(2)} + 1);
+  }
+}
+flute();
+`;
+  const blob = new Blob([scadContent], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `flute_${rootMidi}_${scaleKey}.scad`;
+  a.click();
+});
+
+// Initial Setup
+setTimeout(() => {
+  resizeCanvas();
+  loadPresetScore('native_motif');
+}, 100);
+</script>
+</body>
+</html>

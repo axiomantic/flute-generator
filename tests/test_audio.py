@@ -1,4 +1,4 @@
-"""Deep tests for expressive MIDI sequencing, controllers (CC1/CC11), and audio waveform synthesis."""
+"""Deep tests for expressive MIDI sequencing, controllers (CC1/CC11), physical waveguide acoustic synthesis, and stereo Freeverb reverb."""
 
 import math
 from pathlib import Path
@@ -12,9 +12,9 @@ import pytest
 from flute_generator.acoustics import calculate_flute_geometry
 from flute_generator.audio import (
     create_flute_midi,
-    find_soundfont,
-    get_soundfont_instructions,
-    synthesize_fallback_wav,
+    PhysicalWaveguidePipe,
+    StereoFreeverb,
+    synthesize_flute_audio,
 )
 from flute_generator.melodies import NoteEvent, build_quantized_melody
 from flute_generator.scales import SCALES
@@ -43,7 +43,7 @@ class TestMidiSequencing:
             melody_track = mid.tracks[1]
             program_msgs = [m for m in melody_track if m.type == 'program_change']
             assert len(program_msgs) == 1
-            assert program_msgs[0].program == 0
+            assert program_msgs[0].program == 73  # GM Flute
 
             # Check CC1 (vibrato modulation), CC11 (expression breath), CC91 (reverb)
             cc_msgs = [m for m in melody_track if m.type == 'control_change']
@@ -80,7 +80,7 @@ class TestMidiSequencing:
             assert d2_pan == [90]
 
 
-class TestWaveformSynthesis:
+class TestPhysicalWaveguideSynthesis:
     def test_synthesized_wav_stereo_and_signal_properties(self):
         """Synthesized WAV must have valid 16-bit PCM stereo format with rich non-clipped samples."""
         dims = calculate_flute_geometry(root_midi=69)
@@ -90,7 +90,7 @@ class TestWaveformSynthesis:
         bpm = 120
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = Path(tmpdir) / "output.wav"
-            synthesize_fallback_wav(dims, events, wav_path, sample_rate=sample_rate, bpm=bpm)
+            synthesize_flute_audio(dims, events, wav_path, sample_rate=sample_rate, bpm=bpm)
 
             assert wav_path.exists()
 
@@ -120,15 +120,15 @@ class TestWaveformSynthesis:
             mean_dc = sum(samples) / len(samples)
             assert abs(mean_dc) < 500
 
+    def test_waveguide_pipe_frequency_tuning(self):
+        """Waveguide pipe must respond to frequency changes."""
+        pipe = PhysicalWaveguidePipe(sample_rate=44100)
+        pipe.set_frequency(440.0)
+        assert pytest.approx(pipe.target_delay, abs=0.1) == 100.227
 
-class TestSoundFontResolution:
-    def test_find_soundfont_with_custom_path(self):
-        with tempfile.NamedTemporaryFile(suffix=".sf2") as tmp:
-            found = find_soundfont(tmp.name)
-            assert found is not None
-            assert found.resolve() == Path(tmp.name).resolve()
-
-    def test_soundfont_missing_instructions_contain_download_link(self):
-        msg = get_soundfont_instructions()
-        assert "https://www.polyphone.io/en/soundfonts/flutes/214-ixox-flute-full-v0-2" in msg
-        assert "ixox_flute" in msg
+    def test_stereo_freeverb_processing(self):
+        """Stereo Freeverb must diffuse impulses and maintain stereo decorrelation."""
+        reverb = StereoFreeverb(sample_rate=44100)
+        out_l, out_r = reverb.process(1.0, 1.0, room_size=0.8, damping=0.2, wet=0.5, dry=0.5)
+        assert out_l != 0.0
+        assert out_r != 0.0
