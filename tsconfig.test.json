@@ -1,0 +1,11 @@
+{
+  // The suite runs in Node and needs Node's globals. They are kept OUT of tsconfig.json on
+  // purpose: src/web ships to a browser and an AudioWorkletGlobalScope, and letting `process`
+  // or `Buffer` typecheck there would hide a real portability error.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["test/**/*.ts", "src/web/**/*.ts", "vitest.config.ts"]
+}
