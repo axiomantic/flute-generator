@@ -1,52 +1,34 @@
 # Generated outputs
 output/
-!examples/**/*.wav
-!examples/**/*.mid
-!examples/**/*.scad
-!examples/**/*.stl
-!docs/**/*.wav
-!docs/**/*.mid
-!docs/**/*.scad
-!docs/**/*.stl
-
-# Python build & cache
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
 downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# Virtual environments
+# Dependencies and local environments. These are listed here, not left to a personal
+# ~/.gitignore_global: a fresh clone, a CI runner and another contributor's machine have no
+# such file, and there they would be staged by `git add -A`.
+node_modules/
 .venv/
 venv/
-ENV/
-env/
-
-# Pytest / Testing
-.pytest_cache/
-.coverage
-htmlcov/
 
 # IDEs
 .idea/
 .vscode/
 *.swp
+.DS_Store
+
+# Documents. This repository holds source, meshes, audio and renders - never a PDF. The rule is
+# a guard rather than a convenience: personal paperwork lands in a working directory more often
+# than anyone expects, and this one is public.
+*.pdf
+
+# OpenSCAD editor scratch files and the WASM build tree
 .openscad-studio-*
 build_wasm/
+
+# Local capture/screenshot scratch space
+scratch/
+
+# esbuild output. The repo-root dist/ is a local build product; docs/dist is the published
+# site and IS committed, so the directory has to be re-included before its contents can be.
+/dist/
+!docs/dist/
+!docs/dist/**
