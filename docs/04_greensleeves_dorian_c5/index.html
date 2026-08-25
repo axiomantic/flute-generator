@@ -17,28 +17,33 @@
     .spec-box span { display: block; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
     .spec-box strong { font-size: 1.1rem; color: #f8fafc; }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Checked in under vendor/, not fetched from a CDN: the page has to work offline and under a
+       script-src 'self' policy, and the gallery build has to work with no network. This build
+       mirrors vendor/ next to the pages, so ../vendor/ resolves from examples/ and from docs/.
+       See vendor/README.md for versions and hashes. -->
+  <script src="../vendor/three.min.js"></script>
+  <script src="../vendor/STLLoader.js"></script>
+  <script src="../vendor/OrbitControls.js"></script>
 </head>
 <body>
   <div class="container">
     <h1>🪈 Renaissance Greensleeves Triple Flute (C5) in Dorian Scale</h1>
-    <p>High-register C5 triple flute in Dorian modal scale playing Greensleeves with crisp planar windway voicing and calibrated harmonic fifth drone accompaniment.</p>
+    <p>High-register C5 triple flute in Dorian modal scale playing Greensleeves with crisp planar windway voicing and a calibrated harmonic fifth drone accompaniment.</p>
 
     <div class="player-card">
       <span class="badge">AUDIO PREVIEW</span>
-      <audio controls autoplay loop src="flute.wav"></audio>
+      <audio controls loop src="flute.wav"></audio>
     </div>
 
-    <h3>Interactive 3D Model (Click & Drag to Rotate / Scroll to Zoom)</h3>
+    <h3>Interactive 3D Model (Click &amp; Drag to Rotate / Scroll to Zoom)</h3>
     <div id="viewport"></div>
 
     <div class="specs">
       <div class="spec-box"><span>Root Pitch</span><strong>MIDI 72 (523.3 Hz)</strong></div>
       <div class="spec-box"><span>Musical Scale</span><strong>dorian</strong></div>
       <div class="spec-box"><span>Mouthpiece Profile</span><strong>FLAT</strong></div>
-      <div class="spec-box"><span>Total Length</span><strong>327.5 mm</strong></div>
+      <div class="spec-box"><span>Tone Holes</span><strong>6 &times; 8.0 mm</strong></div>
+      <div class="spec-box"><span>Total Length</span><strong>388.9 mm</strong></div>
     </div>
   </div>
 
@@ -57,8 +62,7 @@
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 
     const dirLight1 = new THREE.DirectionalLight(0xfff5ea, 0.9);
     dirLight1.position.set(150, -200, 300);
@@ -72,11 +76,7 @@
     loader.load('flute.stl', function (geometry) {
       geometry.computeVertexNormals();
       geometry.center();
-      const material = new THREE.MeshStandardMaterial({
-        color: 0xdeb887,
-        roughness: 0.35,
-        metalness: 0.15,
-      });
+      const material = new THREE.MeshStandardMaterial({ color: 0xdeb887, roughness: 0.35, metalness: 0.15 });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.rotation.x = -Math.PI / 2;
       scene.add(mesh);

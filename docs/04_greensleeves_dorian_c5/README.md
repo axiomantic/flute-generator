@@ -1,6 +1,6 @@
 # 🪈 Renaissance Greensleeves Triple Flute (C5) in Dorian Scale
 
-High-register C5 triple flute in Dorian modal scale playing Greensleeves with crisp planar windway voicing and calibrated harmonic fifth drone accompaniment.
+High-register C5 triple flute in Dorian modal scale playing Greensleeves with crisp planar windway voicing and a calibrated harmonic fifth drone accompaniment.
 
 ---
 
@@ -22,6 +22,10 @@ High-register C5 triple flute in Dorian modal scale playing Greensleeves with cr
 > [!TIP]
 > Open [`index.html`](index.html) in your web browser for an interactive 3D rotating model viewer with embedded audio playback!
 
+The `.wav` is rendered through the studio's own digital waveguide AudioWorklet and its
+convolution room reverb, so it is the signal the studio plays for these settings, not a
+separate model of it.
+
 ---
 
 ## 📐 Acoustic & CAD Specifications
@@ -30,10 +34,11 @@ High-register C5 triple flute in Dorian modal scale playing Greensleeves with cr
 - **Musical Scale**: `dorian`
 - **Melody Preset**: `greensleeves`
 - **Mouthpiece Profile**: `flat`
-- **Windway Texture**: `smooth`
-- **Drone Air Balancing Ratio**: `0.78`
-- **Total Height**: 327.5 mm
-- **Melody Tube Length**: 297.5 mm (523.3 Hz)
-- **Drone 1 Tube Length**: 292.7 mm (523.3 Hz)
-- **Drone 2 Tube Length**: 193.3 mm (784.0 Hz)
-- **Tone Holes**: 7 holes (261.8mm, 245.4mm, 215.3mm, 188.5mm, 164.6mm, 153.7mm, 133.6mm)
+- **Drone Intervals**: 0 and 7 semitones from the root
+- **Total Height**: 388.9 mm
+- **Melody Tube Length**: 311.0 mm (523.3 Hz)
+- **Drone 1 Tube Length**: 316.9 mm (523.3 Hz)
+- **Drone 2 Tube Length**: 210.3 mm (784.0 Hz)
+- **Tone Holes**: 6 holes of 8.0 mm, measured from the fipple (254.8mm, 244.8mm, 212.2mm, 187.0mm, 164.4mm, 24.2mm)
+- **Tuning Residual**: worst 5.1 cents across the solved lattice
+- **Tuning Notice**: 8.0 mm holes: 2 of 7 target pitches are out of reach at any hole position; worst 5.1 cents off.
